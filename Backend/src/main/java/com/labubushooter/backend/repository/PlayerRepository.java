@@ -1,6 +1,6 @@
-package com.alwahib.backend.repository;
+package com.labubushooter.backend.repository;
 
-import com.alwahib.backend.model.Player;
+import com.labubushooter.backend.model.Player;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

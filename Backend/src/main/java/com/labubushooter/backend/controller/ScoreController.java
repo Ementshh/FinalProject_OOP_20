@@ -1,7 +1,7 @@
-package com.alwahib.backend.controller; //sesuaikan
+package com.labubushooter.backend.controller; //sesuaikan
 
-import com.alwahib.backend.model.Score; //sesuaikan
-import com.alwahib.backend.service.ScoreService; //sesuaikan
+import com.labubushooter.backend.model.Score; //sesuaikan
+import com.labubushooter.backend.service.ScoreService; //sesuaikan
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

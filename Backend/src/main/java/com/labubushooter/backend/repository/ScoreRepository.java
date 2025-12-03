@@ -1,6 +1,6 @@
-package com.alwahib.backend.repository;
+package com.labubushooter.backend.repository;
 
-import com.alwahib.backend.model.Score;
+import com.labubushooter.backend.model.Score;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

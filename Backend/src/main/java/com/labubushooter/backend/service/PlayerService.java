@@ -1,7 +1,7 @@
-package com.alwahib.backend.service;
+package com.labubushooter.backend.service;
 
-import com.alwahib.backend.model.Player;
-import com.alwahib.backend.repository.PlayerRepository;
+import com.labubushooter.backend.model.Player;
+import com.labubushooter.backend.repository.PlayerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;

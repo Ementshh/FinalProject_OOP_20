@@ -1,4 +1,4 @@
-package com.alwahib.backend.model;
+package com.labubushooter.backend.model;
 
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;

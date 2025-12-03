@@ -1,14 +1,11 @@
-package com.alwahib.backend.service;
+package com.labubushooter.backend.service;
 
-import com.alwahib.backend.model.Player;
-import com.alwahib.backend.model.Score;
-import com.alwahib.backend.repository.PlayerRepository;
-import com.alwahib.backend.repository.ScoreRepository;
+import com.labubushooter.backend.model.Score;
+import com.labubushooter.backend.repository.PlayerRepository;
+import com.labubushooter.backend.repository.ScoreRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Optional;

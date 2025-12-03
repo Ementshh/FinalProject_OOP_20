@@ -1,7 +1,7 @@
-package com.alwahib.backend.controller;
+package com.labubushooter.backend.controller;
 
-import com.alwahib.backend.model.Player;
-import com.alwahib.backend.service.PlayerService;
+import com.labubushooter.backend.model.Player;
+import com.labubushooter.backend.service.PlayerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

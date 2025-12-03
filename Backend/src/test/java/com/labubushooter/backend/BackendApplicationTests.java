@@ -1,4 +1,4 @@
-package com.alwahib.backend;
+package com.labubushooter.backend;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
