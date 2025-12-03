@@ -1,11 +1,11 @@
-package com.labubushooter.finpro.objects;
+package com.labubushooter.frontend.objects;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
-import com.labubushooter.finpro.patterns.ShootingStrategy;
+import com.labubushooter.frontend.patterns.ShootingStrategy;
 
 public class Player extends GameObject {
     public float velY = 0;

@@ -1,4 +1,4 @@
-package com.labubushooter.finpro.objects;
+package com.labubushooter.frontend.objects;
 
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
