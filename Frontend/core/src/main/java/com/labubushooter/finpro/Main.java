@@ -1,4 +1,4 @@
-package com.clement.finpro;
+package com.labubushooter.finpro;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
@@ -10,10 +10,10 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
-import com.clement.finpro.objects.Bullet;
-import com.clement.finpro.objects.Platform;
-import com.clement.finpro.objects.Player;
-import com.clement.finpro.patterns.ShootingStrategy;
+import com.labubushooter.finpro.objects.Bullet;
+import com.labubushooter.finpro.objects.Platform;
+import com.labubushooter.finpro.objects.Player;
+import com.labubushooter.finpro.patterns.ShootingStrategy;
 
 public class Main extends ApplicationAdapter {
     SpriteBatch batch;

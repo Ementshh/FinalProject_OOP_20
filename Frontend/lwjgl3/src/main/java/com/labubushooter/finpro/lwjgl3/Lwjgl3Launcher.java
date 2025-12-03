@@ -1,8 +1,8 @@
-package com.clement.finpro.lwjgl3;
+package com.labubushooter.finpro.lwjgl3;
 
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
-import com.clement.finpro.Main;
+import com.labubushooter.finpro.Main;
 
 /** Launches the desktop (LWJGL3) application. */
 public class Lwjgl3Launcher {

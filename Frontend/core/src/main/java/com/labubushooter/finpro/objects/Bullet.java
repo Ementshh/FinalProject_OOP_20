@@ -1,4 +1,4 @@
-package com.clement.finpro.objects;
+package com.labubushooter.finpro.objects;
 
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Pool;

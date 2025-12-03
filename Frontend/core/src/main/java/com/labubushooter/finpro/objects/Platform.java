@@ -1,4 +1,4 @@
-package com.clement.finpro.objects;
+package com.labubushooter.finpro.objects;
 
 import com.badlogic.gdx.graphics.Texture;
 
