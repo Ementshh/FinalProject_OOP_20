@@ -19,6 +19,9 @@ public class Player extends GameObject {
     final float JUMP_POWER = 450f;
     final float SPEED = 250f;
 
+    // Level Boundaries
+    public static float LEVEL_WIDTH = 2400f;
+
     public Player(Texture tex, ShootingStrategy strategy) {
         super(100, 300, 40, 60, tex);
         this.shootingStrategy = strategy;
@@ -35,6 +38,12 @@ public class Player extends GameObject {
             facingRight = true;
         }
 
+        // Boundary check untuk level yang lebih lebar
+        if (bounds.x < 0)
+            bounds.x = 0;
+        if (bounds.x + bounds.width > LEVEL_WIDTH)
+            bounds.x = LEVEL_WIDTH - bounds.width;
+
         // 2. Gravitasi
         velY += GRAVITY * delta;
         bounds.y += velY * delta;
@@ -43,7 +52,7 @@ public class Player extends GameObject {
         grounded = false;
         for (Platform p : platforms) {
             if (bounds.overlaps(p.bounds)) {
-                if (velY < 0 && bounds.y + bounds.height/2 > p.bounds.y + p.bounds.height) {
+                if (velY < 0 && bounds.y + bounds.height / 2 > p.bounds.y + p.bounds.height) {
                     bounds.y = p.bounds.y + p.bounds.height;
                     velY = 0;
                     grounded = true;
@@ -67,7 +76,7 @@ public class Player extends GameObject {
 
     public void shoot(Array<Bullet> activeBullets, Pool<Bullet> pool) {
         float startX = facingRight ? bounds.x + bounds.width : bounds.x - 10;
-        float startY = bounds.y + bounds.height/2;
+        float startY = bounds.y + bounds.height / 2;
 
         shootingStrategy.shoot(startX, startY, facingRight, activeBullets, pool);
     }
