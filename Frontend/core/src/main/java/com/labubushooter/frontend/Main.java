@@ -93,15 +93,15 @@ public class Main extends ApplicationAdapter {
         // --- WEAPON SWITCHING ---
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) {
             player.setWeapon(pistolStrategy);
-            System.out.println("Switched to Pistol");
+            Gdx.app.log("WeaponSystem", "Pistol Equipped");
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)) {
             player.setWeapon(mac10Strategy);
-            System.out.println("Switched to Mac-10");
+            Gdx.app.log("WeaponSystem", "Mac-10 Equipped");
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_3)) {
             player.setWeapon(null);
-            System.out.println("Switched to Unarmed");
+            Gdx.app.log("WeaponSystem", "Unarmed");
         }
         
         // --- JUMP ---
