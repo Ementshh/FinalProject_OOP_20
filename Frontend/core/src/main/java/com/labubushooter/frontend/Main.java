@@ -19,19 +19,19 @@ public class Main extends ApplicationAdapter {
     SpriteBatch batch;
     OrthographicCamera orthographicCamera;
 
-    static final float LEVEL_WIDTH = 2400f;
     static final float VIEWPORT_WIDTH = 800f;
     static final float VIEWPORT_HEIGHT = 600f;
 
-    // Assets Placeholder
+    private float currentLevelWidth;
+    private int currentLevel = 1;
+    private final float LEVEL_EXIT_THRESHOLD = 100f;
+
     Texture playerTex, platformTex, bulletTex;
     Texture pistolTex, mac10Tex;
 
-    // Game Objects
     Player player;
     Array<Platform> platforms;
 
-    // Object Pool Pattern
     Pool<Bullet> bulletPool;
     Array<Bullet> activeBullets;
 
@@ -65,17 +65,6 @@ public class Main extends ApplicationAdapter {
         };
         activeBullets = new Array<>();
 
-        // 3. Setup Level (Extended untuk scrolling)
-        platforms = new Array<>();
-        platforms.add(new Platform(0, 50, LEVEL_WIDTH, 50, platformTex));
-        platforms.add(new Platform(300, 200, 200, 20, platformTex));
-        platforms.add(new Platform(900, 180, 150, 20, platformTex));
-        platforms.add(new Platform(1200, 280, 180, 20, platformTex));
-        platforms.add(new Platform(1450, 350, 120, 20, platformTex));
-        platforms.add(new Platform(1700, 200, 200, 20, platformTex));
-        platforms.add(new Platform(2000, 300, 150, 20, platformTex));
-        platforms.add(new Platform(2200, 250, 180, 20, platformTex));
-
         pistolStrategy = new PistolStrategy();
         mac10Strategy = new Mac10Strategy();
 
@@ -84,6 +73,81 @@ public class Main extends ApplicationAdapter {
         player.pistolTex = pistolTex;
         player.mac10Tex = mac10Tex;
         player.setWeapon(null);
+
+        loadLevel(currentLevel);
+    }
+
+    private void loadLevel(int level) {
+        // Hapus semua objek dari level-level sebelumnya
+        if (platforms == null) {
+            platforms = new Array<Platform>();
+        } else {
+            platforms.clear();
+        }
+        activeBullets.clear();
+
+        // Atur parmet dan objek level
+        if (level == 1) {
+            currentLevelWidth = 2400f;
+
+            // Reset posisi dari
+            player.bounds.setPosition(100, 300); // Player
+            player.setWeapon(pistolStrategy); // Senjata
+
+            // Initialize Platform
+            platforms.add(new Platform(0, 50, currentLevelWidth, 50, platformTex));
+            platforms.add(new Platform(500, 200, 200, 20, platformTex));
+            platforms.add(new Platform(currentLevelWidth - LEVEL_EXIT_THRESHOLD, 50, LEVEL_EXIT_THRESHOLD, 200, platformTex));
+
+        } else if (level == 2) {
+            currentLevelWidth = 3000f;
+
+            player.bounds.setPosition(100, 300);
+            player.setWeapon(mac10Strategy);
+
+            platforms.add(new Platform(0, 50, currentLevelWidth, 50, platformTex));
+            platforms.add(new Platform(700, 400, 50, 50, platformTex));
+            platforms.add(new Platform(currentLevelWidth - LEVEL_EXIT_THRESHOLD, 50, LEVEL_EXIT_THRESHOLD, 200, platformTex));
+
+        } else if (level == 3) {
+            currentLevelWidth = 3500f;
+            player.bounds.setPosition(100, 300);
+            player.setWeapon(pistolStrategy);
+
+            platforms.add(new Platform(0, 50, currentLevelWidth, 50, platformTex));
+            platforms.add(new Platform(1000, 150, 300, 20, platformTex));
+            platforms.add(new Platform(currentLevelWidth - LEVEL_EXIT_THRESHOLD, 50, LEVEL_EXIT_THRESHOLD, 200, platformTex));
+
+        } else if (level == 4) {
+            currentLevelWidth = 4000f;
+            player.bounds.setPosition(100, 300);
+            player.setWeapon(mac10Strategy);
+
+            platforms.add(new Platform(0, 50, currentLevelWidth, 50, platformTex));
+            platforms.add(new Platform(500, 300, 50, 200, platformTex));
+            platforms.add(new Platform(currentLevelWidth - LEVEL_EXIT_THRESHOLD, 50, LEVEL_EXIT_THRESHOLD, 200, platformTex));
+
+        } else if (level == 5) {
+            currentLevelWidth = 4500f;
+            player.bounds.setPosition(100, 300);
+            player.setWeapon(mac10Strategy);
+
+            platforms.add(new Platform(0, 50, currentLevelWidth, 50, platformTex));
+            platforms.add(new Platform(currentLevelWidth - LEVEL_EXIT_THRESHOLD, 50, LEVEL_EXIT_THRESHOLD, 200, platformTex));
+
+        } else {
+            Gdx.app.log("Game", "ALL LEVELS COMPLETE!");
+            currentLevel = 1;
+            loadLevel(currentLevel);
+            return;
+        }
+
+        Player.LEVEL_WIDTH = currentLevelWidth;
+        currentLevel = level;
+        Gdx.app.log("Game", "Loading Level: " + currentLevel + " with width: " + currentLevelWidth);
+
+        orthographicCamera.position.x = VIEWPORT_WIDTH / 2;
+        orthographicCamera.update();
     }
 
     @Override
@@ -125,10 +189,14 @@ public class Main extends ApplicationAdapter {
         // --- UPDATE ---
         player.update(delta, platforms);
 
+        if (player.bounds.x + player.bounds.width >= currentLevelWidth - LEVEL_EXIT_THRESHOLD) {
+            loadLevel(currentLevel + 1);
+        }
+
         // Update Camera mengikuti Player
         float targetCameraX = player.bounds.x + player.bounds.width / 2;
         // Clamp camera agar tidak keluar dari level boundaries
-        orthographicCamera.position.x = MathUtils.clamp(targetCameraX, VIEWPORT_WIDTH / 2, LEVEL_WIDTH - VIEWPORT_WIDTH / 2);
+        orthographicCamera.position.x = MathUtils.clamp(targetCameraX, VIEWPORT_WIDTH / 2, currentLevelWidth - VIEWPORT_WIDTH / 2);
         orthographicCamera.update();
 
         // Update Peluru
@@ -136,15 +204,11 @@ public class Main extends ApplicationAdapter {
             Bullet b = activeBullets.get(i);
             b.update(delta);
             // Hapus jika keluar layar
-            if (b.bounds.x < 0 || b.bounds.x > LEVEL_WIDTH) {
+            if (b.bounds.x < 0 || b.bounds.x > currentLevelWidth) {
                 activeBullets.removeIndex(i);
                 bulletPool.free(b);
             }
         }
-
-        // Camera Update
-        orthographicCamera.position.x = MathUtils.clamp(targetCameraX, VIEWPORT_WIDTH / 2, LEVEL_WIDTH - VIEWPORT_WIDTH / 2);
-        orthographicCamera.update();
 
         // --- DRAW ---
         Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1);
