@@ -6,4 +6,5 @@ import com.labubushooter.frontend.objects.Bullet;
 
 public interface ShootingStrategy {
     void shoot(float x, float y, boolean facingRight, Array<Bullet> activeBullets, Pool<Bullet> bulletPool);
+    boolean isAutomatic();
 }
