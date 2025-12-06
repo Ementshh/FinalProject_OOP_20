@@ -20,7 +20,7 @@ public class Player extends GameObject {
     final float JUMP_POWER = 450f;
     final float SPEED = 250f;
     public static float LEVEL_WIDTH = 2400f;
-
+    
     public Texture pistolTex;
     public Texture mac10Tex;
 
@@ -48,11 +48,13 @@ public class Player extends GameObject {
             facingRight = true;
         }
 
-        // Boundary check
-        if (bounds.x < 0) bounds.x = 0;
-        if (bounds.x + bounds.width > LEVEL_WIDTH) bounds.x = LEVEL_WIDTH - bounds.width;
+        // Boundary check untuk level yang lebih lebar
+        if (bounds.x < 0)
+            bounds.x = 0;
+        if (bounds.x + bounds.width > LEVEL_WIDTH)
+            bounds.x = LEVEL_WIDTH - bounds.width;
 
-        // Gravity
+        // 2. Gravitasi
         velY += GRAVITY * delta;
         bounds.y += velY * delta;
 

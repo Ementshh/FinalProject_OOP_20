@@ -39,10 +39,15 @@ public class Main extends ApplicationAdapter {
     Mac10Strategy mac10Strategy;
 
     @Override
-    public void create () {
+    public void create() {
         batch = new SpriteBatch();
         orthographicCamera = new OrthographicCamera();
         orthographicCamera.setToOrtho(false, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+
+        // Setup Camera
+        orthographicCamera = new OrthographicCamera();
+        orthographicCamera.setToOrtho(false, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+        orthographicCamera.update();
 
         // 1. Buat Texture Dummy (Kotak Warna)
         playerTex = createColorTexture(40, 60, Color.ORANGE);
@@ -60,7 +65,7 @@ public class Main extends ApplicationAdapter {
         };
         activeBullets = new Array<>();
 
-        // 3. Setup Level
+        // 3. Setup Level (Extended untuk scrolling)
         platforms = new Array<>();
         platforms.add(new Platform(0, 50, LEVEL_WIDTH, 50, platformTex));
         platforms.add(new Platform(300, 200, 200, 20, platformTex));
@@ -82,7 +87,7 @@ public class Main extends ApplicationAdapter {
     }
 
     @Override
-    public void render () {
+    public void render() {
         float delta = Gdx.graphics.getDeltaTime();
 
         // --- WEAPON SWITCHING ---
@@ -98,7 +103,7 @@ public class Main extends ApplicationAdapter {
             player.setWeapon(null);
             System.out.println("Switched to Unarmed");
         }
-
+        
         // --- JUMP ---
         if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) player.jump();
 
@@ -120,6 +125,12 @@ public class Main extends ApplicationAdapter {
         // --- UPDATE ---
         player.update(delta, platforms);
 
+        // Update Camera mengikuti Player
+        float targetCameraX = player.bounds.x + player.bounds.width / 2;
+        // Clamp camera agar tidak keluar dari level boundaries
+        orthographicCamera.position.x = MathUtils.clamp(targetCameraX, VIEWPORT_WIDTH / 2, LEVEL_WIDTH - VIEWPORT_WIDTH / 2);
+        orthographicCamera.update();
+
         // Update Peluru
         for (int i = activeBullets.size - 1; i >= 0; i--) {
             Bullet b = activeBullets.get(i);
@@ -132,18 +143,19 @@ public class Main extends ApplicationAdapter {
         }
 
         // Camera Update
-        float targetCameraX = player.bounds.x + player.bounds.width / 2;
         orthographicCamera.position.x = MathUtils.clamp(targetCameraX, VIEWPORT_WIDTH / 2, LEVEL_WIDTH - VIEWPORT_WIDTH / 2);
         orthographicCamera.update();
 
         // --- DRAW ---
         Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-
+        
         batch.setProjectionMatrix(orthographicCamera.combined);
         batch.begin();
-        for (Platform p : platforms) p.draw(batch);
-        for (Bullet b : activeBullets) batch.draw(bulletTex, b.bounds.x, b.bounds.y);
+        for (Platform p : platforms)
+            p.draw(batch);
+        for (Bullet b : activeBullets)
+            batch.draw(bulletTex, b.bounds.x, b.bounds.y);
         player.draw(batch);
         batch.end();
     }
@@ -158,7 +170,7 @@ public class Main extends ApplicationAdapter {
     }
 
     @Override
-    public void dispose () {
+    public void dispose() {
         batch.dispose();
         playerTex.dispose();
         platformTex.dispose();
