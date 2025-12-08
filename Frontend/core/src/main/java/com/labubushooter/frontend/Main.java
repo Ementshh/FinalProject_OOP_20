@@ -146,9 +146,10 @@ public class Main extends ApplicationAdapter {
             player.setWeapon(null);
             Gdx.app.log("WeaponSystem", "Unarmed");
         }
-        
+
         // --- JUMP ---
-        if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) player.jump();
+        if (Gdx.input.isKeyJustPressed(Input.Keys.UP))
+            player.jump();
 
         // --- SHOOTING ---
         ShootingStrategy currentWeapon = player.getWeapon();
@@ -176,7 +177,8 @@ public class Main extends ApplicationAdapter {
         // Update Camera mengikuti Player
         float targetCameraX = player.bounds.x + player.bounds.width / 2;
         // Clamp camera agar tidak keluar dari level boundaries
-        orthographicCamera.position.x = MathUtils.clamp(targetCameraX, VIEWPORT_WIDTH / 2, currentLevelWidth - VIEWPORT_WIDTH / 2);
+        orthographicCamera.position.x = MathUtils.clamp(targetCameraX, VIEWPORT_WIDTH / 2,
+                currentLevelWidth - VIEWPORT_WIDTH / 2);
         orthographicCamera.update();
 
         // Update Peluru
@@ -193,7 +195,7 @@ public class Main extends ApplicationAdapter {
         // --- DRAW ---
         Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-        
+
         batch.setProjectionMatrix(orthographicCamera.combined);
         batch.begin();
         for (Platform p : platforms)

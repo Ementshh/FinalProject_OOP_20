@@ -1,0 +1,15 @@
+# Folder Sampah (Build & Cache)
+.gradle/
+build/
+bin/
+
+# File Binary & Class (Hasil Compile)
+*.class
+*.bin
+*.lock
+*.probe
+*.uniqueId0
+
+# File JAR (Kecuali Wrapper)
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
