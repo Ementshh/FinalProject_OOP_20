@@ -11,9 +11,14 @@ import com.badlogic.gdx.utils.Pool;
 import com.labubushooter.frontend.objects.Bullet;
 import com.labubushooter.frontend.objects.Platform;
 import com.labubushooter.frontend.objects.Player;
-import com.labubushooter.frontend.patterns.Mac10Strategy;
-import com.labubushooter.frontend.patterns.PistolStrategy;
+import com.labubushooter.frontend.patterns.LevelStrategy;
+import com.labubushooter.frontend.patterns.levels.*;
+import com.labubushooter.frontend.patterns.weapons.Mac10Strategy;
+import com.labubushooter.frontend.patterns.weapons.PistolStrategy;
 import com.labubushooter.frontend.patterns.ShootingStrategy;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class Main extends ApplicationAdapter {
     SpriteBatch batch;
@@ -22,11 +27,13 @@ public class Main extends ApplicationAdapter {
     static final float VIEWPORT_WIDTH = 800f;
     static final float VIEWPORT_HEIGHT = 600f;
 
-    private float currentLevelWidth;
-    private int currentLevel = 1;
     private final float LEVEL_EXIT_THRESHOLD = 100f;
 
-    Texture playerTex, platformTex, bulletTex;
+    private float currentLevelWidth;
+    private int currentLevel = 1;
+    private Map<Integer, LevelStrategy> levelStrategy;
+
+    Texture playerTex, platformTex, bulletTex, exitTex;
     Texture pistolTex, mac10Tex;
 
     Player player;
@@ -49,14 +56,15 @@ public class Main extends ApplicationAdapter {
         orthographicCamera.setToOrtho(false, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
         orthographicCamera.update();
 
-        // 1. Buat Texture Dummy (Kotak Warna)
+        // Buat Texture Dummy (Kotak Warna)
         playerTex = createColorTexture(40, 60, Color.ORANGE);
         platformTex = createColorTexture(100, 20, Color.FOREST);
         bulletTex = createColorTexture(10, 5, Color.YELLOW);
         pistolTex = createColorTexture(20, 10, Color.GRAY);
         mac10Tex = createColorTexture(30, 15, Color.LIME);
+        exitTex = createColorTexture(30, 100, Color.FOREST);
 
-        // 2. Setup Object Pool
+        // Setup Object Pool
         bulletPool = new Pool<Bullet>() {
             @Override
             protected Bullet newObject() {
@@ -74,10 +82,26 @@ public class Main extends ApplicationAdapter {
         player.mac10Tex = mac10Tex;
         player.setWeapon(null);
 
+        // Initialize Level Strategies
+        levelStrategy = new HashMap<>();
+        levelStrategy.put(1, new Level1Strategy());
+        levelStrategy.put(2, new Level2Strategy());
+        levelStrategy.put(3, new Level3Strategy());
+        levelStrategy.put(4, new Level4Strategy());
+        levelStrategy.put(5, new Level5Strategy());
+
         loadLevel(currentLevel);
     }
 
     private void loadLevel(int level) {
+        LevelStrategy strategy = levelStrategy.get(level);
+
+        if (strategy == null) {
+            // Fallback or game complete logic
+            System.out.println("Level " + level + " not found!");
+            return;
+        }
+
         // Hapus semua objek dari level-level sebelumnya
         if (platforms == null) {
             platforms = new Array<Platform>();
@@ -86,68 +110,23 @@ public class Main extends ApplicationAdapter {
         }
         activeBullets.clear();
 
-        // Atur parmet dan objek level
-        if (level == 1) {
-            currentLevelWidth = 2400f;
+        // Set Level Parameters using Strategy
+        currentLevelWidth = strategy.getLevelWidth();
 
-            // Reset posisi dari
-            player.bounds.setPosition(100, 300); // Player
-            player.setWeapon(pistolStrategy); // Senjata
+        // Load Platforms using Strategy
+        strategy.loadPlatforms(platforms, platformTex);
 
-            // Initialize Platform
-            platforms.add(new Platform(0, 50, currentLevelWidth, 50, platformTex));
-            platforms.add(new Platform(500, 200, 200, 20, platformTex));
-            platforms.add(new Platform(currentLevelWidth - LEVEL_EXIT_THRESHOLD, 50, LEVEL_EXIT_THRESHOLD, 200, platformTex));
+        // Reset Player Position using Strategy
+        player.bounds.setPosition(strategy.getPlayerStartX(), strategy.getPlayerStartY());
+    }
 
-        } else if (level == 2) {
-            currentLevelWidth = 3000f;
-
-            player.bounds.setPosition(100, 300);
-            player.setWeapon(mac10Strategy);
-
-            platforms.add(new Platform(0, 50, currentLevelWidth, 50, platformTex));
-            platforms.add(new Platform(700, 400, 50, 50, platformTex));
-            platforms.add(new Platform(currentLevelWidth - LEVEL_EXIT_THRESHOLD, 50, LEVEL_EXIT_THRESHOLD, 200, platformTex));
-
-        } else if (level == 3) {
-            currentLevelWidth = 3500f;
-            player.bounds.setPosition(100, 300);
-            player.setWeapon(pistolStrategy);
-
-            platforms.add(new Platform(0, 50, currentLevelWidth, 50, platformTex));
-            platforms.add(new Platform(1000, 150, 300, 20, platformTex));
-            platforms.add(new Platform(currentLevelWidth - LEVEL_EXIT_THRESHOLD, 50, LEVEL_EXIT_THRESHOLD, 200, platformTex));
-
-        } else if (level == 4) {
-            currentLevelWidth = 4000f;
-            player.bounds.setPosition(100, 300);
-            player.setWeapon(mac10Strategy);
-
-            platforms.add(new Platform(0, 50, currentLevelWidth, 50, platformTex));
-            platforms.add(new Platform(500, 300, 50, 200, platformTex));
-            platforms.add(new Platform(currentLevelWidth - LEVEL_EXIT_THRESHOLD, 50, LEVEL_EXIT_THRESHOLD, 200, platformTex));
-
-        } else if (level == 5) {
-            currentLevelWidth = 4500f;
-            player.bounds.setPosition(100, 300);
-            player.setWeapon(mac10Strategy);
-
-            platforms.add(new Platform(0, 50, currentLevelWidth, 50, platformTex));
-            platforms.add(new Platform(currentLevelWidth - LEVEL_EXIT_THRESHOLD, 50, LEVEL_EXIT_THRESHOLD, 200, platformTex));
-
-        } else {
-            Gdx.app.log("Game", "ALL LEVELS COMPLETE!");
-            currentLevel = 1;
-            loadLevel(currentLevel);
-            return;
-        }
-
-        Player.LEVEL_WIDTH = currentLevelWidth;
-        currentLevel = level;
-        Gdx.app.log("Game", "Loading Level: " + currentLevel + " with width: " + currentLevelWidth);
-
-        orthographicCamera.position.x = VIEWPORT_WIDTH / 2;
-        orthographicCamera.update();
+    private Texture createColorTexture(int width, int height, Color color) {
+        Pixmap pixmap = new Pixmap(width, height, Pixmap.Format.RGBA8888);
+        pixmap.setColor(color);
+        pixmap.fill();
+        Texture tex = new Texture(pixmap);
+        pixmap.dispose();
+        return tex;
     }
 
     @Override
@@ -190,6 +169,7 @@ public class Main extends ApplicationAdapter {
         player.update(delta, platforms);
 
         if (player.bounds.x + player.bounds.width >= currentLevelWidth - LEVEL_EXIT_THRESHOLD) {
+            currentLevel++;
             loadLevel(currentLevel + 1);
         }
 
@@ -218,19 +198,11 @@ public class Main extends ApplicationAdapter {
         batch.begin();
         for (Platform p : platforms)
             p.draw(batch);
+        batch.draw(exitTex, currentLevelWidth - 80, 50);
         for (Bullet b : activeBullets)
             batch.draw(bulletTex, b.bounds.x, b.bounds.y);
         player.draw(batch);
         batch.end();
-    }
-
-    private Texture createColorTexture(int width, int height, Color color) {
-        Pixmap pixmap = new Pixmap(width, height, Pixmap.Format.RGBA8888);
-        pixmap.setColor(color);
-        pixmap.fill();
-        Texture tex = new Texture(pixmap);
-        pixmap.dispose();
-        return tex;
     }
 
     @Override
