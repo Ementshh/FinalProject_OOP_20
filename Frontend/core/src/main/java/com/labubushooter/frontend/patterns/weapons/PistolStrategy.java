@@ -1,9 +1,10 @@
-package com.labubushooter.frontend.patterns;
+package com.labubushooter.frontend.patterns.weapons;
 
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
 import com.badlogic.gdx.utils.TimeUtils;
 import com.labubushooter.frontend.objects.Bullet;
+import com.labubushooter.frontend.patterns.ShootingStrategy;
 
 public class PistolStrategy implements ShootingStrategy {
     private long lastShotTime;
