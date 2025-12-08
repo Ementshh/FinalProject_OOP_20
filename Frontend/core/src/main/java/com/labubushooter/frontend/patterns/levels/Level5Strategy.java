@@ -8,22 +8,27 @@ import com.labubushooter.frontend.patterns.LevelStrategy;
 public class Level5Strategy implements LevelStrategy {
     @Override
     public void loadPlatforms(Array<Platform> platforms, Texture platformTex) {
-        // Ground - spans entire level (single screen, no scrolling)
-        platforms.add(new Platform(0, 50, getLevelWidth(), 50, platformTex));
+        // Oversized ground - extends beyond level boundaries for ultra-wide screens
+        // This ensures no visual gaps regardless of screen resolution
+        platforms.add(new Platform(-1000, 50, 4000, 50, platformTex));
 
-        // Boss arena - all platforms visible at once
-        platforms.add(new Platform(300, 200, 150, 20, platformTex));
-        platforms.add(new Platform(700, 250, 150, 20, platformTex));
-        platforms.add(new Platform(1100, 300, 200, 20, platformTex));
-        platforms.add(new Platform(1500, 200, 150, 20, platformTex));
+        // Boss arena platforms - symmetric layout for combat
+        // Left platform
+        platforms.add(new Platform(100, 200, 150, 20, platformTex));
 
-        // Exit platform
-        platforms.add(new Platform(getLevelWidth() - 100, 50, 100, 200, platformTex));
+        // Right platform
+        platforms.add(new Platform(550, 200, 150, 20, platformTex));
+
+        // Center elevated platform
+        platforms.add(new Platform(300, 350, 200, 20, platformTex));
+
+        // Exit platform at the right edge (visible after boss defeat)
+        platforms.add(new Platform(700, 50, 100, 200, platformTex));
     }
 
     @Override
     public float getLevelWidth() {
-        return 1920f;
+        return 800f;
     }
 
     @Override

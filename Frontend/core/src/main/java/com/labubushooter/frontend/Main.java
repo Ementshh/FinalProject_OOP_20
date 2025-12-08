@@ -124,13 +124,20 @@ public class Main extends ApplicationAdapter {
         // Set Level Parameters using Strategy
         currentLevelWidth = strategy.getLevelWidth();
 
+        // Special handling for Level 5: Match viewport width for perfect edge-to-edge
+        if (level == 5) {
+            currentLevelWidth = Math.max(currentLevelWidth, viewport.getWorldWidth());
+            Gdx.app.log("Level5",
+                    "Dynamic Width: " + currentLevelWidth + " (Viewport: " + viewport.getWorldWidth() + ")");
+        }
+
         // Load Platforms using Strategy
         strategy.loadPlatforms(platforms, platformTex);
 
         // FORCE-ADD: Base ground that spans the ENTIRE level width
-        // This ensures player can walk from 0 to currentLevelWidth regardless of
-        // Strategy design
-        Platform baseGround = new Platform(0, 0, currentLevelWidth, 50, platformTex);
+        // Use extended width for ultra-wide screens (prevents visual gaps)
+        float safeGroundWidth = Math.max(currentLevelWidth, 3000f);
+        Platform baseGround = new Platform(0, 0, safeGroundWidth, 50, platformTex);
         platforms.insert(0, baseGround); // Insert at index 0 so it's drawn first (behind other platforms)
 
         // Reset Player Position using Strategy
@@ -201,14 +208,20 @@ public class Main extends ApplicationAdapter {
         }
 
         // --- CAMERA FOLLOW LOGIC ---
-        // Camera follows player's center position
-        float targetCameraX = player.bounds.x + player.bounds.width / 2;
+        // Robust camera handling for both single-screen and scrolling levels
+        float halfViewport = viewport.getWorldWidth() / 2;
+        float levelMid = currentLevelWidth / 2;
 
-        // Clamp camera to stay within level boundaries
-        camera.position.x = MathUtils.clamp(
-                targetCameraX,
-                viewport.getWorldWidth() / 2,
-                currentLevelWidth - viewport.getWorldWidth() / 2);
+        if (viewport.getWorldWidth() >= currentLevelWidth) {
+            // Case A: Screen is wider than or equal to level (e.g., Level 5)
+            // LOCK camera to the exact center of the level. Do not follow player.
+            camera.position.x = levelMid;
+        } else {
+            // Case B: Level is wider than screen (Scrolling Levels)
+            // Follow player but clamp within bounds
+            float targetX = player.bounds.x + player.bounds.width / 2;
+            camera.position.x = MathUtils.clamp(targetX, halfViewport, currentLevelWidth - halfViewport);
+        }
 
         camera.update();
 
