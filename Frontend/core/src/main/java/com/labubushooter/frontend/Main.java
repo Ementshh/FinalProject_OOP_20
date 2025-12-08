@@ -5,6 +5,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
@@ -17,11 +18,10 @@ import com.labubushooter.frontend.objects.CommonEnemy;
 import com.labubushooter.frontend.objects.Platform;
 import com.labubushooter.frontend.objects.Player;
 import com.labubushooter.frontend.patterns.LevelStrategy;
+import com.labubushooter.frontend.patterns.ShootingStrategy;
 import com.labubushooter.frontend.patterns.levels.*;
 import com.labubushooter.frontend.patterns.weapons.Mac10Strategy;
-import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.labubushooter.frontend.patterns.weapons.PistolStrategy;
-import com.labubushooter.frontend.patterns.ShootingStrategy;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -59,16 +59,16 @@ public class Main extends ApplicationAdapter {
     private long lastEnemySpawnTime;
     private long nextEnemySpawnDelay;
     private Random random;
-    
+
     // Enemy spawn delays per level (in nanoseconds)
     // Level 1: 7-10 seconds
     private static final long LEVEL1_MIN_SPAWN = 6000000000L;
     private static final long LEVEL1_MAX_SPAWN = 8000000000L;
-    
+
     // Level 2: 6-8 seconds
     private static final long LEVEL2_MIN_SPAWN = 5000000000L;
     private static final long LEVEL2_MAX_SPAWN = 8000000000L;
-    
+
     // Level 4: 4-7 seconds
     private static final long LEVEL4_MIN_SPAWN = 4000000000L;
     private static final long LEVEL4_MAX_SPAWN = 7000000000L;
@@ -86,6 +86,8 @@ public class Main extends ApplicationAdapter {
     public void create() {
         batch = new SpriteBatch();
 
+        // Setup Camera with ExtendViewport for fullscreen without black bars
+        // ExtendViewport shows MORE of the level horizontally on wider screens
         camera = new OrthographicCamera();
         viewport = new ExtendViewport(VIEWPORT_WIDTH, VIEWPORT_HEIGHT, camera);
         viewport.apply();
@@ -106,8 +108,8 @@ public class Main extends ApplicationAdapter {
         pistolTex = createColorTexture(20, 10, Color.GRAY);
         mac10Tex = createColorTexture(30, 15, Color.LIME);
         exitTex = createColorTexture(30, 100, Color.FOREST);
-        debugTex = createColorTexture(10, 600, Color.RED);
-        levelIndicatorTex = createColorTexture(30, 30, Color.YELLOW);
+        debugTex = createColorTexture(10, 600, Color.RED); // Debug marker
+        levelIndicatorTex = createColorTexture(30, 30, Color.YELLOW); // Level indicator
         enemyTex = createColorTexture(40, 60, Color.RED);
 
         // Setup Bullet Pool
@@ -151,10 +153,10 @@ public class Main extends ApplicationAdapter {
 
     private void resetEnemySpawnTimer() {
         lastEnemySpawnTime = TimeUtils.nanoTime();
-        
+
         // Set spawn delay based on current level
         long minDelay, maxDelay;
-        
+
         switch (currentLevel) {
             case 1:
                 minDelay = LEVEL1_MIN_SPAWN;
@@ -174,7 +176,7 @@ public class Main extends ApplicationAdapter {
                 maxDelay = 15000000000L;
                 break;
         }
-        
+
         nextEnemySpawnDelay = minDelay + (long)(random.nextFloat() * (maxDelay - minDelay));
     }
 
@@ -183,34 +185,34 @@ public class Main extends ApplicationAdapter {
         do {
             spawnX = random.nextFloat() * (currentLevelWidth - 100);
         } while (Math.abs(spawnX - player.bounds.x) < 200);
-        
+
         CommonEnemy enemy = enemyPool.obtain();
         enemy.init(spawnX, player, currentLevel); // Pass current level
         activeEnemies.add(enemy);
-        
+
         Gdx.app.log("Enemy", "Spawned at X: " + spawnX);
     }
 
     private void restartGame() {
         isGameOver = false;
         currentLevel = 1;
-        
+
         // Clear all enemies
         for (CommonEnemy enemy : activeEnemies) {
             enemyPool.free(enemy);
         }
         activeEnemies.clear();
-        
+
         // Clear all bullets
         activeBullets.clear();
-        
+
         // Reset player
         player.reset();
         player.setWeapon(null);
-        
+
         // Reload level 1
         loadLevel(1);
-        
+
         Gdx.app.log("Game", "Game Restarted");
     }
 
@@ -230,7 +232,7 @@ public class Main extends ApplicationAdapter {
             platforms.clear();
         }
         activeBullets.clear();
-        
+
         // Clear enemies when loading new level
         for (CommonEnemy enemy : activeEnemies) {
             enemyPool.free(enemy);
@@ -240,6 +242,7 @@ public class Main extends ApplicationAdapter {
 
         currentLevelWidth = strategy.getLevelWidth();
 
+        // Special handling for Level 5: Match viewport width for perfect edge-to-edge
         if (level == 5) {
             currentLevelWidth = Math.max(currentLevelWidth, viewport.getWorldWidth());
             Gdx.app.log("Level5",
@@ -248,6 +251,8 @@ public class Main extends ApplicationAdapter {
 
         strategy.loadPlatforms(platforms, platformTex);
 
+        // FORCE-ADD: Base ground that spans the ENTIRE level width
+        // Use extended width for ultra-wide screens (prevents visual gaps)
         float safeGroundWidth = Math.max(currentLevelWidth, 3000f);
         Platform baseGround = new Platform(0, 0, safeGroundWidth, 50, platformTex);
         platforms.insert(0, baseGround);
@@ -280,7 +285,7 @@ public class Main extends ApplicationAdapter {
             if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
                 restartGame();
             }
-            
+
             // Render Game Over Screen
             renderGameOver();
             return;
@@ -314,6 +319,7 @@ public class Main extends ApplicationAdapter {
         // --- SHOOTING ---
         ShootingStrategy currentWeapon = player.getWeapon();
         if (currentWeapon != null) {
+            // Automatic and non-automatic weapon mechanic
             if (currentWeapon.isAutomatic()) {
                 if (Gdx.input.isKeyPressed(Input.Keys.SPACE)) {
                     player.shoot(activeBullets, bulletPool);
@@ -343,7 +349,7 @@ public class Main extends ApplicationAdapter {
         for (int i = activeEnemies.size - 1; i >= 0; i--) {
             CommonEnemy enemy = activeEnemies.get(i);
             enemy.update(delta, platforms);
-            
+
             if (!enemy.isActive()) {
                 activeEnemies.removeIndex(i);
                 enemyPool.free(enemy);
@@ -353,15 +359,15 @@ public class Main extends ApplicationAdapter {
         // Check bullet-enemy collisions
         for (int i = activeEnemies.size - 1; i >= 0; i--) {
             CommonEnemy enemy = activeEnemies.get(i);
-            
+
             for (int j = activeBullets.size - 1; j >= 0; j--) {
                 Bullet bullet = activeBullets.get(j);
-                
+
                 if (enemy.collider.overlaps(bullet.bounds)) {
                     enemy.takeDamage(bullet.damage);
                     activeBullets.removeIndex(j);
                     bulletPool.free(bullet);
-                    
+
                     Gdx.app.log("Combat", "Enemy hit! Health: " + enemy.health);
                     break;
                 }
@@ -374,12 +380,17 @@ public class Main extends ApplicationAdapter {
         }
 
         // --- CAMERA FOLLOW LOGIC ---
+        // Robust camera handling for both single-screen and scrolling levels
         float halfViewport = viewport.getWorldWidth() / 2;
         float levelMid = currentLevelWidth / 2;
 
         if (viewport.getWorldWidth() >= currentLevelWidth) {
+            // Case A: Screen is wider than or equal to level (e.g., Level 5)
+            // LOCK camera to the exact center of the level. Do not follow player.
             camera.position.x = levelMid;
         } else {
+            // Case B: Level is wider than screen (Scrolling Levels)
+            // Follow player but clamp within bounds
             float targetX = player.bounds.x + player.bounds.width / 2;
             camera.position.x = MathUtils.clamp(targetX, halfViewport, currentLevelWidth - halfViewport);
         }
@@ -411,16 +422,16 @@ public class Main extends ApplicationAdapter {
         for (Platform p : platforms)
             p.draw(batch);
         batch.draw(exitTex, currentLevelWidth - 80, 50);
-        
+
         // Draw enemies
         for (CommonEnemy enemy : activeEnemies) {
             enemy.draw(batch);
         }
-        
+
         // Draw bullets
         for (Bullet b : activeBullets)
             batch.draw(bulletTex, b.bounds.x, b.bounds.y);
-            
+
         player.draw(batch);
 
         // Debug markers
