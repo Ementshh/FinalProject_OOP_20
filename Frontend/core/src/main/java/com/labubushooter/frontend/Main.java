@@ -4,23 +4,28 @@ import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.*;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
+import com.badlogic.gdx.utils.TimeUtils;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.labubushooter.frontend.objects.Bullet;
+import com.labubushooter.frontend.objects.CommonEnemy;
 import com.labubushooter.frontend.objects.Platform;
 import com.labubushooter.frontend.objects.Player;
 import com.labubushooter.frontend.patterns.LevelStrategy;
+import com.labubushooter.frontend.patterns.ShootingStrategy;
 import com.labubushooter.frontend.patterns.levels.*;
 import com.labubushooter.frontend.patterns.weapons.Mac10Strategy;
 import com.labubushooter.frontend.patterns.weapons.PistolStrategy;
-import com.labubushooter.frontend.patterns.ShootingStrategy;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
 public class Main extends ApplicationAdapter {
     SpriteBatch batch;
@@ -38,8 +43,13 @@ public class Main extends ApplicationAdapter {
 
     Texture playerTex, platformTex, bulletTex, exitTex;
     Texture pistolTex, mac10Tex;
-    Texture debugTex; // Debug marker untuk level boundaries
-    Texture levelIndicatorTex; // Level indicator marker
+    Texture debugTex;
+    Texture levelIndicatorTex;
+<<<<<<< Updated upstream
+    Texture enemyTex;
+=======
+    Texture enemyTex; // BARU
+>>>>>>> Stashed changes
 
     Player player;
     Array<Platform> platforms;
@@ -47,32 +57,93 @@ public class Main extends ApplicationAdapter {
     Pool<Bullet> bulletPool;
     Array<Bullet> activeBullets;
 
+<<<<<<< Updated upstream
+    // Enemy Pool System
+=======
+    // BARU - Enemy Pool System
+>>>>>>> Stashed changes
+    Pool<CommonEnemy> enemyPool;
+    Array<CommonEnemy> activeEnemies;
+    private long lastEnemySpawnTime;
+    private long nextEnemySpawnDelay;
+    private Random random;
+<<<<<<< Updated upstream
+
+    // Enemy spawn delays per level (in nanoseconds)
+    // Level 1: 7-10 seconds
+    private static final long LEVEL1_MIN_SPAWN = 6000000000L;
+    private static final long LEVEL1_MAX_SPAWN = 8000000000L;
+
+    // Level 2: 6-8 seconds
+    private static final long LEVEL2_MIN_SPAWN = 5000000000L;
+    private static final long LEVEL2_MAX_SPAWN = 8000000000L;
+
+    // Level 4: 4-7 seconds
+    private static final long LEVEL4_MIN_SPAWN = 4000000000L;
+    private static final long LEVEL4_MAX_SPAWN = 7000000000L;
+=======
+    
+    // Enemy spawn delays per level
+    private static final long LEVEL1_MIN_SPAWN = 7000000000L;  // 7 sec
+    private static final long LEVEL1_MAX_SPAWN = 10000000000L; // 10 sec
+    private static final long LEVEL2_MIN_SPAWN = 6000000000L;  // 6 sec
+    private static final long LEVEL2_MAX_SPAWN = 8000000000L;  // 8 sec
+    private static final long LEVEL4_MIN_SPAWN = 4000000000L;  // 4 sec
+    private static final long LEVEL4_MAX_SPAWN = 7000000000L;  // 7 sec
+>>>>>>> Stashed changes
+
     PistolStrategy pistolStrategy;
     Mac10Strategy mac10Strategy;
+
+<<<<<<< Updated upstream
+    // Game Over System
+=======
+    // BARU - Game Over System
+>>>>>>> Stashed changes
+    private boolean isGameOver = false;
+    private BitmapFont font;
+    private BitmapFont smallFont;
+    private GlyphLayout layout;
 
     @Override
     public void create() {
         batch = new SpriteBatch();
 
-        // Setup Camera with ExtendViewport for fullscreen without black bars
-        // ExtendViewport shows MORE of the level horizontally on wider screens
         camera = new OrthographicCamera();
         viewport = new ExtendViewport(VIEWPORT_WIDTH, VIEWPORT_HEIGHT, camera);
         viewport.apply();
         camera.position.set(VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2, 0);
         camera.update();
 
-        // Buat Texture Dummy (Kotak Warna)
+<<<<<<< Updated upstream
+        // Create Fonts
+=======
+        // BARU - Create Fonts
+>>>>>>> Stashed changes
+        font = new BitmapFont();
+        font.getData().setScale(3f);
+        smallFont = new BitmapFont();
+        smallFont.getData().setScale(1.5f);
+        layout = new GlyphLayout();
+
+        // Create Textures
         playerTex = createColorTexture(40, 60, Color.ORANGE);
         platformTex = createColorTexture(100, 20, Color.FOREST);
         bulletTex = createColorTexture(10, 5, Color.YELLOW);
         pistolTex = createColorTexture(20, 10, Color.GRAY);
         mac10Tex = createColorTexture(30, 15, Color.LIME);
         exitTex = createColorTexture(30, 100, Color.FOREST);
+<<<<<<< Updated upstream
         debugTex = createColorTexture(10, 600, Color.RED); // Debug marker
         levelIndicatorTex = createColorTexture(30, 30, Color.YELLOW); // Level indicator
+        enemyTex = createColorTexture(40, 60, Color.RED);
+=======
+        debugTex = createColorTexture(10, 600, Color.RED);
+        levelIndicatorTex = createColorTexture(30, 30, Color.YELLOW);
+        enemyTex = createColorTexture(40, 60, Color.RED); // BARU
+>>>>>>> Stashed changes
 
-        // Setup Object Pool
+        // Setup Bullet Pool
         bulletPool = new Pool<Bullet>() {
             @Override
             protected Bullet newObject() {
@@ -81,10 +152,24 @@ public class Main extends ApplicationAdapter {
         };
         activeBullets = new Array<>();
 
+<<<<<<< Updated upstream
+        // Setup Enemy Pool
+=======
+        // BARU - Setup Enemy Pool
+>>>>>>> Stashed changes
+        random = new Random();
+        enemyPool = new Pool<CommonEnemy>() {
+            @Override
+            protected CommonEnemy newObject() {
+                return new CommonEnemy(enemyTex);
+            }
+        };
+        activeEnemies = new Array<>();
+        resetEnemySpawnTimer();
+
         pistolStrategy = new PistolStrategy();
         mac10Strategy = new Mac10Strategy();
 
-        // Initialize Player without a weapon initially (or pick one)
         player = new Player(playerTex);
         player.pistolTex = pistolTex;
         player.mac10Tex = mac10Tex;
@@ -101,52 +186,166 @@ public class Main extends ApplicationAdapter {
         loadLevel(currentLevel);
     }
 
+<<<<<<< Updated upstream
+    private void resetEnemySpawnTimer() {
+        lastEnemySpawnTime = TimeUtils.nanoTime();
+
+        // Set spawn delay based on current level
+        long minDelay, maxDelay;
+
+=======
+    // BARU - Enemy Spawn Methods
+    private void resetEnemySpawnTimer() {
+        lastEnemySpawnTime = TimeUtils.nanoTime();
+        
+        long minDelay, maxDelay;
+>>>>>>> Stashed changes
+        switch (currentLevel) {
+            case 1:
+                minDelay = LEVEL1_MIN_SPAWN;
+                maxDelay = LEVEL1_MAX_SPAWN;
+                break;
+            case 2:
+                minDelay = LEVEL2_MIN_SPAWN;
+                maxDelay = LEVEL2_MAX_SPAWN;
+                break;
+            case 4:
+                minDelay = LEVEL4_MIN_SPAWN;
+                maxDelay = LEVEL4_MAX_SPAWN;
+                break;
+            default:
+<<<<<<< Updated upstream
+                // Level 3 and 5 don't spawn enemies, but set default just in case
+=======
+>>>>>>> Stashed changes
+                minDelay = 10000000000L;
+                maxDelay = 15000000000L;
+                break;
+        }
+<<<<<<< Updated upstream
+
+        nextEnemySpawnDelay = minDelay + (long)(random.nextFloat() * (maxDelay - minDelay));
+=======
+        
+        nextEnemySpawnDelay = minDelay + (long)(random.nextFloat() * (maxDelay - minDelay));
+        Gdx.app.log("EnemySpawn", "Level " + currentLevel + " - Next spawn in: " + 
+            (nextEnemySpawnDelay / 1000000000f) + " seconds");
+>>>>>>> Stashed changes
+    }
+
+    private void spawnEnemy() {
+        float spawnX;
+        do {
+            spawnX = random.nextFloat() * (currentLevelWidth - 100);
+        } while (Math.abs(spawnX - player.bounds.x) < 200);
+<<<<<<< Updated upstream
+
+        CommonEnemy enemy = enemyPool.obtain();
+        enemy.init(spawnX, player, currentLevel); // Pass current level
+        activeEnemies.add(enemy);
+
+        Gdx.app.log("Enemy", "Spawned at X: " + spawnX);
+    }
+
+    private void restartGame() {
+        isGameOver = false;
+        currentLevel = 1;
+
+        // Clear all enemies
+=======
+        
+        CommonEnemy enemy = enemyPool.obtain();
+        enemy.init(spawnX, player, currentLevel);
+        activeEnemies.add(enemy);
+        
+        Gdx.app.log("Enemy", "Spawned at X: " + spawnX);
+    }
+
+    // BARU - Restart Game
+    private void restartGame() {
+        isGameOver = false;
+        currentLevel = 1;
+        
+>>>>>>> Stashed changes
+        for (CommonEnemy enemy : activeEnemies) {
+            enemyPool.free(enemy);
+        }
+        activeEnemies.clear();
+<<<<<<< Updated upstream
+
+        // Clear all bullets
+        activeBullets.clear();
+
+        // Reset player
+        player.reset();
+        player.setWeapon(null);
+
+        // Reload level 1
+        loadLevel(1);
+
+=======
+        activeBullets.clear();
+        
+        player.reset();
+        player.setWeapon(null);
+        
+        loadLevel(1);
+>>>>>>> Stashed changes
+        Gdx.app.log("Game", "Game Restarted");
+    }
+
     private void loadLevel(int level) {
         LevelStrategy strategy = levelStrategy.get(level);
 
         if (strategy == null) {
-            // Fallback or game complete logic
             System.out.println("Level " + level + " not found!");
             return;
         }
 
-        // Update current level state (FIX: prevents infinite Level 2 loop)
         this.currentLevel = level;
 
-        // Hapus semua objek dari level-level sebelumnya
         if (platforms == null) {
             platforms = new Array<Platform>();
         } else {
             platforms.clear();
         }
         activeBullets.clear();
+        
+        // BARU - Clear enemies
+        for (CommonEnemy enemy : activeEnemies) {
+            enemyPool.free(enemy);
+        }
+        activeEnemies.clear();
+        resetEnemySpawnTimer();
 
-        // Set Level Parameters using Strategy
+<<<<<<< Updated upstream
+        // Clear enemies when loading new level
+        for (CommonEnemy enemy : activeEnemies) {
+            enemyPool.free(enemy);
+        }
+        activeEnemies.clear();
+        resetEnemySpawnTimer();
+
+=======
+>>>>>>> Stashed changes
         currentLevelWidth = strategy.getLevelWidth();
 
-        // Special handling for Level 5: Match viewport width for perfect edge-to-edge
         if (level == 5) {
             currentLevelWidth = Math.max(currentLevelWidth, viewport.getWorldWidth());
             Gdx.app.log("Level5",
                     "Dynamic Width: " + currentLevelWidth + " (Viewport: " + viewport.getWorldWidth() + ")");
         }
 
-        // Load Platforms using Strategy
         strategy.loadPlatforms(platforms, platformTex);
 
-        // FORCE-ADD: Base ground that spans the ENTIRE level width
-        // Use extended width for ultra-wide screens (prevents visual gaps)
         float safeGroundWidth = Math.max(currentLevelWidth, 3000f);
         Platform baseGround = new Platform(0, 0, safeGroundWidth, 50, platformTex);
-        platforms.insert(0, baseGround); // Insert at index 0 so it's drawn first (behind other platforms)
+        platforms.insert(0, baseGround);
 
-        // Reset Player Position using Strategy
         player.bounds.setPosition(strategy.getPlayerStartX(), strategy.getPlayerStartY());
 
-        // Update Player's level width for boundary checking
         Player.LEVEL_WIDTH = currentLevelWidth;
 
-        // Reset camera position
         camera.position.x = VIEWPORT_WIDTH / 2;
         camera.update();
 
@@ -165,6 +364,35 @@ public class Main extends ApplicationAdapter {
     @Override
     public void render() {
         float delta = Gdx.graphics.getDeltaTime();
+
+<<<<<<< Updated upstream
+        // Check for Game Over restart
+=======
+        // BARU - Check for Game Over restart
+>>>>>>> Stashed changes
+        if (isGameOver) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+                restartGame();
+            }
+<<<<<<< Updated upstream
+
+            // Render Game Over Screen
+=======
+>>>>>>> Stashed changes
+            renderGameOver();
+            return;
+        }
+
+<<<<<<< Updated upstream
+        // Check if player is dead
+=======
+        // BARU - Check if player is dead
+>>>>>>> Stashed changes
+        if (player.isDead()) {
+            isGameOver = true;
+            Gdx.app.log("Game", "GAME OVER");
+            return;
+        }
 
         // --- WEAPON SWITCHING ---
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) {
@@ -187,7 +415,6 @@ public class Main extends ApplicationAdapter {
         // --- SHOOTING ---
         ShootingStrategy currentWeapon = player.getWeapon();
         if (currentWeapon != null) {
-            // Automatic and non-automatic weapon mechanic
             if (currentWeapon.isAutomatic()) {
                 if (Gdx.input.isKeyPressed(Input.Keys.SPACE)) {
                     player.shoot(activeBullets, bulletPool);
@@ -202,34 +429,93 @@ public class Main extends ApplicationAdapter {
         // --- UPDATE ---
         player.update(delta, platforms);
 
+<<<<<<< Updated upstream
+        // Spawn enemy based on timer - KECUALI di Level 3 dan 5
+        // Level 1: 7-10 seconds
+        // Level 2: 6-8 seconds
+        // Level 4: 4-7 seconds
+=======
+        // BARU - Spawn enemy (kecuali level 3 & 5)
+>>>>>>> Stashed changes
+        if (currentLevel != 3 && currentLevel != 5) {
+            if (TimeUtils.nanoTime() - lastEnemySpawnTime > nextEnemySpawnDelay) {
+                spawnEnemy();
+                resetEnemySpawnTimer();
+            }
+        }
+
+<<<<<<< Updated upstream
+        // Update enemies dengan platform collision
+        for (int i = activeEnemies.size - 1; i >= 0; i--) {
+            CommonEnemy enemy = activeEnemies.get(i);
+            enemy.update(delta, platforms);
+
+=======
+        // BARU - Update enemies
+        for (int i = activeEnemies.size - 1; i >= 0; i--) {
+            CommonEnemy enemy = activeEnemies.get(i);
+            enemy.update(delta, platforms);
+            
+>>>>>>> Stashed changes
+            if (!enemy.isActive()) {
+                activeEnemies.removeIndex(i);
+                enemyPool.free(enemy);
+            }
+        }
+
+<<<<<<< Updated upstream
+        // Check bullet-enemy collisions
+        for (int i = activeEnemies.size - 1; i >= 0; i--) {
+            CommonEnemy enemy = activeEnemies.get(i);
+
+            for (int j = activeBullets.size - 1; j >= 0; j--) {
+                Bullet bullet = activeBullets.get(j);
+
+=======
+        // BARU - Check bullet-enemy collisions
+        for (int i = activeEnemies.size - 1; i >= 0; i--) {
+            CommonEnemy enemy = activeEnemies.get(i);
+            
+            for (int j = activeBullets.size - 1; j >= 0; j--) {
+                Bullet bullet = activeBullets.get(j);
+                
+>>>>>>> Stashed changes
+                if (enemy.collider.overlaps(bullet.bounds)) {
+                    enemy.takeDamage(bullet.damage);
+                    activeBullets.removeIndex(j);
+                    bulletPool.free(bullet);
+<<<<<<< Updated upstream
+
+=======
+>>>>>>> Stashed changes
+                    Gdx.app.log("Combat", "Enemy hit! Health: " + enemy.health);
+                    break;
+                }
+            }
+        }
+
         // Check Level Exit
         if (player.bounds.x + player.bounds.width >= currentLevelWidth - LEVEL_EXIT_THRESHOLD) {
             loadLevel(currentLevel + 1);
         }
 
         // --- CAMERA FOLLOW LOGIC ---
-        // Robust camera handling for both single-screen and scrolling levels
         float halfViewport = viewport.getWorldWidth() / 2;
         float levelMid = currentLevelWidth / 2;
 
         if (viewport.getWorldWidth() >= currentLevelWidth) {
-            // Case A: Screen is wider than or equal to level (e.g., Level 5)
-            // LOCK camera to the exact center of the level. Do not follow player.
             camera.position.x = levelMid;
         } else {
-            // Case B: Level is wider than screen (Scrolling Levels)
-            // Follow player but clamp within bounds
             float targetX = player.bounds.x + player.bounds.width / 2;
             camera.position.x = MathUtils.clamp(targetX, halfViewport, currentLevelWidth - halfViewport);
         }
 
         camera.update();
 
-        // Update Peluru
+        // Update Bullets
         for (int i = activeBullets.size - 1; i >= 0; i--) {
             Bullet b = activeBullets.get(i);
             b.update(delta);
-            // Hapus jika keluar layar
             if (b.bounds.x < 0 || b.bounds.x > currentLevelWidth) {
                 activeBullets.removeIndex(i);
                 bulletPool.free(b);
@@ -237,35 +523,101 @@ public class Main extends ApplicationAdapter {
         }
 
         // --- DRAW ---
+        renderGame();
+    }
+
+    private void renderGame() {
         Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        // Apply camera projection
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
-        // Draw game objects (bottom layer to top layer)
+        // Draw platforms
         for (Platform p : platforms)
             p.draw(batch);
         batch.draw(exitTex, currentLevelWidth - 80, 50);
+<<<<<<< Updated upstream
+
+        // Draw enemies
+        for (CommonEnemy enemy : activeEnemies) {
+            enemy.draw(batch);
+        }
+
+        // Draw bullets
+=======
+        
+        // BARU - Draw enemies
+        for (CommonEnemy enemy : activeEnemies) {
+            enemy.draw(batch);
+        }
+        
+>>>>>>> Stashed changes
         for (Bullet b : activeBullets)
             batch.draw(bulletTex, b.bounds.x, b.bounds.y);
+
         player.draw(batch);
 
-        // Level indicator di kiri atas layar (fixed position relative to camera)
+        // Debug markers
+        batch.draw(debugTex, 0, 0);
+        batch.draw(debugTex, currentLevelWidth - 10, 0);
+
+        // Level indicator
         float levelIndicatorStartX = camera.position.x - viewport.getWorldWidth() / 2 + 20;
         float levelIndicatorY = camera.position.y + viewport.getWorldHeight() / 2 - 50;
         for (int i = 0; i < currentLevel; i++) {
             batch.draw(levelIndicatorTex, levelIndicatorStartX + (i * 35), levelIndicatorY);
         }
 
+<<<<<<< Updated upstream
+        // Draw Health Bar
+=======
+        // BARU - Health Display
+>>>>>>> Stashed changes
+        String healthText = "HP: " + (int)player.health + "/" + (int)Player.MAX_HEALTH;
+        float healthX = camera.position.x - viewport.getWorldWidth() / 2 + 20;
+        float healthY = camera.position.y + viewport.getWorldHeight() / 2 - 80;
+        smallFont.draw(batch, healthText, healthX, healthY);
+
+        batch.end();
+    }
+
+<<<<<<< Updated upstream
+=======
+    // BARU - Game Over Screen
+>>>>>>> Stashed changes
+    private void renderGameOver() {
+        Gdx.gl.glClearColor(0.1f, 0.1f, 0.1f, 1);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
+
+<<<<<<< Updated upstream
+        // Draw "GAME OVER" text
+=======
+>>>>>>> Stashed changes
+        String gameOverText = "GAME OVER";
+        layout.setText(font, gameOverText);
+        float gameOverX = camera.position.x - layout.width / 2;
+        float gameOverY = camera.position.y + 50;
+        font.draw(batch, gameOverText, gameOverX, gameOverY);
+
+<<<<<<< Updated upstream
+        // Draw "press space to restart" text
+=======
+>>>>>>> Stashed changes
+        String restartText = "Press SPACE to restart";
+        layout.setText(smallFont, restartText);
+        float restartX = camera.position.x - layout.width / 2;
+        float restartY = camera.position.y - 20;
+        smallFont.draw(batch, restartText, restartX, restartY);
+
         batch.end();
     }
 
     @Override
     public void resize(int width, int height) {
-        // Update viewport when window is resized or fullscreen toggled
-        // The 'true' parameter centers the camera
         viewport.update(width, height, true);
     }
 
@@ -277,5 +629,14 @@ public class Main extends ApplicationAdapter {
         bulletTex.dispose();
         debugTex.dispose();
         levelIndicatorTex.dispose();
+<<<<<<< Updated upstream
+        enemyTex.dispose();
+        font.dispose();
+        smallFont.dispose();
+=======
+        enemyTex.dispose(); // BARU
+        font.dispose(); // BARU
+        smallFont.dispose(); // BARU
+>>>>>>> Stashed changes
     }
 }
