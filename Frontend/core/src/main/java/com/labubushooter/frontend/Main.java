@@ -39,6 +39,7 @@ public class Main extends ApplicationAdapter {
     Texture playerTex, platformTex, bulletTex, exitTex;
     Texture pistolTex, mac10Tex;
     Texture debugTex; // Debug marker untuk level boundaries
+    Texture levelIndicatorTex; // Level indicator marker
 
     Player player;
     Array<Platform> platforms;
@@ -69,6 +70,7 @@ public class Main extends ApplicationAdapter {
         mac10Tex = createColorTexture(30, 15, Color.LIME);
         exitTex = createColorTexture(30, 100, Color.FOREST);
         debugTex = createColorTexture(10, 600, Color.RED); // Debug marker
+        levelIndicatorTex = createColorTexture(30, 30, Color.YELLOW); // Level indicator
 
         // Setup Object Pool
         bulletPool = new Pool<Bullet>() {
@@ -107,6 +109,9 @@ public class Main extends ApplicationAdapter {
             System.out.println("Level " + level + " not found!");
             return;
         }
+
+        // Update current level state (FIX: prevents infinite Level 2 loop)
+        this.currentLevel = level;
 
         // Hapus semua objek dari level-level sebelumnya
         if (platforms == null) {
@@ -238,6 +243,13 @@ public class Main extends ApplicationAdapter {
         batch.draw(debugTex, 0, 0); // Start marker (red strip at x=0)
         batch.draw(debugTex, currentLevelWidth - 10, 0); // End marker (red strip at level end)
 
+        // Level indicator di kiri atas layar (fixed position relative to camera)
+        float levelIndicatorStartX = camera.position.x - viewport.getWorldWidth() / 2 + 20;
+        float levelIndicatorY = camera.position.y + viewport.getWorldHeight() / 2 - 50;
+        for (int i = 0; i < currentLevel; i++) {
+            batch.draw(levelIndicatorTex, levelIndicatorStartX + (i * 35), levelIndicatorY);
+        }
+
         batch.end();
     }
 
@@ -255,5 +267,6 @@ public class Main extends ApplicationAdapter {
         platformTex.dispose();
         bulletTex.dispose();
         debugTex.dispose();
+        levelIndicatorTex.dispose();
     }
 }
