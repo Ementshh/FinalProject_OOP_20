@@ -21,9 +21,6 @@ public class Level5Strategy implements LevelStrategy {
 
         // Center elevated platform
         platforms.add(new Platform(300, 350, 200, 20, platformTex));
-
-        // Exit platform at the right edge (visible after boss defeat)
-        platforms.add(new Platform(700, 50, 100, 200, platformTex));
     }
 
     @Override

@@ -127,10 +127,10 @@ public class Main extends ApplicationAdapter {
 
         // Boss textures
         miniBossTex = createColorTexture(60, 90, Color.PURPLE);
-        bossTex = createColorTexture(80, 120, Color.MAROON);
+        bossTex = createColorTexture(60, 100, Color.MAROON);
         enemyBulletTex = createColorTexture(8, 8, Color.ORANGE);
         whiteFlashTex = createColorTexture(60, 90, Color.WHITE);
-        redFlashTex = createColorTexture(80, 120, Color.RED);
+        redFlashTex = createColorTexture(60, 100, Color.RED);
 
         // Setup Bullet Pool
         bulletPool = new Pool<Bullet>() {
@@ -347,6 +347,16 @@ public class Main extends ApplicationAdapter {
             isGameOver = true;
             Gdx.app.log("Game", "GAME OVER");
             return;
+        }
+
+        // --- SECRET LEVEL SKIP ---
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F3)) {
+            loadLevel(3);
+            Gdx.app.log("Debug", "Skipped to Level 3 (Mini Boss)");
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F5)) {
+            loadLevel(5);
+            Gdx.app.log("Debug", "Skipped to Level 5 (Final Boss)");
         }
 
         // --- WEAPON SWITCHING ---
@@ -570,10 +580,17 @@ public class Main extends ApplicationAdapter {
         }
 
         // Debug markers
-        batch.draw(debugTex, 0, 0);
-        batch.draw(debugTex, currentLevelWidth - 10, 0);
-
-        // Level indicator
+        if (currentLevel == 5) {
+            // Level 5: Draw at viewport edges for fullscreen
+            float leftEdge = camera.position.x - viewport.getWorldWidth() / 2;
+            float rightEdge = camera.position.x + viewport.getWorldWidth() / 2 - 10;
+            batch.draw(debugTex, leftEdge, 0);
+            batch.draw(debugTex, rightEdge, 0);
+        } else {
+            // Other levels: Draw at level boundaries
+            batch.draw(debugTex, 0, 0);
+            batch.draw(debugTex, currentLevelWidth - 10, 0);
+        } // Level indicator
         float levelIndicatorStartX = camera.position.x - viewport.getWorldWidth() / 2 + 20;
         float levelIndicatorY = camera.position.y + viewport.getWorldHeight() / 2 - 50;
         for (int i = 0; i < currentLevel; i++) {

@@ -23,11 +23,12 @@ public class FinalBoss extends BossEnemy {
     private float shootCooldown;
     private float shootTimer;
 
-    // Phase 1: Melee only
-    private static final float PHASE1_SPEED = 100f;
+    // Phase 1: Single bullet attack
+    private static final float PHASE1_SPEED = 140f;
+    private static final float PHASE1_COOLDOWN = 4.0f;
 
     // Phase 2: Spread attack
-    private static final float PHASE2_SPEED = 150f;
+    private static final float PHASE2_SPEED = 160f;
     private static final float PHASE2_COOLDOWN = 3.0f;
     private static final int PHASE2_BULLET_COUNT = 3;
     private static final float PHASE2_SPREAD_ANGLE = 20f;
@@ -49,10 +50,10 @@ public class FinalBoss extends BossEnemy {
     private Texture enemyBulletTex;
 
     public FinalBoss(Texture tex, Texture flashTex, Texture bulletTex) {
-        super(0, 0, 80, 120, 400, 8.0f, tex, flashTex);
+        super(0, 0, 60, 100, 400, 8.0f, tex, flashTex);
         this.enemyBulletTex = bulletTex;
         this.currentSpeed = PHASE1_SPEED;
-        this.shootCooldown = 999f; // Phase 1 doesn't shoot
+        this.shootCooldown = PHASE1_COOLDOWN;
         this.shootTimer = shootCooldown;
     }
 
@@ -64,7 +65,7 @@ public class FinalBoss extends BossEnemy {
         grounded = false;
         currentPhase = 1;
         currentSpeed = PHASE1_SPEED;
-        shootCooldown = 999f;
+        shootCooldown = PHASE1_COOLDOWN;
         shootTimer = shootCooldown;
         phaseTransitionTimer = 0f;
         shouldFlash = false;
@@ -107,13 +108,11 @@ public class FinalBoss extends BossEnemy {
         // Check for phase changes
         updatePhase();
 
-        // Shooting (Phase 2 and 3 only)
-        if (currentPhase >= 2) {
-            shootTimer -= delta;
-            if (shootTimer <= 0) {
-                shootPattern(bullets, bulletPool, player);
-                shootTimer = shootCooldown;
-            }
+        // Shooting (all phases)
+        shootTimer -= delta;
+        if (shootTimer <= 0) {
+            shootPattern(bullets, bulletPool, player);
+            shootTimer = shootCooldown;
         }
 
         // Movement AI
@@ -175,7 +174,11 @@ public class FinalBoss extends BossEnemy {
         float dy = player.bounds.y + player.bounds.height / 2 - (bounds.y + bounds.height / 2);
         float baseAngle = (float) Math.toDegrees(Math.atan2(dy, dx));
 
-        if (currentPhase == 2) {
+        if (currentPhase == 1) {
+            // Phase 1: Single bullet aimed at player
+            spawnBullet(bullets, bulletPool, baseAngle);
+            Gdx.app.log("Boss", "Single shot!");
+        } else if (currentPhase == 2) {
             // Phase 2: 3-bullet spread (-20°, 0°, +20°)
             for (int i = 0; i < PHASE2_BULLET_COUNT; i++) {
                 float angleOffset = (i - 1) * PHASE2_SPREAD_ANGLE; // -20, 0, 20

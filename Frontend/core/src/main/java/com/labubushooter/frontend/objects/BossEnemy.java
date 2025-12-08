@@ -88,16 +88,34 @@ public abstract class BossEnemy {
         grounded = false;
         for (Platform p : platforms) {
             if (bounds.overlaps(p.bounds)) {
-                // Landing on top
-                if (velY < 0 && bounds.y < p.bounds.y + p.bounds.height) {
+                // Calculate overlap amounts
+                float overlapBottom = (bounds.y + bounds.height) - p.bounds.y;
+                float overlapTop = (p.bounds.y + p.bounds.height) - bounds.y;
+                float overlapLeft = (bounds.x + bounds.width) - p.bounds.x;
+                float overlapRight = (p.bounds.x + p.bounds.width) - bounds.x;
+
+                // Determine smallest overlap to find collision side
+                float minOverlap = Math.min(Math.min(overlapBottom, overlapTop), Math.min(overlapLeft, overlapRight));
+
+                // Landing on top (falling down)
+                if (minOverlap == overlapTop && velY <= 0 && overlapTop > 0 && overlapTop < bounds.height) {
                     bounds.y = p.bounds.y + p.bounds.height;
                     velY = 0;
                     grounded = true;
                 }
-                // Hitting ceiling
-                else if (velY > 0 && bounds.y + bounds.height > p.bounds.y) {
+                // Hitting ceiling (jumping up)
+                else if (minOverlap == overlapBottom && velY > 0 && overlapBottom > 0
+                        && overlapBottom < bounds.height) {
                     bounds.y = p.bounds.y - bounds.height;
                     velY = 0;
+                }
+                // Hitting from left
+                else if (minOverlap == overlapLeft && overlapLeft > 0 && overlapLeft < bounds.width) {
+                    bounds.x = p.bounds.x - bounds.width;
+                }
+                // Hitting from right
+                else if (minOverlap == overlapRight && overlapRight > 0 && overlapRight < bounds.width) {
+                    bounds.x = p.bounds.x + p.bounds.width;
                 }
             }
         }
