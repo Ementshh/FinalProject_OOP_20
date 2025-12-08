@@ -12,7 +12,7 @@ public class Level4Strategy implements LevelStrategy {
         platforms.add(new Platform(0, 50, getLevelWidth(), 50, platformTex));
 
         // Vertical tower climbing pattern
-        platforms.add(new Platform(500, 150, 50, 200, platformTex)); // Wall
+        // platforms.add(new Platform(500, 150, 50, 200, platformTex)); // Wall
         platforms.add(new Platform(700, 300, 150, 20, platformTex));
         platforms.add(new Platform(1000, 200, 150, 20, platformTex));
         platforms.add(new Platform(1300, 350, 200, 20, platformTex));
