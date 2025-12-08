@@ -252,10 +252,6 @@ public class Main extends ApplicationAdapter {
             batch.draw(bulletTex, b.bounds.x, b.bounds.y);
         player.draw(batch);
 
-        // Debug markers drawn LAST (on top of everything for visibility)
-        batch.draw(debugTex, 0, 0); // Start marker (red strip at x=0)
-        batch.draw(debugTex, currentLevelWidth - 10, 0); // End marker (red strip at level end)
-
         // Level indicator di kiri atas layar (fixed position relative to camera)
         float levelIndicatorStartX = camera.position.x - viewport.getWorldWidth() / 2 + 20;
         float levelIndicatorY = camera.position.y + viewport.getWorldHeight() / 2 - 50;
