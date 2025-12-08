@@ -8,6 +8,8 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
+import com.badlogic.gdx.utils.viewport.ExtendViewport;
+import com.badlogic.gdx.utils.viewport.Viewport;
 import com.labubushooter.frontend.objects.Bullet;
 import com.labubushooter.frontend.objects.Platform;
 import com.labubushooter.frontend.objects.Player;
@@ -22,7 +24,8 @@ import java.util.Map;
 
 public class Main extends ApplicationAdapter {
     SpriteBatch batch;
-    OrthographicCamera orthographicCamera;
+    OrthographicCamera camera;
+    Viewport viewport;
 
     static final float VIEWPORT_WIDTH = 800f;
     static final float VIEWPORT_HEIGHT = 600f;
@@ -35,6 +38,8 @@ public class Main extends ApplicationAdapter {
 
     Texture playerTex, platformTex, bulletTex, exitTex;
     Texture pistolTex, mac10Tex;
+    Texture debugTex; // Debug marker untuk level boundaries
+    Texture levelIndicatorTex; // Level indicator marker
 
     Player player;
     Array<Platform> platforms;
@@ -48,13 +53,14 @@ public class Main extends ApplicationAdapter {
     @Override
     public void create() {
         batch = new SpriteBatch();
-        orthographicCamera = new OrthographicCamera();
-        orthographicCamera.setToOrtho(false, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 
-        // Setup Camera
-        orthographicCamera = new OrthographicCamera();
-        orthographicCamera.setToOrtho(false, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
-        orthographicCamera.update();
+        // Setup Camera with ExtendViewport for fullscreen without black bars
+        // ExtendViewport shows MORE of the level horizontally on wider screens
+        camera = new OrthographicCamera();
+        viewport = new ExtendViewport(VIEWPORT_WIDTH, VIEWPORT_HEIGHT, camera);
+        viewport.apply();
+        camera.position.set(VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2, 0);
+        camera.update();
 
         // Buat Texture Dummy (Kotak Warna)
         playerTex = createColorTexture(40, 60, Color.ORANGE);
@@ -63,6 +69,8 @@ public class Main extends ApplicationAdapter {
         pistolTex = createColorTexture(20, 10, Color.GRAY);
         mac10Tex = createColorTexture(30, 15, Color.LIME);
         exitTex = createColorTexture(30, 100, Color.FOREST);
+        debugTex = createColorTexture(10, 600, Color.RED); // Debug marker
+        levelIndicatorTex = createColorTexture(30, 30, Color.YELLOW); // Level indicator
 
         // Setup Object Pool
         bulletPool = new Pool<Bullet>() {
@@ -102,6 +110,9 @@ public class Main extends ApplicationAdapter {
             return;
         }
 
+        // Update current level state (FIX: prevents infinite Level 2 loop)
+        this.currentLevel = level;
+
         // Hapus semua objek dari level-level sebelumnya
         if (platforms == null) {
             platforms = new Array<Platform>();
@@ -113,11 +124,33 @@ public class Main extends ApplicationAdapter {
         // Set Level Parameters using Strategy
         currentLevelWidth = strategy.getLevelWidth();
 
+        // Special handling for Level 5: Match viewport width for perfect edge-to-edge
+        if (level == 5) {
+            currentLevelWidth = Math.max(currentLevelWidth, viewport.getWorldWidth());
+            Gdx.app.log("Level5",
+                    "Dynamic Width: " + currentLevelWidth + " (Viewport: " + viewport.getWorldWidth() + ")");
+        }
+
         // Load Platforms using Strategy
         strategy.loadPlatforms(platforms, platformTex);
 
+        // FORCE-ADD: Base ground that spans the ENTIRE level width
+        // Use extended width for ultra-wide screens (prevents visual gaps)
+        float safeGroundWidth = Math.max(currentLevelWidth, 3000f);
+        Platform baseGround = new Platform(0, 0, safeGroundWidth, 50, platformTex);
+        platforms.insert(0, baseGround); // Insert at index 0 so it's drawn first (behind other platforms)
+
         // Reset Player Position using Strategy
         player.bounds.setPosition(strategy.getPlayerStartX(), strategy.getPlayerStartY());
+
+        // Update Player's level width for boundary checking
+        Player.LEVEL_WIDTH = currentLevelWidth;
+
+        // Reset camera position
+        camera.position.x = VIEWPORT_WIDTH / 2;
+        camera.update();
+
+        Gdx.app.log("Game", "Loaded Level " + level + " | Width: " + currentLevelWidth);
     }
 
     private Texture createColorTexture(int width, int height, Color color) {
@@ -169,17 +202,28 @@ public class Main extends ApplicationAdapter {
         // --- UPDATE ---
         player.update(delta, platforms);
 
+        // Check Level Exit
         if (player.bounds.x + player.bounds.width >= currentLevelWidth - LEVEL_EXIT_THRESHOLD) {
-            currentLevel++;
             loadLevel(currentLevel + 1);
         }
 
-        // Update Camera mengikuti Player
-        float targetCameraX = player.bounds.x + player.bounds.width / 2;
-        // Clamp camera agar tidak keluar dari level boundaries
-        orthographicCamera.position.x = MathUtils.clamp(targetCameraX, VIEWPORT_WIDTH / 2,
-                currentLevelWidth - VIEWPORT_WIDTH / 2);
-        orthographicCamera.update();
+        // --- CAMERA FOLLOW LOGIC ---
+        // Robust camera handling for both single-screen and scrolling levels
+        float halfViewport = viewport.getWorldWidth() / 2;
+        float levelMid = currentLevelWidth / 2;
+
+        if (viewport.getWorldWidth() >= currentLevelWidth) {
+            // Case A: Screen is wider than or equal to level (e.g., Level 5)
+            // LOCK camera to the exact center of the level. Do not follow player.
+            camera.position.x = levelMid;
+        } else {
+            // Case B: Level is wider than screen (Scrolling Levels)
+            // Follow player but clamp within bounds
+            float targetX = player.bounds.x + player.bounds.width / 2;
+            camera.position.x = MathUtils.clamp(targetX, halfViewport, currentLevelWidth - halfViewport);
+        }
+
+        camera.update();
 
         // Update Peluru
         for (int i = activeBullets.size - 1; i >= 0; i--) {
@@ -196,15 +240,37 @@ public class Main extends ApplicationAdapter {
         Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        batch.setProjectionMatrix(orthographicCamera.combined);
+        // Apply camera projection
+        batch.setProjectionMatrix(camera.combined);
         batch.begin();
+
+        // Draw game objects (bottom layer to top layer)
         for (Platform p : platforms)
             p.draw(batch);
         batch.draw(exitTex, currentLevelWidth - 80, 50);
         for (Bullet b : activeBullets)
             batch.draw(bulletTex, b.bounds.x, b.bounds.y);
         player.draw(batch);
+
+        // Debug markers drawn LAST (on top of everything for visibility)
+        batch.draw(debugTex, 0, 0); // Start marker (red strip at x=0)
+        batch.draw(debugTex, currentLevelWidth - 10, 0); // End marker (red strip at level end)
+
+        // Level indicator di kiri atas layar (fixed position relative to camera)
+        float levelIndicatorStartX = camera.position.x - viewport.getWorldWidth() / 2 + 20;
+        float levelIndicatorY = camera.position.y + viewport.getWorldHeight() / 2 - 50;
+        for (int i = 0; i < currentLevel; i++) {
+            batch.draw(levelIndicatorTex, levelIndicatorStartX + (i * 35), levelIndicatorY);
+        }
+
         batch.end();
+    }
+
+    @Override
+    public void resize(int width, int height) {
+        // Update viewport when window is resized or fullscreen toggled
+        // The 'true' parameter centers the camera
+        viewport.update(width, height, true);
     }
 
     @Override
@@ -213,5 +279,7 @@ public class Main extends ApplicationAdapter {
         playerTex.dispose();
         platformTex.dispose();
         bulletTex.dispose();
+        debugTex.dispose();
+        levelIndicatorTex.dispose();
     }
 }
