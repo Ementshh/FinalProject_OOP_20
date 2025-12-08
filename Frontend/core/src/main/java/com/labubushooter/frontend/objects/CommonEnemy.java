@@ -27,13 +27,21 @@ public class CommonEnemy implements Pool.Poolable {
     private static final long DAMAGE_COOLDOWN = 1000000000L; // 1 second in nanoseconds
 
     // Jump System
+<<<<<<< Updated upstream
     private static final float JUMP_POWER = 500f; 
+=======
+    private static final float JUMP_POWER = 500f; // Sama dengan player
+>>>>>>> Stashed changes
     private static final float JUMP_THRESHOLD = 10f; // Threshold untuk X-axis alignment
 
     private static final float GRAVITY = -900f;
     private static final float WIDTH = 40f;
     private static final float HEIGHT = 60f;
+<<<<<<< Updated upstream
     private static final float SPAWN_Y = 300f; // Ground + 1f
+=======
+    private static final float SPAWN_Y = 300f; // Ground (50f) + 1f
+>>>>>>> Stashed changes
     
     // Base speed untuk multiplier
     private static final float BASE_SPEED = 100f;
@@ -60,17 +68,29 @@ public class CommonEnemy implements Pool.Poolable {
             case 1:
                 this.maxHealth = 10f;
                 this.damageAmount = 1f;
+<<<<<<< Updated upstream
                 this.speed = BASE_SPEED * 1.2f; // 1.2x lebih cepat
+=======
+                this.speed = BASE_SPEED * 1.2f; // 120 speed
+>>>>>>> Stashed changes
                 break;
             case 2:
                 this.maxHealth = 15f;
                 this.damageAmount = 1.5f;
+<<<<<<< Updated upstream
                 this.speed = BASE_SPEED * 1.5f; // 1.5x lebih cepat
+=======
+                this.speed = BASE_SPEED * 1.5f; // 150 speed
+>>>>>>> Stashed changes
                 break;
             case 4:
                 this.maxHealth = 20f;
                 this.damageAmount = 1.5f;
+<<<<<<< Updated upstream
                 this.speed = BASE_SPEED * 1.8f; // 1.8x lebih cepat
+=======
+                this.speed = BASE_SPEED * 1.8f; // 180 speed
+>>>>>>> Stashed changes
                 break;
             default:
                 this.maxHealth = 10f;

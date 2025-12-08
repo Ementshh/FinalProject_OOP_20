@@ -14,6 +14,7 @@ public class Player extends GameObject {
     public boolean grounded = false;
     public boolean facingRight = true;
 
+<<<<<<< Updated upstream
     // Health System
     public float health;
     public static final float MAX_HEALTH = 20f;
@@ -23,6 +24,17 @@ public class Player extends GameObject {
     private long lastRegenTime;
     private static final long REGEN_DELAY = 5000000000L; // 5 seconds in nanoseconds
     private static final long REGEN_INTERVAL = 2000000000L; // 2 seconds in nanoseconds
+=======
+    // Health System - BARU
+    public float health;
+    public static final float MAX_HEALTH = 20f;
+    
+    // Health Regeneration System - BARU
+    private long lastDamageTime;
+    private long lastRegenTime;
+    private static final long REGEN_DELAY = 5000000000L; // 5 seconds
+    private static final long REGEN_INTERVAL = 2000000000L; // 2 seconds
+>>>>>>> Stashed changes
     private static final float REGEN_AMOUNT = 1f;
 
     // Strategy Pattern: The behavior of shooting is encapsulated in this interface
@@ -39,9 +51,15 @@ public class Player extends GameObject {
     public Player(Texture tex) {
         super(100, 300, 40, 60, tex);
         this.shootingStrategy = null;
+<<<<<<< Updated upstream
         this.health = MAX_HEALTH;
         this.lastDamageTime = TimeUtils.nanoTime();
         this.lastRegenTime = TimeUtils.nanoTime();
+=======
+        this.health = MAX_HEALTH; // BARU
+        this.lastDamageTime = TimeUtils.nanoTime(); // BARU
+        this.lastRegenTime = TimeUtils.nanoTime(); // BARU
+>>>>>>> Stashed changes
     }
 
     public void setWeapon(ShootingStrategy strategy) {
@@ -52,10 +70,18 @@ public class Player extends GameObject {
         return this.shootingStrategy;
     }
 
+<<<<<<< Updated upstream
     public void takeDamage(float damage) {
         health -= damage;
         if (health < 0) health = 0;
         lastDamageTime = TimeUtils.nanoTime(); // Reset damage timer
+=======
+    // BARU - Health Methods
+    public void takeDamage(float damage) {
+        health -= damage;
+        if (health < 0) health = 0;
+        lastDamageTime = TimeUtils.nanoTime();
+>>>>>>> Stashed changes
         Gdx.app.log("Player", "Health: " + health);
     }
 
@@ -74,7 +100,11 @@ public class Player extends GameObject {
     }
 
     public void update(float delta, Array<Platform> platforms) {
+<<<<<<< Updated upstream
         // Health Regeneration Logic
+=======
+        // BARU - Health Regeneration Logic
+>>>>>>> Stashed changes
         long currentTime = TimeUtils.nanoTime();
         if (health < MAX_HEALTH && currentTime - lastDamageTime > REGEN_DELAY) {
             if (currentTime - lastRegenTime > REGEN_INTERVAL) {
@@ -95,13 +125,13 @@ public class Player extends GameObject {
             facingRight = true;
         }
 
-        // Boundary check untuk level yang lebih lebar
+        // Boundary check
         if (bounds.x < 0)
             bounds.x = 0;
         if (bounds.x + bounds.width > LEVEL_WIDTH)
             bounds.x = LEVEL_WIDTH - bounds.width;
 
-        // 2. Gravitasi
+        // Gravitasi
         velY += GRAVITY * delta;
         bounds.y += velY * delta;
 
@@ -142,10 +172,10 @@ public class Player extends GameObject {
 
     @Override
     public void draw(SpriteBatch batch) {
-        // 1. Draw Player Body
+        // Draw Player Body
         batch.draw(texture, bounds.x, bounds.y, bounds.width, bounds.height);
 
-        // 2. Draw Weapon Hitbox (if holding one)
+        // Draw Weapon
         if (shootingStrategy != null) {
             Texture currentWeaponTex = null;
             float w = 0, h = 0;
