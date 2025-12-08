@@ -132,7 +132,7 @@ public class Main extends ApplicationAdapter {
                     new Platform(currentLevelWidth - LEVEL_EXIT_THRESHOLD, 50, LEVEL_EXIT_THRESHOLD, 200, platformTex));
 
         } else if (level == 5) {
-            currentLevelWidth = 1920f;
+            currentLevelWidth = 1067f;
             player.bounds.setPosition(100, 300);
             player.setWeapon(mac10Strategy);
 

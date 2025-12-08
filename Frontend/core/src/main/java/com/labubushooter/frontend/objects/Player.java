@@ -20,7 +20,7 @@ public class Player extends GameObject {
     final float JUMP_POWER = 450f;
     final float SPEED = 250f;
     public static float LEVEL_WIDTH = 2400f;
-    
+
     public Texture pistolTex;
     public Texture mac10Tex;
 
@@ -85,7 +85,8 @@ public class Player extends GameObject {
     }
 
     public void shoot(Array<Bullet> activeBullets, Pool<Bullet> pool) {
-        if (shootingStrategy == null) return; // Cannot shoot if holding nothing
+        if (shootingStrategy == null)
+            return; // Cannot shoot if holding nothing
 
         float startX = facingRight ? bounds.x + bounds.width + 10 : bounds.x - 10;
         float startY = bounds.y + (bounds.height / 2) - 5.5f;
@@ -106,10 +107,12 @@ public class Player extends GameObject {
 
             if (strategyName.contains("Pistol")) {
                 currentWeaponTex = pistolTex;
-                w = 20; h = 10;
+                w = 20;
+                h = 10;
             } else if (strategyName.contains("Mac10")) {
                 currentWeaponTex = mac10Tex;
-                w = 30; h = 15;
+                w = 30;
+                h = 15;
             }
 
             if (currentWeaponTex != null) {
