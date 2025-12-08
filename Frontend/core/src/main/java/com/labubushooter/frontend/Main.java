@@ -8,6 +8,8 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
+import com.badlogic.gdx.utils.viewport.ExtendViewport;
+import com.badlogic.gdx.utils.viewport.Viewport;
 import com.labubushooter.frontend.objects.Bullet;
 import com.labubushooter.frontend.objects.Platform;
 import com.labubushooter.frontend.objects.Player;
@@ -22,7 +24,8 @@ import java.util.Map;
 
 public class Main extends ApplicationAdapter {
     SpriteBatch batch;
-    OrthographicCamera orthographicCamera;
+    OrthographicCamera camera;
+    Viewport viewport;
 
     static final float VIEWPORT_WIDTH = 800f;
     static final float VIEWPORT_HEIGHT = 600f;
@@ -35,6 +38,7 @@ public class Main extends ApplicationAdapter {
 
     Texture playerTex, platformTex, bulletTex, exitTex;
     Texture pistolTex, mac10Tex;
+    Texture debugTex; // Debug marker untuk level boundaries
 
     Player player;
     Array<Platform> platforms;
@@ -48,13 +52,14 @@ public class Main extends ApplicationAdapter {
     @Override
     public void create() {
         batch = new SpriteBatch();
-        orthographicCamera = new OrthographicCamera();
-        orthographicCamera.setToOrtho(false, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 
-        // Setup Camera
-        orthographicCamera = new OrthographicCamera();
-        orthographicCamera.setToOrtho(false, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
-        orthographicCamera.update();
+        // Setup Camera with ExtendViewport for fullscreen without black bars
+        // ExtendViewport shows MORE of the level horizontally on wider screens
+        camera = new OrthographicCamera();
+        viewport = new ExtendViewport(VIEWPORT_WIDTH, VIEWPORT_HEIGHT, camera);
+        viewport.apply();
+        camera.position.set(VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2, 0);
+        camera.update();
 
         // Buat Texture Dummy (Kotak Warna)
         playerTex = createColorTexture(40, 60, Color.ORANGE);
@@ -63,6 +68,7 @@ public class Main extends ApplicationAdapter {
         pistolTex = createColorTexture(20, 10, Color.GRAY);
         mac10Tex = createColorTexture(30, 15, Color.LIME);
         exitTex = createColorTexture(30, 100, Color.FOREST);
+        debugTex = createColorTexture(10, 600, Color.RED); // Debug marker
 
         // Setup Object Pool
         bulletPool = new Pool<Bullet>() {
@@ -116,8 +122,23 @@ public class Main extends ApplicationAdapter {
         // Load Platforms using Strategy
         strategy.loadPlatforms(platforms, platformTex);
 
+        // FORCE-ADD: Base ground that spans the ENTIRE level width
+        // This ensures player can walk from 0 to currentLevelWidth regardless of
+        // Strategy design
+        Platform baseGround = new Platform(0, 0, currentLevelWidth, 50, platformTex);
+        platforms.insert(0, baseGround); // Insert at index 0 so it's drawn first (behind other platforms)
+
         // Reset Player Position using Strategy
         player.bounds.setPosition(strategy.getPlayerStartX(), strategy.getPlayerStartY());
+
+        // Update Player's level width for boundary checking
+        Player.LEVEL_WIDTH = currentLevelWidth;
+
+        // Reset camera position
+        camera.position.x = VIEWPORT_WIDTH / 2;
+        camera.update();
+
+        Gdx.app.log("Game", "Loaded Level " + level + " | Width: " + currentLevelWidth);
     }
 
     private Texture createColorTexture(int width, int height, Color color) {
@@ -169,17 +190,22 @@ public class Main extends ApplicationAdapter {
         // --- UPDATE ---
         player.update(delta, platforms);
 
+        // Check Level Exit
         if (player.bounds.x + player.bounds.width >= currentLevelWidth - LEVEL_EXIT_THRESHOLD) {
-            currentLevel++;
             loadLevel(currentLevel + 1);
         }
 
-        // Update Camera mengikuti Player
+        // --- CAMERA FOLLOW LOGIC ---
+        // Camera follows player's center position
         float targetCameraX = player.bounds.x + player.bounds.width / 2;
-        // Clamp camera agar tidak keluar dari level boundaries
-        orthographicCamera.position.x = MathUtils.clamp(targetCameraX, VIEWPORT_WIDTH / 2,
-                currentLevelWidth - VIEWPORT_WIDTH / 2);
-        orthographicCamera.update();
+
+        // Clamp camera to stay within level boundaries
+        camera.position.x = MathUtils.clamp(
+                targetCameraX,
+                viewport.getWorldWidth() / 2,
+                currentLevelWidth - viewport.getWorldWidth() / 2);
+
+        camera.update();
 
         // Update Peluru
         for (int i = activeBullets.size - 1; i >= 0; i--) {
@@ -196,15 +222,30 @@ public class Main extends ApplicationAdapter {
         Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        batch.setProjectionMatrix(orthographicCamera.combined);
+        // Apply camera projection
+        batch.setProjectionMatrix(camera.combined);
         batch.begin();
+
+        // Draw game objects (bottom layer to top layer)
         for (Platform p : platforms)
             p.draw(batch);
         batch.draw(exitTex, currentLevelWidth - 80, 50);
         for (Bullet b : activeBullets)
             batch.draw(bulletTex, b.bounds.x, b.bounds.y);
         player.draw(batch);
+
+        // Debug markers drawn LAST (on top of everything for visibility)
+        batch.draw(debugTex, 0, 0); // Start marker (red strip at x=0)
+        batch.draw(debugTex, currentLevelWidth - 10, 0); // End marker (red strip at level end)
+
         batch.end();
+    }
+
+    @Override
+    public void resize(int width, int height) {
+        // Update viewport when window is resized or fullscreen toggled
+        // The 'true' parameter centers the camera
+        viewport.update(width, height, true);
     }
 
     @Override
@@ -213,5 +254,6 @@ public class Main extends ApplicationAdapter {
         playerTex.dispose();
         platformTex.dispose();
         bulletTex.dispose();
+        debugTex.dispose();
     }
 }
