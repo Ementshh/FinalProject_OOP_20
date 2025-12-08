@@ -6,7 +6,14 @@ import com.labubushooter.frontend.objects.Platform;
 
 public interface LevelStrategy {
     void loadPlatforms(Array<Platform> platforms, Texture platformTex);
+
     float getLevelWidth();
+
     float getPlayerStartX();
+
     float getPlayerStartY();
+
+    float getBossSpawnX();
+
+    float getBossSpawnY();
 }

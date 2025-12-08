@@ -15,6 +15,9 @@ import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.labubushooter.frontend.objects.Bullet;
 import com.labubushooter.frontend.objects.CommonEnemy;
+import com.labubushooter.frontend.objects.EnemyBullet;
+import com.labubushooter.frontend.objects.FinalBoss;
+import com.labubushooter.frontend.objects.MiniBossEnemy;
 import com.labubushooter.frontend.objects.Platform;
 import com.labubushooter.frontend.objects.Player;
 import com.labubushooter.frontend.patterns.LevelStrategy;
@@ -47,6 +50,10 @@ public class Main extends ApplicationAdapter {
     Texture levelIndicatorTex;
     Texture enemyTex;
 
+    // Boss textures
+    Texture miniBossTex, bossTex, enemyBulletTex;
+    Texture whiteFlashTex, redFlashTex;
+
     Player player;
     Array<Platform> platforms;
 
@@ -59,6 +66,12 @@ public class Main extends ApplicationAdapter {
     private long lastEnemySpawnTime;
     private long nextEnemySpawnDelay;
     private Random random;
+
+    // Boss System
+    MiniBossEnemy miniBoss;
+    FinalBoss boss;
+    Pool<EnemyBullet> enemyBulletPool;
+    Array<EnemyBullet> activeEnemyBullets;
 
     // Enemy spawn delays per level (in nanoseconds)
     // Level 1: 7-10 seconds
@@ -112,6 +125,13 @@ public class Main extends ApplicationAdapter {
         levelIndicatorTex = createColorTexture(30, 30, Color.YELLOW); // Level indicator
         enemyTex = createColorTexture(40, 60, Color.RED);
 
+        // Boss textures
+        miniBossTex = createColorTexture(60, 90, Color.PURPLE);
+        bossTex = createColorTexture(80, 120, Color.MAROON);
+        enemyBulletTex = createColorTexture(8, 8, Color.ORANGE);
+        whiteFlashTex = createColorTexture(60, 90, Color.WHITE);
+        redFlashTex = createColorTexture(80, 120, Color.RED);
+
         // Setup Bullet Pool
         bulletPool = new Pool<Bullet>() {
             @Override
@@ -131,6 +151,15 @@ public class Main extends ApplicationAdapter {
         };
         activeEnemies = new Array<>();
         resetEnemySpawnTimer();
+
+        // Setup Enemy Bullet Pool
+        enemyBulletPool = new Pool<EnemyBullet>() {
+            @Override
+            protected EnemyBullet newObject() {
+                return new EnemyBullet();
+            }
+        };
+        activeEnemyBullets = new Array<>();
 
         pistolStrategy = new PistolStrategy();
         mac10Strategy = new Mac10Strategy();
@@ -177,7 +206,7 @@ public class Main extends ApplicationAdapter {
                 break;
         }
 
-        nextEnemySpawnDelay = minDelay + (long)(random.nextFloat() * (maxDelay - minDelay));
+        nextEnemySpawnDelay = minDelay + (long) (random.nextFloat() * (maxDelay - minDelay));
     }
 
     private void spawnEnemy() {
@@ -239,6 +268,28 @@ public class Main extends ApplicationAdapter {
         }
         activeEnemies.clear();
         resetEnemySpawnTimer();
+
+        // Clear enemy bullets
+        for (EnemyBullet eb : activeEnemyBullets) {
+            enemyBulletPool.free(eb);
+        }
+        activeEnemyBullets.clear();
+
+        // Spawn boss for levels 3 and 5
+        if (level == 3) {
+            miniBoss = new MiniBossEnemy(miniBossTex, whiteFlashTex);
+            miniBoss.init(strategy.getBossSpawnX(), strategy.getBossSpawnY());
+            boss = null;
+            Gdx.app.log("Level3", "Mini Boss spawned!");
+        } else if (level == 5) {
+            boss = new FinalBoss(bossTex, redFlashTex, enemyBulletTex);
+            boss.init(strategy.getBossSpawnX(), strategy.getBossSpawnY());
+            miniBoss = null;
+            Gdx.app.log("Level5", "Final Boss spawned!");
+        } else {
+            miniBoss = null;
+            boss = null;
+        }
 
         currentLevelWidth = strategy.getLevelWidth();
 
@@ -334,6 +385,26 @@ public class Main extends ApplicationAdapter {
         // --- UPDATE ---
         player.update(delta, platforms);
 
+        // Update bosses
+        if (currentLevel == 3 && miniBoss != null && !miniBoss.isDead()) {
+            miniBoss.update(delta, platforms, player);
+        }
+
+        if (currentLevel == 5 && boss != null && !boss.isDead()) {
+            boss.update(delta, platforms, player, activeEnemyBullets, enemyBulletPool);
+        }
+
+        // Update enemy bullets
+        for (int i = activeEnemyBullets.size - 1; i >= 0; i--) {
+            EnemyBullet eb = activeEnemyBullets.get(i);
+            eb.update(delta);
+
+            if (eb.isOutOfBounds(currentLevelWidth, VIEWPORT_HEIGHT)) {
+                activeEnemyBullets.removeIndex(i);
+                enemyBulletPool.free(eb);
+            }
+        }
+
         // Spawn enemy based on timer - KECUALI di Level 3 dan 5
         // Level 1: 7-10 seconds
         // Level 2: 6-8 seconds
@@ -374,8 +445,58 @@ public class Main extends ApplicationAdapter {
             }
         }
 
-        // Check Level Exit
-        if (player.bounds.x + player.bounds.width >= currentLevelWidth - LEVEL_EXIT_THRESHOLD) {
+        // Check bullet-miniboss collisions
+        if (miniBoss != null && !miniBoss.isDead()) {
+            for (int j = activeBullets.size - 1; j >= 0; j--) {
+                Bullet bullet = activeBullets.get(j);
+
+                if (bullet.bounds.overlaps(miniBoss.collider)) {
+                    miniBoss.takeDamage(bullet.damage);
+                    activeBullets.removeIndex(j);
+                    bulletPool.free(bullet);
+                    Gdx.app.log("Combat", "Mini Boss hit! Health: " + miniBoss.health);
+                    break;
+                }
+            }
+        }
+
+        // Check bullet-boss collisions
+        if (boss != null && !boss.isDead()) {
+            for (int j = activeBullets.size - 1; j >= 0; j--) {
+                Bullet bullet = activeBullets.get(j);
+
+                if (bullet.bounds.overlaps(boss.collider)) {
+                    boss.takeDamage(bullet.damage);
+                    activeBullets.removeIndex(j);
+                    bulletPool.free(bullet);
+                    Gdx.app.log("Combat", "Boss hit! Health: " + boss.health);
+                    break;
+                }
+            }
+        }
+
+        // Check enemy bullet-player collisions
+        for (int i = activeEnemyBullets.size - 1; i >= 0; i--) {
+            EnemyBullet eb = activeEnemyBullets.get(i);
+
+            if (eb.bounds.overlaps(player.bounds)) {
+                player.takeDamage(eb.damage);
+                activeEnemyBullets.removeIndex(i);
+                enemyBulletPool.free(eb);
+                Gdx.app.log("Combat", "Player hit by enemy bullet!");
+            }
+        }
+
+        // Check Level Exit (with boss defeat requirement)
+        boolean bossDefeated = true;
+        if (currentLevel == 3 && miniBoss != null) {
+            bossDefeated = miniBoss.isDead();
+        }
+        if (currentLevel == 5 && boss != null) {
+            bossDefeated = boss.isDead();
+        }
+
+        if (bossDefeated && player.bounds.x + player.bounds.width >= currentLevelWidth - LEVEL_EXIT_THRESHOLD) {
             loadLevel(currentLevel + 1);
         }
 
@@ -434,6 +555,20 @@ public class Main extends ApplicationAdapter {
 
         player.draw(batch);
 
+        // Draw bosses
+        if (miniBoss != null && !miniBoss.isDead()) {
+            miniBoss.draw(batch);
+        }
+
+        if (boss != null && !boss.isDead()) {
+            boss.draw(batch);
+        }
+
+        // Draw enemy bullets
+        for (EnemyBullet eb : activeEnemyBullets) {
+            eb.draw(batch);
+        }
+
         // Debug markers
         batch.draw(debugTex, 0, 0);
         batch.draw(debugTex, currentLevelWidth - 10, 0);
@@ -446,7 +581,7 @@ public class Main extends ApplicationAdapter {
         }
 
         // Draw Health Bar
-        String healthText = "HP: " + (int)player.health + "/" + (int)Player.MAX_HEALTH;
+        String healthText = "HP: " + (int) player.health + "/" + (int) Player.MAX_HEALTH;
         float healthX = camera.position.x - viewport.getWorldWidth() / 2 + 20;
         float healthY = camera.position.y + viewport.getWorldHeight() / 2 - 80;
         smallFont.draw(batch, healthText, healthX, healthY);
@@ -492,6 +627,11 @@ public class Main extends ApplicationAdapter {
         debugTex.dispose();
         levelIndicatorTex.dispose();
         enemyTex.dispose();
+        miniBossTex.dispose();
+        bossTex.dispose();
+        enemyBulletTex.dispose();
+        whiteFlashTex.dispose();
+        redFlashTex.dispose();
         font.dispose();
         smallFont.dispose();
     }

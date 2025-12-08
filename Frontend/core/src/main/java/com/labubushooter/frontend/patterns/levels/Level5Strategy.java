@@ -23,7 +23,7 @@ public class Level5Strategy implements LevelStrategy {
         platforms.add(new Platform(300, 350, 200, 20, platformTex));
 
         // Exit platform at the right edge (visible after boss defeat)
-        // platforms.add(new Platform(700, 50, 100, 200, platformTex));
+        platforms.add(new Platform(700, 50, 100, 200, platformTex));
     }
 
     @Override
@@ -39,5 +39,15 @@ public class Level5Strategy implements LevelStrategy {
     @Override
     public float getPlayerStartY() {
         return 300f;
+    }
+
+    @Override
+    public float getBossSpawnX() {
+        return 400f;
+    }
+
+    @Override
+    public float getBossSpawnY() {
+        return 200f;
     }
 }
