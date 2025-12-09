@@ -37,4 +37,14 @@ public class Level4Strategy implements LevelStrategy {
     public float getPlayerStartY() {
         return 300f;
     }
+
+    @Override
+    public float getBossSpawnX() {
+        return 0f;
+    }
+
+    @Override
+    public float getBossSpawnY() {
+        return 0f;
+    }
 }
