@@ -108,6 +108,7 @@ public class Main extends ApplicationAdapter {
 
     // Game Over System
     private boolean isGameOver = false;
+    private boolean isVictory = false;
     private BitmapFont font;
     private BitmapFont smallFont;
     private GlyphLayout layout;
@@ -345,6 +346,7 @@ public class Main extends ApplicationAdapter {
 
     private void restartGame() {
         isGameOver = false;
+        isVictory = false;
         currentLevel = 1;
 
         // Clear all enemies
@@ -568,6 +570,20 @@ public class Main extends ApplicationAdapter {
     public void render() {
         float delta = Gdx.graphics.getDeltaTime();
 
+        // Check for Victory screen
+        if (isVictory) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+                restartGame();
+            }
+            if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+                Gdx.app.exit();
+            }
+
+            // Render Victory Screen
+            renderVictory();
+            return;
+        }
+
         // Check for Game Over restart
         if (isGameOver) {
             if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
@@ -761,7 +777,13 @@ public class Main extends ApplicationAdapter {
         }
 
         if (bossDefeated && player.bounds.x + player.bounds.width >= currentLevelWidth - LEVEL_EXIT_THRESHOLD) {
-            loadLevel(currentLevel + 1);
+            if (currentLevel == 5) {
+                // Level 5 completed - trigger victory!
+                isVictory = true;
+                Gdx.app.log("Game", "VICTORY! Game Completed!");
+            } else {
+                loadLevel(currentLevel + 1);
+            }
         }
 
         // --- CAMERA FOLLOW LOGIC ---
@@ -922,6 +944,51 @@ public class Main extends ApplicationAdapter {
         float restartX = camera.position.x - layout.width / 2;
         float restartY = camera.position.y - 20;
         smallFont.draw(batch, restartText, restartX, restartY);
+
+        batch.end();
+    }
+
+    private void renderVictory() {
+        Gdx.gl.glClearColor(0.1f, 0.3f, 0.1f, 1); // Green tint for victory
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
+
+        // Draw "VICTORY!" text
+        String victoryText = "VICTORY!";
+        layout.setText(font, victoryText);
+        float victoryX = camera.position.x - layout.width / 2;
+        float victoryY = camera.position.y + 100;
+        font.draw(batch, victoryText, victoryX, victoryY);
+
+        // Draw "Game Completed!" text
+        String completedText = "Game Completed!";
+        layout.setText(smallFont, completedText);
+        float completedX = camera.position.x - layout.width / 2;
+        float completedY = camera.position.y + 50;
+        smallFont.draw(batch, completedText, completedX, completedY);
+
+        // Draw coin score
+        String coinsText = "Total Coins Collected: " + coinScore;
+        layout.setText(smallFont, coinsText);
+        float coinsX = camera.position.x - layout.width / 2;
+        float coinsY = camera.position.y;
+        smallFont.draw(batch, coinsText, coinsX, coinsY);
+
+        // Draw replay instruction
+        String replayText = "Press SPACE to Play Again";
+        layout.setText(smallFont, replayText);
+        float replayX = camera.position.x - layout.width / 2;
+        float replayY = camera.position.y - 50;
+        smallFont.draw(batch, replayText, replayX, replayY);
+
+        // Draw quit instruction
+        String quitText = "Press ESC to Quit";
+        layout.setText(smallFont, quitText);
+        float quitX = camera.position.x - layout.width / 2;
+        float quitY = camera.position.y - 80;
+        smallFont.draw(batch, quitText, quitX, quitY);
 
         batch.end();
     }
