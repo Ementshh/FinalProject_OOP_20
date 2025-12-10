@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
@@ -14,15 +15,18 @@ import com.badlogic.gdx.utils.TimeUtils;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.labubushooter.frontend.objects.Bullet;
+import com.labubushooter.frontend.objects.Coin;
 import com.labubushooter.frontend.objects.CommonEnemy;
 import com.labubushooter.frontend.objects.EnemyBullet;
 import com.labubushooter.frontend.objects.FinalBoss;
 import com.labubushooter.frontend.objects.MiniBossEnemy;
 import com.labubushooter.frontend.objects.Platform;
 import com.labubushooter.frontend.objects.Player;
+import com.labubushooter.frontend.patterns.CoinPattern;
 import com.labubushooter.frontend.patterns.LevelStrategy;
 import com.labubushooter.frontend.patterns.ShootingStrategy;
 import com.labubushooter.frontend.patterns.levels.*;
+import com.labubushooter.frontend.patterns.coins.LinePattern;
 import com.labubushooter.frontend.patterns.weapons.Mac10Strategy;
 import com.labubushooter.frontend.patterns.weapons.PistolStrategy;
 
@@ -32,6 +36,7 @@ import java.util.Random;
 
 public class Main extends ApplicationAdapter {
     SpriteBatch batch;
+    ShapeRenderer shapeRenderer;
     OrthographicCamera camera;
     Viewport viewport;
 
@@ -73,18 +78,30 @@ public class Main extends ApplicationAdapter {
     Pool<EnemyBullet> enemyBulletPool;
     Array<EnemyBullet> activeEnemyBullets;
 
+    // Coin System
+    Pool<Coin> coinPool;
+    Array<Coin> activeCoins;
+    CoinPattern coinPattern;
+    private int coinScore = 0;
+    private Array<float[]> coinSpawnLocations;
+
+    // MAX ENEMY PER LEVEL
+    private static final int MAX_ENEMIES_LEVEL1 = 6;
+    private static final int MAX_ENEMIES_LEVEL2 = 7;
+    private static final int MAX_ENEMIES_LEVEL4 = 8;
+
     // Enemy spawn delays per level (in nanoseconds)
     // Level 1: 7-10 seconds
-    private static final long LEVEL1_MIN_SPAWN = 6000000000L;
-    private static final long LEVEL1_MAX_SPAWN = 8000000000L;
+    private static final long LEVEL1_MIN_SPAWN = 3000000000L;
+    private static final long LEVEL1_MAX_SPAWN = 4000000000L;
 
     // Level 2: 6-8 seconds
-    private static final long LEVEL2_MIN_SPAWN = 5000000000L;
-    private static final long LEVEL2_MAX_SPAWN = 8000000000L;
+    private static final long LEVEL2_MIN_SPAWN = 2000000000L;
+    private static final long LEVEL2_MAX_SPAWN = 4000000000L;
 
     // Level 4: 4-7 seconds
-    private static final long LEVEL4_MIN_SPAWN = 4000000000L;
-    private static final long LEVEL4_MAX_SPAWN = 7000000000L;
+    private static final long LEVEL4_MIN_SPAWN = 1000000000L;
+    private static final long LEVEL4_MAX_SPAWN = 3000000000L;
 
     PistolStrategy pistolStrategy;
     Mac10Strategy mac10Strategy;
@@ -98,6 +115,7 @@ public class Main extends ApplicationAdapter {
     @Override
     public void create() {
         batch = new SpriteBatch();
+        shapeRenderer = new ShapeRenderer();
 
         // Setup Camera with ExtendViewport for fullscreen without black bars
         // ExtendViewport shows MORE of the level horizontally on wider screens
@@ -161,6 +179,16 @@ public class Main extends ApplicationAdapter {
         };
         activeEnemyBullets = new Array<>();
 
+        // Setup Coin Pool
+        coinPool = new Pool<Coin>() {
+            @Override
+            protected Coin newObject() {
+                return new Coin();
+            }
+        };
+        activeCoins = new Array<>();
+        coinPattern = new LinePattern();
+
         pistolStrategy = new PistolStrategy();
         mac10Strategy = new Mac10Strategy();
 
@@ -209,17 +237,108 @@ public class Main extends ApplicationAdapter {
         nextEnemySpawnDelay = minDelay + (long) (random.nextFloat() * (maxDelay - minDelay));
     }
 
+    // Method to spawn initial enemies at level start
+    private void spawnInitialEnemiesForLevel(int level) {
+        // Only spawn initial enemy for levels 1, 2, and 4
+        if (level != 1 && level != 2 && level != 4) {
+            return;
+        }
+
+        // Get spawn positions for this level
+        float[] spawnPositions = getInitialEnemySpawnPositions(level);
+
+        for (float spawnX : spawnPositions) {
+            CommonEnemy enemy = enemyPool.obtain();
+            enemy.init(spawnX, player, level);
+            activeEnemies.add(enemy);
+            Gdx.app.log("InitialEnemy", "Spawned initial enemy at X: " + spawnX + " for level " + level);
+        }
+    }
+
+    // Get initial enemy spawn positions per level
+    private float[] getInitialEnemySpawnPositions(int level) {
+        switch (level) {
+            case 1:
+                // Level 1: Spawn 1 enemy at middle platform (blocking path)
+                return new float[]{1200f};
+                
+            case 2:
+                // Level 2: Spawn 1 enemy at stairway area
+                return new float[]{1000f};
+                
+            case 4:
+                // Level 4: Spawn 1 enemy at vertical tower area
+                return new float[]{1400f};
+                
+            default:
+                return new float[]{}; // No initial spawn
+        }
+    }
+
     private void spawnEnemy() {
+        float cameraLeft = camera.position.x - VIEWPORT_WIDTH / 2;
+        float cameraRight = camera.position.x + VIEWPORT_WIDTH / 2;
+        
+        // Spawn area dengan buffer zone di luar layar
+        final float SPAWN_BUFFER = 200f; // Jarak spawn di luar layar
+        final float PLAYER_SAFETY_ZONE = 300f; // Jarak minimum dari player
+        
         float spawnX;
+        int attempts = 0;
+        final int MAX_ATTEMPTS = 20;
+        
         do {
-            spawnX = random.nextFloat() * (currentLevelWidth - 100);
-        } while (Math.abs(spawnX - player.bounds.x) < 200);
+            // Pilih spawn di kiri atau kanan layar secara random
+            boolean spawnLeft = random.nextBoolean();
+            
+            if (spawnLeft) {
+                // Spawn di kiri layar (di luar view)
+                spawnX = cameraLeft - SPAWN_BUFFER - random.nextFloat() * 100f;
+                // Pastikan tidak keluar dari level bounds
+                if (spawnX < 0) spawnX = cameraRight + SPAWN_BUFFER + random.nextFloat() * 100f;
+            } else {
+                // Spawn di kanan layar (di luar view)
+                spawnX = cameraRight + SPAWN_BUFFER + random.nextFloat() * 100f;
+                // Pastikan tidak keluar dari level bounds
+                if (spawnX > currentLevelWidth - 100f) spawnX = cameraLeft - SPAWN_BUFFER - random.nextFloat() * 100f;
+            }
+            
+            attempts++;
+            
+            // Break jika sudah terlalu banyak percobaan
+            if (attempts >= MAX_ATTEMPTS) {
+                // Fallback: spawn di ujung level yang jauh dari player
+                if (player.bounds.x < currentLevelWidth / 2) {
+                    spawnX = currentLevelWidth - 200f; // Spawn di kanan
+                } else {
+                    spawnX = 100f; // Spawn di kiri
+                }
+                break;
+            }
+            
+        } while (Math.abs(spawnX - player.bounds.x) < PLAYER_SAFETY_ZONE || 
+                 (spawnX >= cameraLeft && spawnX <= cameraRight)); // Pastikan di luar layar
 
         CommonEnemy enemy = enemyPool.obtain();
-        enemy.init(spawnX, player, currentLevel); // Pass current level
+        enemy.init(spawnX, player, currentLevel);
         activeEnemies.add(enemy);
 
-        Gdx.app.log("Enemy", "Spawned at X: " + spawnX);
+        Gdx.app.log("EnemySpawn", "Spawned at X: " + spawnX + 
+                    " (Camera: " + cameraLeft + " - " + cameraRight + 
+                    ", Player: " + player.bounds.x + ")");
+    }
+    
+    private int getMaxEnemiesForLevel(int level) {
+        switch (level) {
+            case 1:
+                return MAX_ENEMIES_LEVEL1; // 6 enemies
+            case 2:
+                return MAX_ENEMIES_LEVEL2; // 7 enemies
+            case 4:
+                return MAX_ENEMIES_LEVEL4; // 8 enemies
+            default:
+                return 5; // Default
+        }
     }
 
     private void restartGame() {
@@ -234,6 +353,13 @@ public class Main extends ApplicationAdapter {
 
         // Clear all bullets
         activeBullets.clear();
+
+        // Clear all coins
+        for (Coin coin : activeCoins) {
+            coinPool.free(coin);
+        }
+        activeCoins.clear();
+        coinScore = 0;
 
         // Reset player
         player.reset();
@@ -275,6 +401,12 @@ public class Main extends ApplicationAdapter {
         }
         activeEnemyBullets.clear();
 
+        // Clear coins
+        for (Coin coin : activeCoins) {
+            coinPool.free(coin);
+        }
+        activeCoins.clear();
+
         // Spawn boss for levels 3 and 5
         if (level == 3) {
             miniBoss = new MiniBossEnemy(miniBossTex, whiteFlashTex);
@@ -315,7 +447,110 @@ public class Main extends ApplicationAdapter {
         camera.position.x = VIEWPORT_WIDTH / 2;
         camera.update();
 
+        // Setup and spawn coins for this level
+        setupCoinSpawnLocations(level);
+        spawnCoinsForLevel();
+
+        // Spawn initial enemies for level 1, 2, and 4
+        spawnInitialEnemiesForLevel(level);
+
         Gdx.app.log("Game", "Loaded Level " + level + " | Width: " + currentLevelWidth);
+    }
+
+    private void setupCoinSpawnLocations(int level) {
+        coinSpawnLocations = new Array<>();
+        
+        // Konstanta untuk posisi coin
+        final float PLATFORM_OFFSET = 30f; // Jarak di atas platform
+        final float GROUND_Y = 50f; // Ground base Y
+        final float GROUND_HEIGHT = 50f; // Ground height
+        final float PLATFORM_HEIGHT = 20f; // Platform height (dari createColorTexture)
+        final float JUMP_OFFSET = 500f / 2.5f - 50f; // (JUMP_POWER / 2.5) - 50f = 150f
+        
+        switch (level) {
+            case 1:
+                // Level 1: Coin di atas platform dan ground
+                // Platform di x=500, y=200 -> coin di y=200+20+30 = 250
+                coinSpawnLocations.add(new float[]{600f, 200f + PLATFORM_HEIGHT + PLATFORM_OFFSET});
+                
+                // Ground y=50 + 50(tinggi) = 100 -> coin di y=100+30 = 130
+                coinSpawnLocations.add(new float[]{900f, GROUND_Y + GROUND_HEIGHT + PLATFORM_OFFSET});
+                
+                // Platform di x=1200, y=300 -> coin di y=300+20+30 = 350
+                coinSpawnLocations.add(new float[]{1300f, 300f + PLATFORM_HEIGHT + PLATFORM_OFFSET});
+                
+                // Coin di udara (tinggi lompatan dari ground)
+                coinSpawnLocations.add(new float[]{1700f, GROUND_Y + GROUND_HEIGHT + JUMP_OFFSET});
+                break;
+                
+            case 2:
+                // Level 2: Mengikuti pola stairway
+                // Platform x=600, y=150 -> y=150+20+30 = 200
+                coinSpawnLocations.add(new float[]{650f, 150f + PLATFORM_HEIGHT + PLATFORM_OFFSET});
+                
+                // Platform x=900, y=250 -> y=250+20+30 = 300
+                coinSpawnLocations.add(new float[]{950f, 250f + PLATFORM_HEIGHT + PLATFORM_OFFSET});
+                
+                // Platform x=1200, y=350 -> y=350+20+30 = 400
+                coinSpawnLocations.add(new float[]{1300f, 350f + PLATFORM_HEIGHT + PLATFORM_OFFSET});
+                
+                // Ground area
+                coinSpawnLocations.add(new float[]{1650f, GROUND_Y + GROUND_HEIGHT + PLATFORM_OFFSET});
+                
+                // Platform x=1800, y=200 -> y=200+20+30 = 250
+                coinSpawnLocations.add(new float[]{1900f, 200f + PLATFORM_HEIGHT + PLATFORM_OFFSET});
+                break;
+                
+            case 3:
+                // Level 3: Boss level - coins di safe spots
+                // Platform x=500, y=200 -> y=200+20+30 = 250
+                coinSpawnLocations.add(new float[]{550f, 200f + PLATFORM_HEIGHT + PLATFORM_OFFSET});
+                
+                // Platform x=1100, y=200 -> y=200+20+30 = 250
+                coinSpawnLocations.add(new float[]{1150f, 200f + PLATFORM_HEIGHT + PLATFORM_OFFSET});
+                break;
+                
+            case 4:
+                // Level 4: Vertical tower pattern
+                // Platform x=700, y=300 -> y=300+20+30 = 350
+                coinSpawnLocations.add(new float[]{750f, 300f + PLATFORM_HEIGHT + PLATFORM_OFFSET});
+                
+                // Platform x=1000, y=200 -> y=200+20+30 = 250
+                coinSpawnLocations.add(new float[]{1050f, 200f + PLATFORM_HEIGHT + PLATFORM_OFFSET});
+                
+                // Platform x=1300, y=350 -> y=350+20+30 = 400
+                coinSpawnLocations.add(new float[]{1400f, 350f + PLATFORM_HEIGHT + PLATFORM_OFFSET});
+                
+                // Platform x=1600, y=250 -> y=250+20+30 = 300
+                coinSpawnLocations.add(new float[]{1650f, 250f + PLATFORM_HEIGHT + PLATFORM_OFFSET});
+                
+                // Platform x=1900, y=180 -> y=180+20+30 = 230
+                coinSpawnLocations.add(new float[]{2000f, 180f + PLATFORM_HEIGHT + PLATFORM_OFFSET});
+                break;
+                
+            case 5:
+                // Level 5: Boss arena
+                // Platform kiri x=100, y=200 -> y=200+20+30 = 250
+                coinSpawnLocations.add(new float[]{150f, 200f + PLATFORM_HEIGHT + PLATFORM_OFFSET});
+                
+                // Platform kanan x=550, y=200 -> y=200+20+30 = 250
+                coinSpawnLocations.add(new float[]{600f, 200f + PLATFORM_HEIGHT + PLATFORM_OFFSET});
+                
+                // Platform tengah elevated x=300, y=350 -> y=350+20+30 = 400
+                coinSpawnLocations.add(new float[]{400f, 350f + PLATFORM_HEIGHT + PLATFORM_OFFSET});
+                break;
+        }
+        
+        Gdx.app.log("CoinSpawn", "Setup " + coinSpawnLocations.size + " spawn locations for level " + level);
+    }
+    
+    private void spawnCoinsForLevel() {
+        for (float[] location : coinSpawnLocations) {
+            Array<Coin> spawnedCoins = coinPattern.spawn(coinPool, location[0], location[1]);
+            activeCoins.addAll(spawnedCoins);
+        }
+        
+        Gdx.app.log("Coins", "Spawned " + activeCoins.size + " coins for level " + currentLevel);
     }
 
     private Texture createColorTexture(int width, int height, Color color) {
@@ -380,7 +615,6 @@ public class Main extends ApplicationAdapter {
         // --- SHOOTING ---
         ShootingStrategy currentWeapon = player.getWeapon();
         if (currentWeapon != null) {
-            // Automatic and non-automatic weapon mechanic
             if (currentWeapon.isAutomatic()) {
                 if (Gdx.input.isKeyPressed(Input.Keys.SPACE)) {
                     player.shoot(activeBullets, bulletPool);
@@ -415,14 +649,20 @@ public class Main extends ApplicationAdapter {
             }
         }
 
-        // Spawn enemy based on timer - KECUALI di Level 3 dan 5
-        // Level 1: 7-10 seconds
-        // Level 2: 6-8 seconds
-        // Level 4: 4-7 seconds
+        // Spawn enemy based on timer - DENGAN BATASAN JUMLAH
         if (currentLevel != 3 && currentLevel != 5) {
             if (TimeUtils.nanoTime() - lastEnemySpawnTime > nextEnemySpawnDelay) {
-                spawnEnemy();
-                resetEnemySpawnTimer();
+                int maxEnemies = getMaxEnemiesForLevel(currentLevel);
+                
+                // Hanya spawn jika belum mencapai batas
+                if (activeEnemies.size < maxEnemies) {
+                    spawnEnemy();
+                    resetEnemySpawnTimer();
+                    Gdx.app.log("EnemySpawn", "Active enemies: " + activeEnemies.size + "/" + maxEnemies);
+                } else {
+                    // Reset timer agar tidak terus mengecek
+                    resetEnemySpawnTimer();
+                }
             }
         }
 
@@ -511,22 +751,33 @@ public class Main extends ApplicationAdapter {
         }
 
         // --- CAMERA FOLLOW LOGIC ---
-        // Robust camera handling for both single-screen and scrolling levels
         float halfViewport = viewport.getWorldWidth() / 2;
         float levelMid = currentLevelWidth / 2;
 
         if (viewport.getWorldWidth() >= currentLevelWidth) {
-            // Case A: Screen is wider than or equal to level (e.g., Level 5)
-            // LOCK camera to the exact center of the level. Do not follow player.
             camera.position.x = levelMid;
         } else {
-            // Case B: Level is wider than screen (Scrolling Levels)
-            // Follow player but clamp within bounds
             float targetX = player.bounds.x + player.bounds.width / 2;
             camera.position.x = MathUtils.clamp(targetX, halfViewport, currentLevelWidth - halfViewport);
         }
 
         camera.update();
+
+        // Update Coins - HANYA HAPUS SAAT DIKUMPULKAN
+        for (int i = activeCoins.size - 1; i >= 0; i--) {
+            Coin coin = activeCoins.get(i);
+            coin.update(delta);
+            
+            // Check coin collection - GUNAKAN isColliding
+            if (coin.isColliding(player.bounds)) {
+                coin.active = false;
+                coinScore++;
+                activeCoins.removeIndex(i);
+                coinPool.free(coin);
+                Gdx.app.log("Coin", "Collected! Total: " + coinScore);
+            }
+            // Coin TIDAK dihapus ketika keluar layar
+        }
 
         // Update Bullets
         for (int i = activeBullets.size - 1; i >= 0; i--) {
@@ -579,6 +830,19 @@ public class Main extends ApplicationAdapter {
             eb.draw(batch);
         }
 
+        batch.end();
+
+        // RENDER COINS DENGAN SHAPERENDERER (SETELAH BATCH.END)
+        shapeRenderer.setProjectionMatrix(camera.combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        for (Coin coin : activeCoins) {
+            coin.renderShape(shapeRenderer);
+        }
+        shapeRenderer.end();
+
+        // RENDER UI DAN DEBUG (GUNAKAN BATCH LAGI)
+        batch.begin();
+
         // Debug markers
         if (currentLevel == 5) {
             // Level 5: Draw at viewport edges for fullscreen
@@ -602,6 +866,12 @@ public class Main extends ApplicationAdapter {
         float healthX = camera.position.x - viewport.getWorldWidth() / 2 + 20;
         float healthY = camera.position.y + viewport.getWorldHeight() / 2 - 80;
         smallFont.draw(batch, healthText, healthX, healthY);
+
+        // Draw Coin Score
+        String coinText = "Coins: " + coinScore;
+        float coinX = camera.position.x - viewport.getWorldWidth() / 2 + 20;
+        float coinY = healthY - 30; // Below health
+        smallFont.draw(batch, coinText, coinX, coinY);
 
         batch.end();
     }
@@ -638,6 +908,7 @@ public class Main extends ApplicationAdapter {
     @Override
     public void dispose() {
         batch.dispose();
+        shapeRenderer.dispose();
         playerTex.dispose();
         platformTex.dispose();
         bulletTex.dispose();
