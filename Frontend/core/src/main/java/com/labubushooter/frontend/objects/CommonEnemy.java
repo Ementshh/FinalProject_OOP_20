@@ -36,7 +36,7 @@ public class CommonEnemy implements Pool.Poolable {
     private static final float SPAWN_Y = 300f; // Ground + 1f
     
     // Base speed untuk multiplier
-    private static final float BASE_SPEED = 100f;
+    private static final float BASE_SPEED = 120f;
 
     public CommonEnemy(Texture texture) {
         this.texture = texture;
