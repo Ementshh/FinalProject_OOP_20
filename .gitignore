@@ -1,49 +1,72 @@
-# Folder Sampah (Build & Cache)
-.gradle/
-build/
-bin/
+# =============================================================================
+# STRATEGY: ONLY TRACK SOURCE CODE AND ASSETS
+# Track: Frontend/core/src/main/java/com/labubushooter/frontend/**
+# Track: Frontend/assets/**
+# Ignore everything else (build artifacts, IDE files, gradle cache)
+# =============================================================================
 
-# File Binary & Class (Hasil Compile)
+# Ignore everything in Frontend by default
+Frontend/*
+
+# But DO track these specific folders:
+!Frontend/core/
+Frontend/core/*
+!Frontend/core/src/
+Frontend/core/src/*
+!Frontend/core/src/main/
+Frontend/core/src/main/*
+!Frontend/core/src/main/java/
+Frontend/core/src/main/java/*
+!Frontend/core/src/main/java/com/
+Frontend/core/src/main/java/com/*
+!Frontend/core/src/main/java/com/labubushooter/
+Frontend/core/src/main/java/com/labubushooter/*
+!Frontend/core/src/main/java/com/labubushooter/frontend/
+!Frontend/core/src/main/java/com/labubushooter/frontend/**
+
+# Track assets folder
+!Frontend/assets/
+!Frontend/assets/**
+
+# =============================================================================
+# IGNORE ALL BUILD & CACHE FILES
+# =============================================================================
+
+# Gradle files
+.gradle/
+**/build/
+**/bin/
+*.gradle
+!settings.gradle
+!build.gradle
+
+# Compiled files
 *.class
+*.jar
+*.war
+*.ear
+
+# Binary files
 *.bin
 *.lock
 *.probe
-*.uniqueId0
 
-# File JAR (Kecuali Wrapper)
-*.jar
-!gradle/wrapper/gradle-wrapper.jar
-*.bin
-*.bin
-Frontend/.gradle/8.14.1/executionHistory/executionHistory.lock
-Frontend/.gradle/8.14.1/executionHistory/executionHistory.bin
-Frontend/.gradle/8.14.1/executionHistory/executionHistory.bin
-Frontend/.gradle/8.14.1/executionHistory/executionHistory.lock
-Frontend/.gradle/8.14.1/fileHashes/fileHashes.bin
-Frontend/.gradle/8.14.1/fileHashes/fileHashes.lock
-Frontend/.gradle/8.14.1/fileHashes/resourceHashesCache.bin
-Frontend/.gradle/buildOutputCleanup/buildOutputCleanup.lock
-Frontend/core/build/classes/java/main/com/labubushooter/frontend/Main.class
-Frontend/core/build/libs/core-1.0.0.jar
-Frontend/core/build/tmp/compileJava/previous-compilation-data.bin
-Frontend/.gradle/8.14.1/executionHistory/executionHistory.bin
-Frontend/.gradle/8.14.1/executionHistory/executionHistory.lock
-Frontend/.gradle/8.14.1/fileHashes/fileHashes.bin
-Frontend/.gradle/8.14.1/fileHashes/resourceHashesCache.bin
-Frontend/.gradle/buildOutputCleanup/buildOutputCleanup.lock
-Frontend/.gradle/file-system.probe
-Frontend/core/build/classes/java/main/com/labubushooter/frontend/Main.class
-Frontend/core/build/libs/core-1.0.0.jar
-Frontend/core/build/tmp/compileJava/previous-compilation-data.bin
-Frontend/.gradle/8.14.1/executionHistory/executionHistory.bin
-Frontend/.gradle/8.14.1/executionHistory/executionHistory.bin
-Frontend/.gradle/8.14.1/executionHistory/executionHistory.lock
-Frontend/.gradle/8.14.1/fileHashes/fileHashes.bin
-Frontend/.gradle/8.14.1/fileHashes/fileHashes.lock
-Frontend/.gradle/8.14.1/fileHashes/resourceHashesCache.bin
-Frontend/.gradle/buildOutputCleanup/buildOutputCleanup.lock
-Frontend/build/reports/problems/problems-report.html
-Frontend/core/build/classes/java/main/com/labubushooter/frontend/Main.class
-Frontend/core/build/classes/java/main/com/labubushooter/frontend/patterns/levels/Level5Strategy.class
-Frontend/core/build/libs/core-1.0.0.jar
-Frontend/core/build/tmp/compileJava/previous-compilation-data.bin
+# IDE files
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+*.uniqueId*
+
+# Build reports
+**/reports/
+
