@@ -8,6 +8,7 @@ import com.badlogic.gdx.utils.Pool;
 import com.badlogic.gdx.utils.TimeUtils;
 
 public class FinalBoss extends BossEnemy {
+    private static final float LEVEL_WIDTH = 2400f; // Level 4 width
     private static final float JUMP_POWER = 500f;
 
     // Phase system
@@ -122,6 +123,13 @@ public class FinalBoss extends BossEnemy {
         if (Math.abs(directionX) > 10) {
             float moveX = Math.signum(directionX) * currentSpeed * delta;
             bounds.x += moveX;
+
+            // Boundary check to prevent moving out of level
+            if (bounds.x < 0)
+                bounds.x = 0;
+            if (bounds.x + bounds.width > LEVEL_WIDTH)
+                bounds.x = LEVEL_WIDTH - bounds.width;
+
             updateCollider();
         }
 

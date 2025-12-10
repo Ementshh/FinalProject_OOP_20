@@ -13,3 +13,25 @@ bin/
 # File JAR (Kecuali Wrapper)
 *.jar
 !gradle/wrapper/gradle-wrapper.jar
+*.bin
+*.bin
+Frontend/.gradle/8.14.1/executionHistory/executionHistory.lock
+Frontend/.gradle/8.14.1/executionHistory/executionHistory.bin
+Frontend/.gradle/8.14.1/executionHistory/executionHistory.bin
+Frontend/.gradle/8.14.1/executionHistory/executionHistory.lock
+Frontend/.gradle/8.14.1/fileHashes/fileHashes.bin
+Frontend/.gradle/8.14.1/fileHashes/fileHashes.lock
+Frontend/.gradle/8.14.1/fileHashes/resourceHashesCache.bin
+Frontend/.gradle/buildOutputCleanup/buildOutputCleanup.lock
+Frontend/core/build/classes/java/main/com/labubushooter/frontend/Main.class
+Frontend/core/build/libs/core-1.0.0.jar
+Frontend/core/build/tmp/compileJava/previous-compilation-data.bin
+Frontend/.gradle/8.14.1/executionHistory/executionHistory.bin
+Frontend/.gradle/8.14.1/executionHistory/executionHistory.lock
+Frontend/.gradle/8.14.1/fileHashes/fileHashes.bin
+Frontend/.gradle/8.14.1/fileHashes/resourceHashesCache.bin
+Frontend/.gradle/buildOutputCleanup/buildOutputCleanup.lock
+Frontend/.gradle/file-system.probe
+Frontend/core/build/classes/java/main/com/labubushooter/frontend/Main.class
+Frontend/core/build/libs/core-1.0.0.jar
+Frontend/core/build/tmp/compileJava/previous-compilation-data.bin

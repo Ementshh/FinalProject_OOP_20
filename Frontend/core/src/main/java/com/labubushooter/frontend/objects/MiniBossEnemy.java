@@ -8,6 +8,7 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.TimeUtils;
 
 public class MiniBossEnemy extends BossEnemy {
+    private static final float LEVEL_WIDTH = 2400f; // Level 3 width
     private static final float NORMAL_SPEED = 120f;
     private static final float DASH_SPEED = 800f;
     private static final float DASH_COOLDOWN_DURATION = 4.0f;
@@ -122,6 +123,13 @@ public class MiniBossEnemy extends BossEnemy {
 
             // Move at dash speed
             bounds.x += dashDirectionX * DASH_SPEED * delta;
+
+            // Boundary check to prevent dashing out of level
+            if (bounds.x < 0)
+                bounds.x = 0;
+            if (bounds.x + bounds.width > LEVEL_WIDTH)
+                bounds.x = LEVEL_WIDTH - bounds.width;
+
             updateCollider();
 
             // End dash, start stun
@@ -152,6 +160,13 @@ public class MiniBossEnemy extends BossEnemy {
             if (Math.abs(directionX) > 10) {
                 float moveX = Math.signum(directionX) * NORMAL_SPEED * delta;
                 bounds.x += moveX;
+
+                // Boundary check for normal movement
+                if (bounds.x < 0)
+                    bounds.x = 0;
+                if (bounds.x + bounds.width > LEVEL_WIDTH)
+                    bounds.x = LEVEL_WIDTH - bounds.width;
+
                 updateCollider();
             }
 

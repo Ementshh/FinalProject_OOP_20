@@ -7,7 +7,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
 
-public abstract class BossEnemy {
+public abstract class   BossEnemy {
     public Rectangle bounds;
     public Rectangle collider; // Slightly smaller for fairness
     public float health;
