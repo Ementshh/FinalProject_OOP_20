@@ -75,16 +75,16 @@ public class Main extends ApplicationAdapter {
 
     // Enemy spawn delays per level (in nanoseconds)
     // Level 1: 7-10 seconds
-    private static final long LEVEL1_MIN_SPAWN = 6000000000L;
-    private static final long LEVEL1_MAX_SPAWN = 8000000000L;
+    private static final long LEVEL1_MIN_SPAWN = 3000000000L;
+    private static final long LEVEL1_MAX_SPAWN = 4000000000L;
 
     // Level 2: 6-8 seconds
-    private static final long LEVEL2_MIN_SPAWN = 5000000000L;
-    private static final long LEVEL2_MAX_SPAWN = 8000000000L;
+    private static final long LEVEL2_MIN_SPAWN = 2000000000L;
+    private static final long LEVEL2_MAX_SPAWN = 3000000000L;
 
     // Level 4: 4-7 seconds
-    private static final long LEVEL4_MIN_SPAWN = 4000000000L;
-    private static final long LEVEL4_MAX_SPAWN = 7000000000L;
+    private static final long LEVEL4_MIN_SPAWN = 1000000000L;
+    private static final long LEVEL4_MAX_SPAWN = 3000000000L;
 
     PistolStrategy pistolStrategy;
     Mac10Strategy mac10Strategy;
