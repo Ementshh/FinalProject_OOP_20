@@ -791,7 +791,6 @@ public class Main extends ApplicationAdapter {
             for (Platform p : platforms) {
                 if (b.bounds.overlaps(p.bounds)) {
                     shouldRemove = true;
-                    Gdx.app.log("Bullet", "Hit wall at (" + b.bounds.x + ", " + b.bounds.y + ")");
                     break;
                 }
             }
@@ -799,7 +798,6 @@ public class Main extends ApplicationAdapter {
             // Check if bullet traveled too far vertically
             if (!shouldRemove && b.isOutOfVerticalBounds(VIEWPORT_HEIGHT)) {
                 shouldRemove = true;
-                Gdx.app.log("Bullet", "Out of vertical bounds");
             }
             
             if (shouldRemove) {
