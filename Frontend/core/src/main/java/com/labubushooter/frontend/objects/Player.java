@@ -2,8 +2,11 @@ package com.labubushooter.frontend.objects;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
 import com.badlogic.gdx.utils.TimeUtils;
@@ -35,6 +38,11 @@ public class Player extends GameObject {
     
     public Texture pistolTex;
     public Texture mac10Tex;
+    
+    // Mouse aiming
+    private Vector2 mouseWorldPos;
+    private float weaponAngle;
+    public OrthographicCamera camera;
 
     public Player(Texture tex) {
         super(100, 300, 40, 60, tex);
@@ -42,6 +50,8 @@ public class Player extends GameObject {
         this.health = MAX_HEALTH;
         this.lastDamageTime = TimeUtils.nanoTime();
         this.lastRegenTime = TimeUtils.nanoTime();
+        this.mouseWorldPos = new Vector2();
+        this.weaponAngle = 0f;
     }
 
     public void setWeapon(ShootingStrategy strategy) {
@@ -71,6 +81,7 @@ public class Player extends GameObject {
         this.bounds.setPosition(100, 300);
         this.lastDamageTime = TimeUtils.nanoTime();
         this.lastRegenTime = TimeUtils.nanoTime();
+        this.weaponAngle = 0f;
     }
 
     public void update(float delta, Array<Platform> platforms) {
@@ -85,14 +96,12 @@ public class Player extends GameObject {
             }
         }
 
-        // Movement Input
-        if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
+        // WASD Movement Input
+        if (Gdx.input.isKeyPressed(Input.Keys.A)) {
             bounds.x -= SPEED * delta;
-            facingRight = false;
         }
-        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
+        if (Gdx.input.isKeyPressed(Input.Keys.D)) {
             bounds.x += SPEED * delta;
-            facingRight = true;
         }
 
         // Boundary check untuk level yang lebih lebar
@@ -122,6 +131,41 @@ public class Player extends GameObject {
             bounds.setPosition(100, 400);
             velY = 0;
         }
+        
+        // Update mouse world position and weapon angle
+        if (camera != null) {
+            updateMouseAiming();
+        }
+    }
+    
+    private void updateMouseAiming() {
+        // Convert screen coordinates to world coordinates
+        Vector3 mousePos3D = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
+        camera.unproject(mousePos3D);
+        mouseWorldPos.set(mousePos3D.x, mousePos3D.y);
+        
+        // Calculate player center
+        float playerCenterX = bounds.x + bounds.width / 2;
+        float playerCenterY = bounds.y + bounds.height / 2;
+        
+        // Determine facing direction based on mouse X position
+        if (mouseWorldPos.x > playerCenterX) {
+            facingRight = true;
+        } else {
+            facingRight = false;
+        }
+        
+        // Calculate weapon angle
+        float dx = mouseWorldPos.x - playerCenterX;
+        float dy = mouseWorldPos.y - playerCenterY;
+        weaponAngle = (float) Math.toDegrees(Math.atan2(dy, dx));
+        
+        // Adjust angle if facing left
+        if (!facingRight && weaponAngle > 0) {
+            weaponAngle = 180 - weaponAngle;
+        } else if (!facingRight && weaponAngle < 0) {
+            weaponAngle = -180 - weaponAngle;
+        }
     }
 
     public void jump() {
@@ -131,13 +175,43 @@ public class Player extends GameObject {
         }
     }
 
+    public Vector2 getShootDirection() {
+        float playerCenterX = bounds.x + bounds.width / 2;
+        float playerCenterY = bounds.y + bounds.height / 2;
+        
+        float dx = mouseWorldPos.x - playerCenterX;
+        float dy = mouseWorldPos.y - playerCenterY;
+        
+        // Normalize
+        float length = (float) Math.sqrt(dx * dx + dy * dy);
+        if (length > 0) {
+            dx /= length;
+            dy /= length;
+        }
+        
+        return new Vector2(dx, dy);
+    }
+    
+    public Vector2 getShootStartPosition() {
+        float playerCenterX = bounds.x + bounds.width / 2;
+        float playerCenterY = bounds.y + bounds.height / 2;
+        
+        Vector2 dir = getShootDirection();
+        float offsetDistance = 25f;
+        
+        return new Vector2(
+            playerCenterX + dir.x * offsetDistance,
+            playerCenterY + dir.y * offsetDistance
+        );
+    }
+
     public void shoot(Array<Bullet> activeBullets, Pool<Bullet> pool) {
         if (shootingStrategy == null) return;
 
-        float startX = facingRight ? bounds.x + bounds.width + 10 : bounds.x - 10;
-        float startY = bounds.y + (bounds.height / 2) - 5.5f;
-
-        shootingStrategy.shoot(startX, startY, facingRight, activeBullets, pool);
+        Vector2 startPos = getShootStartPosition();
+        Vector2 direction = getShootDirection();
+        
+        shootingStrategy.shoot(startPos.x, startPos.y, direction, activeBullets, pool);
     }
 
     @Override
@@ -160,10 +234,31 @@ public class Player extends GameObject {
             }
 
             if (currentWeaponTex != null) {
-                float wx = facingRight ? bounds.x + bounds.width - 10 : bounds.x - w + 10;
-                float wy = bounds.y + bounds.height / 2 - h / 2 - 5;
-
-                batch.draw(currentWeaponTex, wx, wy, w, h);
+                float playerCenterX = bounds.x + bounds.width / 2;
+                float playerCenterY = bounds.y + bounds.height / 2;
+                
+                float weaponDistance = 15f;
+                Vector2 dir = getShootDirection();
+                float weaponX = playerCenterX + dir.x * weaponDistance;
+                float weaponY = playerCenterY + dir.y * weaponDistance;
+                
+                float originX = w / 2;
+                float originY = h / 2;
+                
+                float scaleX = 1;
+                float scaleY = facingRight ? 1 : -1;
+                
+                batch.draw(
+                    currentWeaponTex,
+                    weaponX - originX, weaponY - originY,
+                    originX, originY,
+                    w, h,
+                    scaleX, scaleY,
+                    weaponAngle,
+                    0, 0,
+                    (int)w, (int)h,
+                    false, false
+                );
             }
         }
     }
