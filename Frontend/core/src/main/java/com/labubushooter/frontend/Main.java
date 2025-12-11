@@ -118,8 +118,10 @@ public class Main extends ApplicationAdapter {
         batch = new SpriteBatch();
         shapeRenderer = new ShapeRenderer();
 
-        // Setup Camera with ExtendViewport for fullscreen without black bars
-        // ExtendViewport shows MORE of the level horizontally on wider screens
+        // Setup Camera with ExtendViewport for fullscreen scaling
+        // ExtendViewport maintains minimum 800x600 world units and extends horizontally
+        // on wider screens
+        // No black bars - fills entire screen while keeping gameplay area consistent
         camera = new OrthographicCamera();
         viewport = new ExtendViewport(VIEWPORT_WIDTH, VIEWPORT_HEIGHT, camera);
         viewport.apply();
@@ -279,8 +281,8 @@ public class Main extends ApplicationAdapter {
     }
 
     private void spawnEnemy() {
-        float cameraLeft = camera.position.x - VIEWPORT_WIDTH / 2;
-        float cameraRight = camera.position.x + VIEWPORT_WIDTH / 2;
+        float cameraLeft = camera.position.x - viewport.getWorldWidth() / 2;
+        float cameraRight = camera.position.x + viewport.getWorldWidth() / 2;
 
         // Spawn area dengan buffer zone di luar layar
         final float SPAWN_BUFFER = 200f; // Jarak spawn di luar layar
@@ -678,7 +680,7 @@ public class Main extends ApplicationAdapter {
             EnemyBullet eb = activeEnemyBullets.get(i);
             eb.update(delta);
 
-            if (eb.isOutOfBounds(currentLevelWidth, VIEWPORT_HEIGHT)) {
+            if (eb.isOutOfBounds(currentLevelWidth, viewport.getWorldHeight())) {
                 activeEnemyBullets.removeIndex(i);
                 enemyBulletPool.free(eb);
             }
@@ -824,9 +826,9 @@ public class Main extends ApplicationAdapter {
         for (int i = activeBullets.size - 1; i >= 0; i--) {
             Bullet b = activeBullets.get(i);
             b.update(delta);
-            
+
             boolean shouldRemove = false;
-            
+
             // Check collision with platforms (walls)
             for (Platform p : platforms) {
                 if (b.bounds.overlaps(p.bounds)) {
@@ -834,12 +836,12 @@ public class Main extends ApplicationAdapter {
                     break;
                 }
             }
-            
+
             // Check if bullet traveled too far vertically
-            if (!shouldRemove && b.isOutOfVerticalBounds(VIEWPORT_HEIGHT)) {
+            if (!shouldRemove && b.isOutOfVerticalBounds(viewport.getWorldHeight())) {
                 shouldRemove = true;
             }
-            
+
             if (shouldRemove) {
                 activeBullets.removeIndex(i);
                 bulletPool.free(b);
