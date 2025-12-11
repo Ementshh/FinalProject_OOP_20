@@ -57,7 +57,7 @@ public class Main extends ApplicationAdapter {
 
     // Boss textures
     Texture miniBossTex, bossTex, enemyBulletTex;
-    Texture whiteFlashTex, redFlashTex;
+    Texture whiteFlashTex, redFlashTex, yellowFlashTex;
 
     Player player;
     Array<Platform> platforms;
@@ -150,6 +150,7 @@ public class Main extends ApplicationAdapter {
         enemyBulletTex = createColorTexture(8, 8, Color.ORANGE);
         whiteFlashTex = createColorTexture(60, 90, Color.WHITE);
         redFlashTex = createColorTexture(60, 100, Color.RED);
+        yellowFlashTex = createColorTexture(60, 90, Color.YELLOW);
 
         // Setup Bullet Pool
         bulletPool = new Pool<Bullet>() {
@@ -413,7 +414,7 @@ public class Main extends ApplicationAdapter {
 
         // Spawn boss for levels 3 and 5
         if (level == 3) {
-            miniBoss = new MiniBossEnemy(miniBossTex, whiteFlashTex);
+            miniBoss = new MiniBossEnemy(miniBossTex, whiteFlashTex, yellowFlashTex);
             miniBoss.init(strategy.getBossSpawnX(), strategy.getBossSpawnY());
             boss = null;
             Gdx.app.log("Level3", "Mini Boss spawned!");

@@ -7,7 +7,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
 
-public abstract class   BossEnemy {
+public abstract class BossEnemy {
     public Rectangle bounds;
     public Rectangle collider; // Slightly smaller for fairness
     public float health;
@@ -84,38 +84,16 @@ public abstract class   BossEnemy {
         // Update collider position
         updateCollider();
 
-        // Platform collision
+        // Platform collision - same behavior as Player (only bottom collision)
         grounded = false;
         for (Platform p : platforms) {
             if (bounds.overlaps(p.bounds)) {
-                // Calculate overlap amounts
-                float overlapBottom = (bounds.y + bounds.height) - p.bounds.y;
-                float overlapTop = (p.bounds.y + p.bounds.height) - bounds.y;
-                float overlapLeft = (bounds.x + bounds.width) - p.bounds.x;
-                float overlapRight = (p.bounds.x + p.bounds.width) - bounds.x;
-
-                // Determine smallest overlap to find collision side
-                float minOverlap = Math.min(Math.min(overlapBottom, overlapTop), Math.min(overlapLeft, overlapRight));
-
-                // Landing on top (falling down)
-                if (minOverlap == overlapTop && velY <= 0 && overlapTop > 0 && overlapTop < bounds.height) {
+                // Only collide from below (when falling down and boss center is above platform
+                // top)
+                if (velY < 0 && bounds.y + bounds.height / 2 > p.bounds.y + p.bounds.height) {
                     bounds.y = p.bounds.y + p.bounds.height;
                     velY = 0;
                     grounded = true;
-                }
-                // Hitting ceiling (jumping up)
-                else if (minOverlap == overlapBottom && velY > 0 && overlapBottom > 0
-                        && overlapBottom < bounds.height) {
-                    bounds.y = p.bounds.y - bounds.height;
-                    velY = 0;
-                }
-                // Hitting from left
-                else if (minOverlap == overlapLeft && overlapLeft > 0 && overlapLeft < bounds.width) {
-                    bounds.x = p.bounds.x - bounds.width;
-                }
-                // Hitting from right
-                else if (minOverlap == overlapRight && overlapRight > 0 && overlapRight < bounds.width) {
-                    bounds.x = p.bounds.x + p.bounds.width;
                 }
             }
         }
