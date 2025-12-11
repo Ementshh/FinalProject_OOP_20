@@ -57,7 +57,7 @@ public class Main extends ApplicationAdapter {
 
     // Boss textures
     Texture miniBossTex, bossTex, enemyBulletTex;
-    Texture whiteFlashTex, redFlashTex;
+    Texture whiteFlashTex, redFlashTex, yellowFlashTex;
 
     Player player;
     Array<Platform> platforms;
@@ -108,6 +108,7 @@ public class Main extends ApplicationAdapter {
 
     // Game Over System
     private boolean isGameOver = false;
+    private boolean isVictory = false;
     private BitmapFont font;
     private BitmapFont smallFont;
     private GlyphLayout layout;
@@ -149,6 +150,7 @@ public class Main extends ApplicationAdapter {
         enemyBulletTex = createColorTexture(8, 8, Color.ORANGE);
         whiteFlashTex = createColorTexture(60, 90, Color.WHITE);
         redFlashTex = createColorTexture(60, 100, Color.RED);
+        yellowFlashTex = createColorTexture(60, 90, Color.YELLOW);
 
         // Setup Bullet Pool
         bulletPool = new Pool<Bullet>() {
@@ -260,51 +262,53 @@ public class Main extends ApplicationAdapter {
         switch (level) {
             case 1:
                 // Level 1: Spawn 1 enemy at middle platform (blocking path)
-                return new float[]{1200f};
-                
+                return new float[] { 1200f };
+
             case 2:
                 // Level 2: Spawn 1 enemy at stairway area
-                return new float[]{1000f};
-                
+                return new float[] { 1000f };
+
             case 4:
                 // Level 4: Spawn 1 enemy at vertical tower area
-                return new float[]{1400f};
-                
+                return new float[] { 1400f };
+
             default:
-                return new float[]{}; // No initial spawn
+                return new float[] {}; // No initial spawn
         }
     }
 
     private void spawnEnemy() {
         float cameraLeft = camera.position.x - VIEWPORT_WIDTH / 2;
         float cameraRight = camera.position.x + VIEWPORT_WIDTH / 2;
-        
+
         // Spawn area dengan buffer zone di luar layar
         final float SPAWN_BUFFER = 200f; // Jarak spawn di luar layar
         final float PLAYER_SAFETY_ZONE = 300f; // Jarak minimum dari player
-        
+
         float spawnX;
         int attempts = 0;
         final int MAX_ATTEMPTS = 20;
-        
+
         do {
             // Pilih spawn di kiri atau kanan layar secara random
             boolean spawnLeft = random.nextBoolean();
-            
+
             if (spawnLeft) {
                 // Spawn di kiri layar (di luar view)
                 spawnX = cameraLeft - SPAWN_BUFFER - random.nextFloat() * 100f;
                 // Pastikan tidak keluar dari level bounds
-                if (spawnX < 0) spawnX = cameraRight + SPAWN_BUFFER + random.nextFloat() * 100f;
+                if (spawnX < 0)
+                    spawnX = cameraRight + SPAWN_BUFFER + random.nextFloat() * 100f;
             } else {
                 // Spawn di kanan layar (di luar view)
                 spawnX = cameraRight + SPAWN_BUFFER + random.nextFloat() * 100f;
                 // Pastikan tidak keluar dari level bounds
-                if (spawnX > currentLevelWidth - 100f) spawnX = cameraLeft - SPAWN_BUFFER - random.nextFloat() * 100f;
+                if (spawnX > currentLevelWidth - 100f)
+                    spawnX = cameraLeft - SPAWN_BUFFER - random.nextFloat() * 100f;
             }
-            
+
             attempts++;
-            
+
             // Break jika sudah terlalu banyak percobaan
             if (attempts >= MAX_ATTEMPTS) {
                 // Fallback: spawn di ujung level yang jauh dari player
@@ -315,19 +319,19 @@ public class Main extends ApplicationAdapter {
                 }
                 break;
             }
-            
-        } while (Math.abs(spawnX - player.bounds.x) < PLAYER_SAFETY_ZONE || 
-                 (spawnX >= cameraLeft && spawnX <= cameraRight)); // Pastikan di luar layar
+
+        } while (Math.abs(spawnX - player.bounds.x) < PLAYER_SAFETY_ZONE ||
+                (spawnX >= cameraLeft && spawnX <= cameraRight)); // Pastikan di luar layar
 
         CommonEnemy enemy = enemyPool.obtain();
         enemy.init(spawnX, player, currentLevel);
         activeEnemies.add(enemy);
 
-        Gdx.app.log("EnemySpawn", "Spawned at X: " + spawnX + 
-                    " (Camera: " + cameraLeft + " - " + cameraRight + 
-                    ", Player: " + player.bounds.x + ")");
+        Gdx.app.log("EnemySpawn", "Spawned at X: " + spawnX +
+                " (Camera: " + cameraLeft + " - " + cameraRight +
+                ", Player: " + player.bounds.x + ")");
     }
-    
+
     private int getMaxEnemiesForLevel(int level) {
         switch (level) {
             case 1:
@@ -343,6 +347,7 @@ public class Main extends ApplicationAdapter {
 
     private void restartGame() {
         isGameOver = false;
+        isVictory = false;
         currentLevel = 1;
 
         // Clear all enemies
@@ -409,12 +414,12 @@ public class Main extends ApplicationAdapter {
 
         // Spawn boss for levels 3 and 5
         if (level == 3) {
-            miniBoss = new MiniBossEnemy(miniBossTex, whiteFlashTex);
+            miniBoss = new MiniBossEnemy(miniBossTex, whiteFlashTex, yellowFlashTex);
             miniBoss.init(strategy.getBossSpawnX(), strategy.getBossSpawnY());
             boss = null;
             Gdx.app.log("Level3", "Mini Boss spawned!");
         } else if (level == 5) {
-            boss = new FinalBoss(bossTex, redFlashTex, enemyBulletTex);
+            boss = new FinalBoss(bossTex, redFlashTex, enemyBulletTex, yellowFlashTex);
             boss.init(strategy.getBossSpawnX(), strategy.getBossSpawnY());
             miniBoss = null;
             Gdx.app.log("Level5", "Final Boss spawned!");
@@ -459,97 +464,100 @@ public class Main extends ApplicationAdapter {
 
     private void setupCoinSpawnLocations(int level) {
         coinSpawnLocations = new Array<>();
-        
+
         // Konstanta untuk posisi coin
         final float PLATFORM_OFFSET = 30f; // Jarak di atas platform
         final float GROUND_Y = 50f; // Ground base Y
         final float GROUND_HEIGHT = 50f; // Ground height
         final float PLATFORM_HEIGHT = 20f; // Platform height (dari createColorTexture)
         final float JUMP_OFFSET = 500f / 2.5f - 50f; // (JUMP_POWER / 2.5) - 50f = 150f
-        
+
         switch (level) {
             case 1:
                 // Level 1: Coin di atas platform dan ground
                 // Platform di x=500, y=200 -> coin di y=200+20+30 = 250
-                coinSpawnLocations.add(new float[]{600f, 200f + PLATFORM_HEIGHT + PLATFORM_OFFSET});
-                
+                coinSpawnLocations.add(new float[] { 600f, 200f + PLATFORM_HEIGHT + PLATFORM_OFFSET });
+
                 // Ground y=50 + 50(tinggi) = 100 -> coin di y=100+30 = 130
-                coinSpawnLocations.add(new float[]{900f, GROUND_Y + GROUND_HEIGHT + PLATFORM_OFFSET});
-                
+                coinSpawnLocations.add(new float[] { 900f, GROUND_Y + GROUND_HEIGHT + PLATFORM_OFFSET });
+
                 // Platform di x=1200, y=300 -> coin di y=300+20+30 = 350
-                coinSpawnLocations.add(new float[]{1300f, 300f + PLATFORM_HEIGHT + PLATFORM_OFFSET});
-                
+                coinSpawnLocations.add(new float[] { 1300f, 300f + PLATFORM_HEIGHT + PLATFORM_OFFSET });
+
                 // Coin di udara (tinggi lompatan dari ground)
-                coinSpawnLocations.add(new float[]{1700f, GROUND_Y + GROUND_HEIGHT + JUMP_OFFSET});
+                coinSpawnLocations.add(new float[] { 1700f, GROUND_Y + GROUND_HEIGHT + JUMP_OFFSET });
                 break;
-                
+
             case 2:
                 // Level 2: Mengikuti pola stairway
                 // Platform x=600, y=150 -> y=150+20+30 = 200
-                coinSpawnLocations.add(new float[]{650f, 150f + PLATFORM_HEIGHT + PLATFORM_OFFSET});
-                
+                coinSpawnLocations.add(new float[] { 650f, 150f + PLATFORM_HEIGHT + PLATFORM_OFFSET });
+
                 // Platform x=900, y=250 -> y=250+20+30 = 300
-                coinSpawnLocations.add(new float[]{950f, 250f + PLATFORM_HEIGHT + PLATFORM_OFFSET});
-                
+                coinSpawnLocations.add(new float[] { 950f, 250f + PLATFORM_HEIGHT + PLATFORM_OFFSET });
+
                 // Platform x=1200, y=350 -> y=350+20+30 = 400
-                coinSpawnLocations.add(new float[]{1300f, 350f + PLATFORM_HEIGHT + PLATFORM_OFFSET});
-                
+                coinSpawnLocations.add(new float[] { 1300f, 350f + PLATFORM_HEIGHT + PLATFORM_OFFSET });
+
                 // Ground area
-                coinSpawnLocations.add(new float[]{1650f, GROUND_Y + GROUND_HEIGHT + PLATFORM_OFFSET});
-                
+                coinSpawnLocations.add(new float[] { 1650f, GROUND_Y + GROUND_HEIGHT + PLATFORM_OFFSET });
+
                 // Platform x=1800, y=200 -> y=200+20+30 = 250
-                coinSpawnLocations.add(new float[]{1900f, 200f + PLATFORM_HEIGHT + PLATFORM_OFFSET});
+                coinSpawnLocations.add(new float[] { 1900f, 200f + PLATFORM_HEIGHT + PLATFORM_OFFSET });
                 break;
-                
+
             case 3:
                 // Level 3: Boss level - coins di safe spots
                 // Platform x=500, y=200 -> y=200+20+30 = 250
-                coinSpawnLocations.add(new float[]{550f, 200f + PLATFORM_HEIGHT + PLATFORM_OFFSET});
-                
+                coinSpawnLocations.add(new float[] { 550f, 200f + PLATFORM_HEIGHT + PLATFORM_OFFSET });
+
                 // Platform x=1100, y=200 -> y=200+20+30 = 250
-                coinSpawnLocations.add(new float[]{1150f, 200f + PLATFORM_HEIGHT + PLATFORM_OFFSET});
+                coinSpawnLocations.add(new float[] { 1150f, 200f + PLATFORM_HEIGHT + PLATFORM_OFFSET });
                 break;
-                
+
             case 4:
                 // Level 4: Vertical tower pattern
                 // Platform x=700, y=300 -> y=300+20+30 = 350
-                coinSpawnLocations.add(new float[]{750f, 300f + PLATFORM_HEIGHT + PLATFORM_OFFSET});
-                
+                coinSpawnLocations.add(new float[] { 750f, 300f + PLATFORM_HEIGHT + PLATFORM_OFFSET });
+
                 // Platform x=1000, y=200 -> y=200+20+30 = 250
-                coinSpawnLocations.add(new float[]{1050f, 200f + PLATFORM_HEIGHT + PLATFORM_OFFSET});
-                
+                coinSpawnLocations.add(new float[] { 1050f, 200f + PLATFORM_HEIGHT + PLATFORM_OFFSET });
+
                 // Platform x=1300, y=350 -> y=350+20+30 = 400
-                coinSpawnLocations.add(new float[]{1400f, 350f + PLATFORM_HEIGHT + PLATFORM_OFFSET});
-                
+                coinSpawnLocations.add(new float[] { 1400f, 350f + PLATFORM_HEIGHT + PLATFORM_OFFSET });
+
                 // Platform x=1600, y=250 -> y=250+20+30 = 300
-                coinSpawnLocations.add(new float[]{1650f, 250f + PLATFORM_HEIGHT + PLATFORM_OFFSET});
-                
+                coinSpawnLocations.add(new float[] { 1650f, 250f + PLATFORM_HEIGHT + PLATFORM_OFFSET });
+
                 // Platform x=1900, y=180 -> y=180+20+30 = 230
-                coinSpawnLocations.add(new float[]{2000f, 180f + PLATFORM_HEIGHT + PLATFORM_OFFSET});
+                coinSpawnLocations.add(new float[] { 2000f, 180f + PLATFORM_HEIGHT + PLATFORM_OFFSET });
                 break;
-                
+
             case 5:
                 // Level 5: Boss arena
-                // Platform kiri x=100, y=200 -> y=200+20+30 = 250
-                coinSpawnLocations.add(new float[]{150f, 200f + PLATFORM_HEIGHT + PLATFORM_OFFSET});
-                
-                // Platform kanan x=550, y=200 -> y=200+20+30 = 250
-                coinSpawnLocations.add(new float[]{600f, 200f + PLATFORM_HEIGHT + PLATFORM_OFFSET});
-                
-                // Platform tengah elevated x=300, y=350 -> y=350+20+30 = 400
-                coinSpawnLocations.add(new float[]{400f, 350f + PLATFORM_HEIGHT + PLATFORM_OFFSET});
+                // Platform kiri x=200, y=200, width=200 -> coin at center x=300, y=200+20+30 =
+                // 250
+                coinSpawnLocations.add(new float[] { 300f, 200f + PLATFORM_HEIGHT + PLATFORM_OFFSET });
+
+                // Platform kanan x=700, y=200, width=200 -> coin at center x=800, y=200+20+30 =
+                // 250
+                coinSpawnLocations.add(new float[] { 800f, 200f + PLATFORM_HEIGHT + PLATFORM_OFFSET });
+
+                // Platform tengah elevated x=450, y=330, width=200 -> coin at center x=550,
+                // y=330+20+30 = 380
+                coinSpawnLocations.add(new float[] { 550f, 330f + PLATFORM_HEIGHT + PLATFORM_OFFSET });
                 break;
         }
-        
+
         Gdx.app.log("CoinSpawn", "Setup " + coinSpawnLocations.size + " spawn locations for level " + level);
     }
-    
+
     private void spawnCoinsForLevel() {
         for (float[] location : coinSpawnLocations) {
             Array<Coin> spawnedCoins = coinPattern.spawn(coinPool, location[0], location[1]);
             activeCoins.addAll(spawnedCoins);
         }
-        
+
         Gdx.app.log("Coins", "Spawned " + activeCoins.size + " coins for level " + currentLevel);
     }
 
@@ -565,6 +573,20 @@ public class Main extends ApplicationAdapter {
     @Override
     public void render() {
         float delta = Gdx.graphics.getDeltaTime();
+
+        // Check for Victory screen
+        if (isVictory) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+                restartGame();
+            }
+            if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+                Gdx.app.exit();
+            }
+
+            // Render Victory Screen
+            renderVictory();
+            return;
+        }
 
         // Check for Game Over restart
         if (isGameOver) {
@@ -592,6 +614,18 @@ public class Main extends ApplicationAdapter {
         if (Gdx.input.isKeyJustPressed(Input.Keys.F5)) {
             loadLevel(5);
             Gdx.app.log("Debug", "Skipped to Level 5 (Final Boss)");
+        }
+
+        // --- DEBUG: INSTA-KILL BOSS ---
+        if (Gdx.input.isKeyJustPressed(Input.Keys.K)) {
+            if (currentLevel == 3 && miniBoss != null && !miniBoss.isDead()) {
+                miniBoss.takeDamage(999999f);
+                Gdx.app.log("Debug", "Mini Boss instantly killed!");
+            }
+            if (currentLevel == 5 && boss != null && !boss.isDead()) {
+                boss.takeDamage(999999f);
+                Gdx.app.log("Debug", "Final Boss instantly killed!");
+            }
         }
 
         // --- WEAPON SWITCHING ---
@@ -653,7 +687,7 @@ public class Main extends ApplicationAdapter {
         if (currentLevel != 3 && currentLevel != 5) {
             if (TimeUtils.nanoTime() - lastEnemySpawnTime > nextEnemySpawnDelay) {
                 int maxEnemies = getMaxEnemiesForLevel(currentLevel);
-                
+
                 // Hanya spawn jika belum mencapai batas
                 if (activeEnemies.size < maxEnemies) {
                     spawnEnemy();
@@ -747,7 +781,13 @@ public class Main extends ApplicationAdapter {
         }
 
         if (bossDefeated && player.bounds.x + player.bounds.width >= currentLevelWidth - LEVEL_EXIT_THRESHOLD) {
-            loadLevel(currentLevel + 1);
+            if (currentLevel == 5) {
+                // Level 5 completed - trigger victory!
+                isVictory = true;
+                Gdx.app.log("Game", "VICTORY! Game Completed!");
+            } else {
+                loadLevel(currentLevel + 1);
+            }
         }
 
         // --- CAMERA FOLLOW LOGIC ---
@@ -767,7 +807,7 @@ public class Main extends ApplicationAdapter {
         for (int i = activeCoins.size - 1; i >= 0; i--) {
             Coin coin = activeCoins.get(i);
             coin.update(delta);
-            
+
             // Check coin collection - GUNAKAN isColliding
             if (coin.isColliding(player.bounds)) {
                 coin.active = false;
@@ -803,7 +843,19 @@ public class Main extends ApplicationAdapter {
         // Draw platforms
         for (Platform p : platforms)
             p.draw(batch);
-        batch.draw(exitTex, currentLevelWidth - 80, 50);
+
+        // Draw exit door (conditional for boss levels)
+        boolean bossDefeated = true;
+        if (currentLevel == 3 && miniBoss != null) {
+            bossDefeated = miniBoss.isDead();
+        }
+        if (currentLevel == 5 && boss != null) {
+            bossDefeated = boss.isDead();
+        }
+
+        if (bossDefeated) {
+            batch.draw(exitTex, currentLevelWidth - 80, 50);
+        }
 
         // Draw enemies
         for (CommonEnemy enemy : activeEnemies) {
@@ -900,6 +952,51 @@ public class Main extends ApplicationAdapter {
         batch.end();
     }
 
+    private void renderVictory() {
+        Gdx.gl.glClearColor(0.1f, 0.3f, 0.1f, 1); // Green tint for victory
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
+
+        // Draw "VICTORY!" text
+        String victoryText = "VICTORY!";
+        layout.setText(font, victoryText);
+        float victoryX = camera.position.x - layout.width / 2;
+        float victoryY = camera.position.y + 100;
+        font.draw(batch, victoryText, victoryX, victoryY);
+
+        // Draw "Game Completed!" text
+        String completedText = "Game Completed!";
+        layout.setText(smallFont, completedText);
+        float completedX = camera.position.x - layout.width / 2;
+        float completedY = camera.position.y + 50;
+        smallFont.draw(batch, completedText, completedX, completedY);
+
+        // Draw coin score
+        String coinsText = "Total Coins Collected: " + coinScore;
+        layout.setText(smallFont, coinsText);
+        float coinsX = camera.position.x - layout.width / 2;
+        float coinsY = camera.position.y;
+        smallFont.draw(batch, coinsText, coinsX, coinsY);
+
+        // Draw replay instruction
+        String replayText = "Press SPACE to Play Again";
+        layout.setText(smallFont, replayText);
+        float replayX = camera.position.x - layout.width / 2;
+        float replayY = camera.position.y - 50;
+        smallFont.draw(batch, replayText, replayX, replayY);
+
+        // Draw quit instruction
+        String quitText = "Press ESC to Quit";
+        layout.setText(smallFont, quitText);
+        float quitX = camera.position.x - layout.width / 2;
+        float quitY = camera.position.y - 80;
+        smallFont.draw(batch, quitText, quitX, quitY);
+
+        batch.end();
+    }
+
     @Override
     public void resize(int width, int height) {
         viewport.update(width, height, true);
@@ -920,6 +1017,7 @@ public class Main extends ApplicationAdapter {
         enemyBulletTex.dispose();
         whiteFlashTex.dispose();
         redFlashTex.dispose();
+        yellowFlashTex.dispose();
         font.dispose();
         smallFont.dispose();
     }
