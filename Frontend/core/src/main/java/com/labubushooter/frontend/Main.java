@@ -40,7 +40,7 @@ public class Main extends ApplicationAdapter {
     OrthographicCamera camera;
     Viewport viewport;
 
-    static final float VIEWPORT_WIDTH = 800f;
+    static final float VIEWPORT_WIDTH = 1066f; // 16:9 aspect ratio
     static final float VIEWPORT_HEIGHT = 600f;
 
     private final float LEVEL_EXIT_THRESHOLD = 100f;
@@ -58,6 +58,7 @@ public class Main extends ApplicationAdapter {
     // Boss textures
     Texture miniBossTex, bossTex, enemyBulletTex;
     Texture whiteFlashTex, redFlashTex, yellowFlashTex;
+    Texture backgroundTex;
 
     Player player;
     Array<Platform> platforms;
@@ -165,6 +166,11 @@ public class Main extends ApplicationAdapter {
 
         // Setup Enemy Pool
         random = new Random();
+
+        // Load background image
+        backgroundTex = new Texture(Gdx.files.internal("background.png"));
+        backgroundTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+
         enemyPool = new Pool<CommonEnemy>() {
             @Override
             protected CommonEnemy newObject() {
@@ -859,6 +865,11 @@ public class Main extends ApplicationAdapter {
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
+        // Draw background (full level width)
+        if (backgroundTex != null) {
+            batch.draw(backgroundTex, 0, 0, currentLevelWidth, VIEWPORT_HEIGHT);
+        }
+
         // Draw platforms
         for (Platform p : platforms)
             p.draw(batch);
@@ -1037,6 +1048,7 @@ public class Main extends ApplicationAdapter {
         whiteFlashTex.dispose();
         redFlashTex.dispose();
         yellowFlashTex.dispose();
+        backgroundTex.dispose();
         font.dispose();
         smallFont.dispose();
     }
