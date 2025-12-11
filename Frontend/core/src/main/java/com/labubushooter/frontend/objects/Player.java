@@ -155,17 +155,10 @@ public class Player extends GameObject {
             facingRight = false;
         }
         
-        // Calculate weapon angle
+        // Calculate weapon angle (pure 360° rotation)
         float dx = mouseWorldPos.x - playerCenterX;
         float dy = mouseWorldPos.y - playerCenterY;
         weaponAngle = (float) Math.toDegrees(Math.atan2(dy, dx));
-        
-        // Adjust angle if facing left
-        if (!facingRight && weaponAngle > 0) {
-            weaponAngle = 180 - weaponAngle;
-        } else if (!facingRight && weaponAngle < 0) {
-            weaponAngle = -180 - weaponAngle;
-        }
     }
 
     public void jump() {
@@ -219,45 +212,59 @@ public class Player extends GameObject {
         // 1. Draw Player Body
         batch.draw(texture, bounds.x, bounds.y, bounds.width, bounds.height);
 
-        // 2. Draw Weapon Hitbox (if holding one)
+        // 2. Draw Weapon with smooth 360° rotation and Y-axis mirroring
         if (shootingStrategy != null) {
             Texture currentWeaponTex = null;
             float w = 0, h = 0;
             String strategyName = shootingStrategy.getClass().getSimpleName();
 
+            // Pistol: 25x8 horizontal rectangle (seperti gambar 1)
             if (strategyName.contains("Pistol")) {
                 currentWeaponTex = pistolTex;
-                w = 20; h = 10;
-            } else if (strategyName.contains("Mac10")) {
+                w = 25; 
+                h = 8;
+            } 
+            // SMG/Mac10: 30x10 horizontal rectangle (seperti gambar 2)
+            else if (strategyName.contains("Mac10")) {
                 currentWeaponTex = mac10Tex;
-                w = 30; h = 15;
+                w = 30; 
+                h = 10;
             }
 
             if (currentWeaponTex != null) {
                 float playerCenterX = bounds.x + bounds.width / 2;
                 float playerCenterY = bounds.y + bounds.height / 2;
                 
-                float weaponDistance = 15f;
-                Vector2 dir = getShootDirection();
-                float weaponX = playerCenterX + dir.x * weaponDistance;
-                float weaponY = playerCenterY + dir.y * weaponDistance;
+                // Weapon offset dari player center
+                float weaponOffsetX = 10f; // Jarak horizontal dari center
+                float weaponOffsetY = 5f;  // Sedikit ke atas dari center
                 
-                float originX = w / 2;
-                float originY = h / 2;
+                // Position weapon di tangan player
+                float weaponX = playerCenterX + weaponOffsetX;
+                float weaponY = playerCenterY + weaponOffsetY;
                 
-                float scaleX = 1;
+                // Origin untuk rotation (di grip/handle, pojok kiri tengah)
+                float originX = 5f;     // Grip position dari kiri
+                float originY = h / 2;  // Center vertikal
+                
+                // Mirror weapon dengan Y-axis flip jika facing left
                 float scaleY = facingRight ? 1 : -1;
                 
+                // Draw weapon dengan rotation 360° smooth
                 batch.draw(
                     currentWeaponTex,
-                    weaponX - originX, weaponY - originY,
-                    originX, originY,
-                    w, h,
-                    scaleX, scaleY,
-                    weaponAngle,
-                    0, 0,
-                    (int)w, (int)h,
-                    false, false
+                    weaponX - originX,       // x position
+                    weaponY - originY,       // y position
+                    originX,                 // origin x (rotation pivot)
+                    originY,                 // origin y (rotation pivot)
+                    w,                       // width
+                    h,                       // height
+                    1,                       // scale x
+                    scaleY,                  // scale y (flip if facing left)
+                    weaponAngle,             // rotation angle (360°)
+                    0, 0,                    // source x, y
+                    (int)w, (int)h,          // source width, height
+                    false, false             // flip x, y
                 );
             }
         }
