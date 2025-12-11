@@ -24,9 +24,14 @@ Frontend/core/src/main/java/com/labubushooter/*
 !Frontend/core/src/main/java/com/labubushooter/frontend/
 !Frontend/core/src/main/java/com/labubushooter/frontend/**
 
+
 # Track assets folder
 !Frontend/assets/
 !Frontend/assets/**
+
+# Track lwjgl3 folder
+!Frontend/lwjgl3/
+!Frontend/lwjgl3/**
 
 # =============================================================================
 # IGNORE ALL BUILD & CACHE FILES
