@@ -19,7 +19,13 @@ public class EnemyBullet implements Pool.Poolable {
     }
 
     public void init(float x, float y, float angleInDegrees, float speed, float damage, Texture texture) {
+        init(x, y, angleInDegrees, speed, damage, texture, 8, 8);
+    }
+
+    public void init(float x, float y, float angleInDegrees, float speed, float damage, Texture texture, float width,
+            float height) {
         this.bounds.setPosition(x, y);
+        this.bounds.setSize(width, height);
         this.damage = damage;
         this.texture = texture;
         this.active = true;

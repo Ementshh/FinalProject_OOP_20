@@ -419,7 +419,7 @@ public class Main extends ApplicationAdapter {
             boss = null;
             Gdx.app.log("Level3", "Mini Boss spawned!");
         } else if (level == 5) {
-            boss = new FinalBoss(bossTex, redFlashTex, enemyBulletTex);
+            boss = new FinalBoss(bossTex, redFlashTex, enemyBulletTex, yellowFlashTex);
             boss.init(strategy.getBossSpawnX(), strategy.getBossSpawnY());
             miniBoss = null;
             Gdx.app.log("Level5", "Final Boss spawned!");
@@ -535,14 +535,17 @@ public class Main extends ApplicationAdapter {
 
             case 5:
                 // Level 5: Boss arena
-                // Platform kiri x=100, y=200 -> y=200+20+30 = 250
-                coinSpawnLocations.add(new float[] { 150f, 200f + PLATFORM_HEIGHT + PLATFORM_OFFSET });
+                // Platform kiri x=200, y=200, width=200 -> coin at center x=300, y=200+20+30 =
+                // 250
+                coinSpawnLocations.add(new float[] { 300f, 200f + PLATFORM_HEIGHT + PLATFORM_OFFSET });
 
-                // Platform kanan x=550, y=200 -> y=200+20+30 = 250
-                coinSpawnLocations.add(new float[] { 600f, 200f + PLATFORM_HEIGHT + PLATFORM_OFFSET });
+                // Platform kanan x=700, y=200, width=200 -> coin at center x=800, y=200+20+30 =
+                // 250
+                coinSpawnLocations.add(new float[] { 800f, 200f + PLATFORM_HEIGHT + PLATFORM_OFFSET });
 
-                // Platform tengah elevated x=300, y=350 -> y=350+20+30 = 400
-                coinSpawnLocations.add(new float[] { 400f, 350f + PLATFORM_HEIGHT + PLATFORM_OFFSET });
+                // Platform tengah elevated x=450, y=330, width=200 -> coin at center x=550,
+                // y=330+20+30 = 380
+                coinSpawnLocations.add(new float[] { 550f, 330f + PLATFORM_HEIGHT + PLATFORM_OFFSET });
                 break;
         }
 
@@ -1014,6 +1017,7 @@ public class Main extends ApplicationAdapter {
         enemyBulletTex.dispose();
         whiteFlashTex.dispose();
         redFlashTex.dispose();
+        yellowFlashTex.dispose();
         font.dispose();
         smallFont.dispose();
     }
