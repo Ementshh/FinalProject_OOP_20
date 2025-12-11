@@ -137,7 +137,8 @@ public class Main extends ApplicationAdapter {
         layout = new GlyphLayout();
 
         // Create Textures
-        playerTex = createColorTexture(40, 60, Color.ORANGE);
+        playerTex = new Texture(Gdx.files.internal("player.png"));
+        playerTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
         platformTex = createColorTexture(100, 20, Color.FOREST);
         bulletTex = createColorTexture(10, 5, Color.YELLOW);
         pistolTex = createColorTexture(20, 10, Color.GRAY);
@@ -865,9 +866,18 @@ public class Main extends ApplicationAdapter {
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
-        // Draw background (full level width)
+        // Draw background at native resolution (crop if doesn't fit)
         if (backgroundTex != null) {
-            batch.draw(backgroundTex, 0, 0, currentLevelWidth, VIEWPORT_HEIGHT);
+            // Get actual texture dimensions
+            float bgWidth = backgroundTex.getWidth();
+            float bgHeight = backgroundTex.getHeight();
+
+            // Position background at world origin - scrolls naturally with camera
+            float bgX = 0; // Start from world origin
+            float bgY = (VIEWPORT_HEIGHT - bgHeight) / 2; // Centered vertically
+
+            // Draw at native size - will crop naturally if larger than viewport
+            batch.draw(backgroundTex, bgX, bgY, bgWidth, bgHeight);
         }
 
         // Draw platforms
