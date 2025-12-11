@@ -149,7 +149,7 @@ public class Player extends GameObject {
         float playerCenterY = bounds.y + bounds.height / 2;
         
         // Determine facing direction based on mouse X position
-        if (mouseWorldPos.x > playerCenterX) {
+        if (mouseWorldPos.x >= playerCenterX) {
             facingRight = true;
         } else {
             facingRight = false;
@@ -235,36 +235,35 @@ public class Player extends GameObject {
                 float playerCenterX = bounds.x + bounds.width / 2;
                 float playerCenterY = bounds.y + bounds.height / 2;
                 
-                // Weapon offset dari player center
-                float weaponOffsetX = 10f; // Jarak horizontal dari center
-                float weaponOffsetY = 5f;  // Sedikit ke atas dari center
+                // Origin point di grip (pojok kiri tengah senjata)
+                float originX = 5f;    // Grip position dari kiri
+                float originY = h / 2; // Center vertikal
                 
-                // Position weapon di tangan player
-                float weaponX = playerCenterX + weaponOffsetX;
-                float weaponY = playerCenterY + weaponOffsetY;
+                // Weapon position di player center
+                float weaponX = playerCenterX;
+                float weaponY = playerCenterY;
                 
-                // Origin untuk rotation (di grip/handle, pojok kiri tengah)
-                float originX = 5f;     // Grip position dari kiri
-                float originY = h / 2;  // Center vertikal
-                
-                // Mirror weapon dengan Y-axis flip jika facing left
+                // Y-axis flip jika mouse di kiri player
                 float scaleY = facingRight ? 1 : -1;
                 
-                // Draw weapon dengan rotation 360° smooth
+                // Rotation angle tetap sama (tidak perlu adjustment)
+                float drawAngle = weaponAngle;
+                
+                // Draw weapon dengan rotation penuh 360°
                 batch.draw(
                     currentWeaponTex,
-                    weaponX - originX,       // x position
-                    weaponY - originY,       // y position
-                    originX,                 // origin x (rotation pivot)
-                    originY,                 // origin y (rotation pivot)
-                    w,                       // width
-                    h,                       // height
-                    1,                       // scale x
-                    scaleY,                  // scale y (flip if facing left)
-                    weaponAngle,             // rotation angle (360°)
-                    0, 0,                    // source x, y
-                    (int)w, (int)h,          // source width, height
-                    false, false             // flip x, y
+                    weaponX - originX,      // x position (offset by origin)
+                    weaponY - originY,      // y position (offset by origin)
+                    originX,                // origin x (grip point - rotation pivot)
+                    originY,                // origin y (center vertikal)
+                    w,                      // width
+                    h,                      // height
+                    1,                      // scale x
+                    scaleY,                 // scale y (flip vertikal jika facing left)
+                    drawAngle,              // rotation angle (360° smooth)
+                    0, 0,                   // source x, y
+                    (int)w, (int)h,         // source width, height
+                    false, false            // flip x, y
                 );
             }
         }
