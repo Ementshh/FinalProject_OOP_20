@@ -197,6 +197,7 @@ public class Main extends ApplicationAdapter {
         player = new Player(playerTex);
         player.pistolTex = pistolTex;
         player.mac10Tex = mac10Tex;
+        player.camera = camera;
         player.setWeapon(null);
 
         // Initialize Level Strategies
@@ -643,18 +644,18 @@ public class Main extends ApplicationAdapter {
         }
 
         // --- JUMP ---
-        if (Gdx.input.isKeyJustPressed(Input.Keys.UP))
+        if (Gdx.input.isKeyJustPressed(Input.Keys.W))
             player.jump();
 
-        // --- SHOOTING ---
+        // --- MOUSE SHOOTING ---
         ShootingStrategy currentWeapon = player.getWeapon();
         if (currentWeapon != null) {
             if (currentWeapon.isAutomatic()) {
-                if (Gdx.input.isKeyPressed(Input.Keys.SPACE)) {
+                if (Gdx.input.isButtonPressed(Input.Buttons.LEFT)) {
                     player.shoot(activeBullets, bulletPool);
                 }
             } else {
-                if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+                if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) {
                     player.shoot(activeBullets, bulletPool);
                 }
             }
@@ -819,11 +820,27 @@ public class Main extends ApplicationAdapter {
             // Coin TIDAK dihapus ketika keluar layar
         }
 
-        // Update Bullets
+        // Update Bullets dengan collision check
         for (int i = activeBullets.size - 1; i >= 0; i--) {
             Bullet b = activeBullets.get(i);
             b.update(delta);
-            if (b.bounds.x < 0 || b.bounds.x > currentLevelWidth) {
+            
+            boolean shouldRemove = false;
+            
+            // Check collision with platforms (walls)
+            for (Platform p : platforms) {
+                if (b.bounds.overlaps(p.bounds)) {
+                    shouldRemove = true;
+                    break;
+                }
+            }
+            
+            // Check if bullet traveled too far vertically
+            if (!shouldRemove && b.isOutOfVerticalBounds(VIEWPORT_HEIGHT)) {
+                shouldRemove = true;
+            }
+            
+            if (shouldRemove) {
                 activeBullets.removeIndex(i);
                 bulletPool.free(b);
             }
