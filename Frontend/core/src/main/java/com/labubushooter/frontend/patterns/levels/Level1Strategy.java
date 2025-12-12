@@ -16,10 +16,7 @@ public class Level1Strategy implements LevelStrategy {
         platforms.add(new Platform(1200, 300, 200, 20, platformTex)); // Debug platform at x=1200
         platforms.add(new Platform(1600, 200, 200, 20, platformTex));
         platforms.add(new Platform(2000, 250, 200, 20, platformTex)); // Debug platform at x=2000
-        platforms.add(new Platform(2200, 180, 150, 20, platformTex));
-
-        // Exit platform
-        platforms.add(new Platform(getLevelWidth() - 100, 50, 100, 200, platformTex));
+        //platforms.add(new Platform(2200, 180, 150, 20, platformTex));
     }
 
     @Override

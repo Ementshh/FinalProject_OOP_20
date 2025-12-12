@@ -15,9 +15,6 @@ public class Level3Strategy implements LevelStrategy {
         platforms.add(new Platform(1350, 320, 150, 20, platformTex));
         platforms.add(new Platform(1650, 250, 180, 20, platformTex));
         platforms.add(new Platform(1950, 180, 200, 20, platformTex));
-
-        // Exit platform
-        platforms.add(new Platform(getLevelWidth() - 100, 50, 100, 200, platformTex));
     }
 
     @Override
