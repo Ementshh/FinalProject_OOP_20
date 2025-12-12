@@ -9,6 +9,8 @@ import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
 import com.badlogic.gdx.utils.TimeUtils;
@@ -30,6 +32,8 @@ import com.labubushooter.frontend.patterns.levels.*;
 import com.labubushooter.frontend.patterns.coins.LinePattern;
 import com.labubushooter.frontend.patterns.weapons.Mac10Strategy;
 import com.labubushooter.frontend.patterns.weapons.PistolStrategy;
+import com.labubushooter.frontend.services.PlayerApiService;
+import com.labubushooter.frontend.services.PlayerApiService.PlayerData;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -115,6 +119,39 @@ public class Main extends ApplicationAdapter {
     private BitmapFont font;
     private BitmapFont smallFont;
     private GlyphLayout layout;
+
+    // Game State System
+    private GameState gameState = GameState.USERNAME_INPUT;
+    private String username = "";
+    private static final int MAX_USERNAME_LENGTH = 20;
+
+    // UI Textures
+    private Texture buttonTex;
+    private Texture buttonHoverTex;
+
+    // Pause Menu Buttons
+    private Rectangle continueButton;
+    private Rectangle saveButton;
+    private Rectangle newGameButton;
+    private Rectangle quitButton;
+
+    // Restart Confirmation Buttons
+    private Rectangle confirmYesButton;
+    private Rectangle confirmNoButton;
+
+    // Username Input
+    private Rectangle startGameButton;
+    private StringBuilder usernameInput;
+
+    // Backend Integration
+    private PlayerApiService playerApi;
+    private PlayerData currentPlayerData;
+    private int coinsCollectedThisSession;
+    private boolean isNewPlayer;
+
+    // Continue/New Game buttons
+    private Rectangle continueGameButton;
+    private Rectangle newGameButtonMenu;
 
     @Override
     public void create() {
@@ -226,7 +263,41 @@ public class Main extends ApplicationAdapter {
         levelStrategy.put(4, new Level4Strategy());
         levelStrategy.put(5, new Level5Strategy());
 
-        loadLevel(currentLevel);
+        // Create UI textures
+        buttonTex = createColorTexture(500, 80, new Color(0.7f, 0.7f, 0.7f, 1f));
+        buttonHoverTex = createColorTexture(500, 80, new Color(0.9f, 0.9f, 0.9f, 1f));
+
+        // Initialize username input
+        usernameInput = new StringBuilder();
+
+        // Initialize pause menu buttons (centered on screen)
+        float buttonWidth = 500f;
+        float buttonHeight = 80f;
+        float centerX = VIEWPORT_WIDTH / 2 - buttonWidth / 2;
+
+        continueButton = new Rectangle(centerX, 370, buttonWidth, buttonHeight);
+        saveButton = new Rectangle(centerX, 270, buttonWidth, buttonHeight);
+        newGameButton = new Rectangle(centerX, 170, buttonWidth, buttonHeight);
+        quitButton = new Rectangle(centerX, 70, buttonWidth, buttonHeight);
+
+        // Confirmation buttons (smaller)
+        float confirmButtonWidth = 200f;
+        confirmYesButton = new Rectangle(VIEWPORT_WIDTH / 2 - confirmButtonWidth - 20, 200, confirmButtonWidth, buttonHeight);
+        confirmNoButton = new Rectangle(VIEWPORT_WIDTH / 2 + 20, 200, confirmButtonWidth, buttonHeight);
+
+        // Start game button
+        startGameButton = new Rectangle(centerX, 200, buttonWidth, buttonHeight);
+
+        // Initialize API service
+        playerApi = new PlayerApiService();
+        coinsCollectedThisSession = 0;
+
+        // Continue/New Game buttons
+        continueGameButton = new Rectangle(centerX, 270, buttonWidth, buttonHeight);
+        newGameButtonMenu = new Rectangle(centerX, 170, buttonWidth, buttonHeight);
+
+        // Don't load level yet - wait for username input
+        // loadLevel(currentLevel);
     }
 
     private void resetEnemySpawnTimer() {
@@ -365,8 +436,7 @@ public class Main extends ApplicationAdapter {
     }
 
     private void restartGame() {
-        isGameOver = false;
-        isVictory = false;
+        gameState = GameState.PLAYING;
         currentLevel = 1;
 
         // Clear all enemies
@@ -593,35 +663,65 @@ public class Main extends ApplicationAdapter {
     public void render() {
         float delta = Gdx.graphics.getDeltaTime();
 
-        // Check for Victory screen
-        if (isVictory) {
-            if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
-                restartGame();
-            }
-            if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
-                Gdx.app.exit();
-            }
+        // Handle different game states
+        switch (gameState) {
+            case USERNAME_INPUT:
+                handleUsernameInput();
+                renderUsernameInput();
+                return;
 
-            // Render Victory Screen
-            renderVictory();
-            return;
-        }
+            case LOADING_PLAYER_DATA:
+                renderLoading();
+                return;
 
-        // Check for Game Over restart
-        if (isGameOver) {
-            if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
-                restartGame();
-            }
+            case CONTINUE_OR_NEW:
+                handleContinueOrNew();
+                renderContinueOrNew();
+                return;
 
-            // Render Game Over Screen
-            renderGameOver();
-            return;
+            case PAUSED:
+                handlePauseMenu();
+                renderPauseMenu();
+                return;
+
+            case RESTART_CONFIRM:
+                handleRestartConfirm();
+                renderRestartConfirm();
+                return;
+
+            case VICTORY:
+                if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+                    restartToUsernameInput();
+                }
+                if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+                    Gdx.app.exit();
+                }
+                renderVictory();
+                return;
+
+            case GAME_OVER:
+                if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+                    restartToUsernameInput();
+                }
+                renderGameOver();
+                return;
+
+            case PLAYING:
+                // Game logic here
+                break;
         }
 
         // Check if player is dead
         if (player.isDead()) {
-            isGameOver = true;
+            gameState = GameState.GAME_OVER;
             Gdx.app.log("Game", "GAME OVER");
+            return;
+        }
+
+        // Check for PAUSE
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            gameState = GameState.PAUSED;
+            Gdx.app.log("Game", "PAUSED");
             return;
         }
 
@@ -662,7 +762,7 @@ public class Main extends ApplicationAdapter {
         }
 
         // --- JUMP ---
-        if (Gdx.input.isKeyJustPressed(Input.Keys.W))
+        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE))
             player.jump();
 
         // --- MOUSE SHOOTING ---
@@ -802,9 +902,11 @@ public class Main extends ApplicationAdapter {
         if (bossDefeated && player.bounds.x + player.bounds.width >= currentLevelWidth - LEVEL_EXIT_THRESHOLD) {
             if (currentLevel == 5) {
                 // Level 5 completed - trigger victory!
-                isVictory = true;
+                saveGameProgress(); // Save final progress
+                gameState = GameState.VICTORY;
                 Gdx.app.log("Game", "VICTORY! Game Completed!");
             } else {
+                saveGameProgress(); // Save after each level
                 loadLevel(currentLevel + 1);
             }
         }
@@ -831,6 +933,7 @@ public class Main extends ApplicationAdapter {
             if (coin.isColliding(player.bounds)) {
                 coin.active = false;
                 coinScore++;
+                coinsCollectedThisSession++; // Track session coins
                 activeCoins.removeIndex(i);
                 coinPool.free(coin);
                 Gdx.app.log("Coin", "Collected! Total: " + coinScore);
@@ -1075,5 +1178,482 @@ public class Main extends ApplicationAdapter {
         backgroundTex.dispose();
         font.dispose();
         smallFont.dispose();
+        if (buttonTex != null) buttonTex.dispose();
+        if (buttonHoverTex != null) buttonHoverTex.dispose();
+    }
+
+    // ==================== USERNAME INPUT ====================
+    private void handleUsernameInput() {
+        // Handle text input
+        Gdx.input.setInputProcessor(new com.badlogic.gdx.InputAdapter() {
+            @Override
+            public boolean keyTyped(char character) {
+                if (gameState != GameState.USERNAME_INPUT) return false;
+
+                if (character == '\b' && usernameInput.length() > 0) {
+                    // Backspace
+                    usernameInput.deleteCharAt(usernameInput.length() - 1);
+                } else if (Character.isLetterOrDigit(character) && usernameInput.length() < MAX_USERNAME_LENGTH) {
+                    // Add character
+                    usernameInput.append(character);
+                }
+                return true;
+            }
+        });
+
+        // Check start button click
+        if (Gdx.input.justTouched()) {
+            Vector3 touchPos = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
+            camera.unproject(touchPos);
+
+            if (startGameButton.contains(touchPos.x, touchPos.y) && usernameInput.length() > 0) {
+                username = usernameInput.toString();
+                gameState = GameState.LOADING_PLAYER_DATA;
+
+                // Call API to login/create player
+                playerApi.login(username, new PlayerApiService.LoginCallback() {
+                    @Override
+                    public void onSuccess(PlayerData playerData, boolean isNew) {
+                        currentPlayerData = playerData;
+                        isNewPlayer = isNew;
+                        coinsCollectedThisSession = 0;
+
+                        if (isNew || playerData.lastStage == 1) {
+                            // New player - start from level 1
+                            gameState = GameState.PLAYING;
+                            loadLevel(1);
+                        } else {
+                            // Existing player - show continue/new menu
+                            gameState = GameState.CONTINUE_OR_NEW;
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(String error) {
+                        Gdx.app.error("Game", "Login failed: " + error);
+                        gameState = GameState.USERNAME_INPUT;
+                        // Show error message to user
+                    }
+                });
+            }
+        }
+    }
+
+    private void renderUsernameInput() {
+        Gdx.gl.glClearColor(0.15f, 0.15f, 0.2f, 1);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
+
+        // Draw title "LABUBOOM"
+        String title = "LABUBOOM";
+        layout.setText(font, title);
+        float titleX = VIEWPORT_WIDTH / 2 - layout.width / 2;
+        float titleY = 500;
+        font.draw(batch, title, titleX, titleY);
+
+        // Draw "Enter Your Name:"
+        String prompt = "Enter Your Name:";
+        layout.setText(smallFont, prompt);
+        float promptX = VIEWPORT_WIDTH / 2 - layout.width / 2;
+        float promptY = 380;
+        smallFont.draw(batch, prompt, promptX, promptY);
+
+        // Draw username input box background
+        batch.setColor(0.3f, 0.3f, 0.3f, 1f);
+        batch.draw(buttonTex, VIEWPORT_WIDTH / 2 - 250, 300, 500, 60);
+        batch.setColor(1, 1, 1, 1);
+
+        // Draw username text
+        String displayText = usernameInput.length() > 0 ? usernameInput.toString() : "Username...";
+        layout.setText(smallFont, displayText);
+        float textX = VIEWPORT_WIDTH / 2 - layout.width / 2;
+        float textY = 340;
+
+        if (usernameInput.length() > 0) {
+            smallFont.draw(batch, displayText, textX, textY);
+        } else {
+            // Draw placeholder in gray
+            smallFont.setColor(0.5f, 0.5f, 0.5f, 1f);
+            smallFont.draw(batch, displayText, textX, textY);
+            smallFont.setColor(1, 1, 1, 1);
+        }
+
+        // Draw Start Game button
+        boolean canStart = usernameInput.length() > 0;
+        if (canStart) {
+            batch.draw(buttonTex, startGameButton.x, startGameButton.y, startGameButton.width, startGameButton.height);
+        } else {
+            batch.setColor(0.4f, 0.4f, 0.4f, 1f);
+            batch.draw(buttonTex, startGameButton.x, startGameButton.y, startGameButton.width, startGameButton.height);
+            batch.setColor(1, 1, 1, 1);
+        }
+
+        String buttonText = "START GAME";
+        layout.setText(font, buttonText);
+        float btnTextX = startGameButton.x + startGameButton.width / 2 - layout.width / 2;
+        float btnTextY = startGameButton.y + startGameButton.height / 2 + layout.height / 2;
+        font.draw(batch, buttonText, btnTextX, btnTextY);
+
+        batch.end();
+    }
+
+    // ==================== PAUSE MENU ====================
+    private void handlePauseMenu() {
+        // Resume with ESC
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            gameState = GameState.PLAYING;
+            Gdx.app.log("Game", "RESUMED");
+            return;
+        }
+
+        // Check button clicks
+        if (Gdx.input.justTouched()) {
+            Vector3 touchPos = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
+            camera.unproject(touchPos);
+
+            // Continue
+            if (continueButton.contains(touchPos.x, touchPos.y)) {
+                gameState = GameState.PLAYING;
+                Gdx.app.log("Game", "RESUMED");
+            }
+
+            // Save Game (placeholder)
+            else if (saveButton.contains(touchPos.x, touchPos.y)) {
+                saveGameProgress();
+                Gdx.app.log("Game", "Game saved manually");
+            }
+
+            // New Game - Show confirmation
+            else if (newGameButton.contains(touchPos.x, touchPos.y)) {
+                gameState = GameState.RESTART_CONFIRM;
+                Gdx.app.log("Game", "Showing restart confirmation");
+            }
+
+            // Quit with auto-save
+            else if (quitButton.contains(touchPos.x, touchPos.y)) {
+                saveGameProgress();
+                Gdx.app.log("Game", "Quitting game with auto-save");
+                // Give time for save request
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            Thread.sleep(500); // Wait for save
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        Gdx.app.exit();
+                    }
+                }).start();
+            }
+        }
+    }
+
+    private void renderPauseMenu() {
+        // Draw game in background (dimmed)
+        renderGame();
+
+        // Draw overlay
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+
+        shapeRenderer.setProjectionMatrix(camera.combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(0, 0, 0, 0.6f);
+        shapeRenderer.rect(0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+        shapeRenderer.end();
+
+        Gdx.gl.glDisable(GL20.GL_BLEND);
+
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
+
+        // Draw "Game Paused" title
+        String title = "Game Paused";
+        layout.setText(font, title);
+        float titleX = VIEWPORT_WIDTH / 2 - layout.width / 2;
+        float titleY = 500;
+        font.draw(batch, title, titleX, titleY);
+
+        // Draw buttons
+        drawButton("Continue", continueButton);
+        drawButton("Save Game", saveButton);
+        drawButton("New Game", newGameButton);
+        drawButton("Quit (Auto Save)", quitButton);
+
+        batch.end();
+    }
+
+    // ==================== RESTART CONFIRMATION ====================
+    private void handleRestartConfirm() {
+        // ESC to cancel
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            gameState = GameState.PAUSED;
+            Gdx.app.log("Game", "Restart cancelled");
+            return;
+        }
+
+        // Check button clicks
+        if (Gdx.input.justTouched()) {
+            Vector3 touchPos = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
+            camera.unproject(touchPos);
+
+            // YES - Restart game with same username
+            if (confirmYesButton.contains(touchPos.x, touchPos.y)) {
+                // Reset progress on server
+                playerApi.resetProgress(currentPlayerData.playerId, new PlayerApiService.SaveCallback() {
+                    @Override
+                    public void onSuccess() {
+                        currentPlayerData.lastStage = 1;
+                        coinsCollectedThisSession = 0;
+                        restartGameSameUser();
+                    }
+
+                    @Override
+                    public void onFailure(String error) {
+                        Gdx.app.error("Game", "Failed to reset: " + error);
+                        restartGameSameUser(); // Continue anyway
+                    }
+                });
+            }
+
+            // NO - Back to pause menu
+            else if (confirmNoButton.contains(touchPos.x, touchPos.y)) {
+                gameState = GameState.PAUSED;
+                Gdx.app.log("Game", "Restart cancelled");
+            }
+        }
+    }
+
+    private void renderRestartConfirm() {
+        // Draw game in background (dimmed)
+        renderGame();
+
+        // Draw overlay
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+
+        shapeRenderer.setProjectionMatrix(camera.combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(0, 0, 0, 0.6f);
+        shapeRenderer.rect(0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+        shapeRenderer.end();
+
+        Gdx.gl.glDisable(GL20.GL_BLEND);
+
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
+
+        // Draw "Restart?" title
+        String title = "Restart?";
+        layout.setText(font, title);
+        float titleX = VIEWPORT_WIDTH / 2 - layout.width / 2;
+        float titleY = 400;
+        font.draw(batch, title, titleX, titleY);
+
+        // Draw YES/NO buttons
+        drawButton("Yes", confirmYesButton);
+        drawButton("No", confirmNoButton);
+
+        batch.end();
+    }
+
+    // ==================== HELPER METHODS ====================
+    private void drawButton(String text, Rectangle button) {
+        // Check hover
+        Vector3 mousePos = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
+        camera.unproject(mousePos);
+        boolean hover = button.contains(mousePos.x, mousePos.y);
+
+        // Draw button background
+        Texture btnTex = hover ? buttonHoverTex : buttonTex;
+        batch.draw(btnTex, button.x, button.y, button.width, button.height);
+
+        // Draw button text
+        layout.setText(smallFont, text);
+        float textX = button.x + button.width / 2 - layout.width / 2;
+        float textY = button.y + button.height / 2 + layout.height / 2;
+
+        smallFont.setColor(0.2f, 0.2f, 0.2f, 1f);
+        smallFont.draw(batch, text, textX, textY);
+        smallFont.setColor(1, 1, 1, 1);
+    }
+
+    private void restartGameSameUser() {
+        Gdx.app.log("Game", "Restarting game with username: " + username);
+
+        // Clear game state
+        for (CommonEnemy enemy : activeEnemies) {
+            enemyPool.free(enemy);
+        }
+        activeEnemies.clear();
+        activeBullets.clear();
+        activeEnemyBullets.clear();
+
+        for (Coin coin : activeCoins) {
+            coinPool.free(coin);
+        }
+        activeCoins.clear();
+        coinScore = 0;
+
+        // Reset player
+        player.reset();
+        player.setWeapon(null);
+
+        // Reset bosses
+        miniBoss = null;
+        boss = null;
+
+        // Load level 1
+        currentLevel = 1;
+        loadLevel(1);
+
+        // Resume game
+        gameState = GameState.PLAYING;
+    }
+
+    private void restartToUsernameInput() {
+        // Clear username and go back to input screen
+        usernameInput.setLength(0);
+        username = "";
+        gameState = GameState.USERNAME_INPUT;
+
+        // Clear game state
+        for (CommonEnemy enemy : activeEnemies) {
+            enemyPool.free(enemy);
+        }
+        activeEnemies.clear();
+        activeBullets.clear();
+        activeEnemyBullets.clear();
+
+        for (Coin coin : activeCoins) {
+            coinPool.free(coin);
+        }
+        activeCoins.clear();
+        coinScore = 0;
+
+        player.reset();
+        player.setWeapon(null);
+        currentLevel = 1;
+
+        miniBoss = null;
+        boss = null;
+
+        Gdx.app.log("Game", "Returned to username input");
+    }
+
+    // ==================== BACKEND INTEGRATION METHODS ====================
+    private void saveGameProgress() {
+        if (currentPlayerData != null) {
+            playerApi.saveProgress(
+                currentPlayerData.playerId,
+                currentLevel,
+                coinsCollectedThisSession,
+                new PlayerApiService.SaveCallback() {
+                    @Override
+                    public void onSuccess() {
+                        Gdx.app.log("Game", "Progress saved: Stage " + currentLevel + 
+                                   ", Coins: " + coinsCollectedThisSession);
+                        currentPlayerData.lastStage = currentLevel;
+                        currentPlayerData.totalCoins += coinsCollectedThisSession;
+                        coinsCollectedThisSession = 0; // Reset session counter
+                    }
+                    
+                    @Override
+                    public void onFailure(String error) {
+                        Gdx.app.error("Game", "Failed to save progress: " + error);
+                    }
+                }
+            );
+        }
+    }
+
+    private void handleContinueOrNew() {
+        if (Gdx.input.justTouched()) {
+            Vector3 touchPos = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
+            camera.unproject(touchPos);
+            
+            // Continue from last stage
+            if (continueGameButton.contains(touchPos.x, touchPos.y)) {
+                gameState = GameState.PLAYING;
+                loadLevel(currentPlayerData.lastStage);
+                Gdx.app.log("Game", "Continuing from stage " + currentPlayerData.lastStage);
+            }
+            
+            // Start new game
+            else if (newGameButtonMenu.contains(touchPos.x, touchPos.y)) {
+                // Reset progress on server
+                playerApi.resetProgress(currentPlayerData.playerId, new PlayerApiService.SaveCallback() {
+                    @Override
+                    public void onSuccess() {
+                        currentPlayerData.lastStage = 1;
+                        coinsCollectedThisSession = 0;
+                        gameState = GameState.PLAYING;
+                        loadLevel(1);
+                        Gdx.app.log("Game", "Starting new game");
+                    }
+                    
+                    @Override
+                    public void onFailure(String error) {
+                        Gdx.app.error("Game", "Failed to reset progress: " + error);
+                    }
+                });
+            }
+        }
+    }
+
+    private void renderLoading() {
+        Gdx.gl.glClearColor(0.15f, 0.15f, 0.2f, 1);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+        
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
+        
+        String loadingText = "Loading...";
+        layout.setText(font, loadingText);
+        float x = VIEWPORT_WIDTH / 2 - layout.width / 2;
+        float y = VIEWPORT_HEIGHT / 2;
+        font.draw(batch, loadingText, x, y);
+        
+        batch.end();
+    }
+
+    private void renderContinueOrNew() {
+        Gdx.gl.glClearColor(0.15f, 0.15f, 0.2f, 1);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+        
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
+        
+        // Draw welcome message
+        String welcomeText = "Welcome back, " + username + "!";
+        layout.setText(font, welcomeText);
+        float welcomeX = VIEWPORT_WIDTH / 2 - layout.width / 2;
+        float welcomeY = 450;
+        font.draw(batch, welcomeText, welcomeX, welcomeY);
+        
+        // Draw last stage info
+        String stageText = "Last Stage: " + currentPlayerData.lastStage;
+        layout.setText(smallFont, stageText);
+        float stageX = VIEWPORT_WIDTH / 2 - layout.width / 2;
+        float stageY = 380;
+        smallFont.draw(batch, stageText, stageX, stageY);
+        
+        // Draw total coins
+        String coinsText = "Total Coins: " + currentPlayerData.totalCoins;
+        layout.setText(smallFont, coinsText);
+        float coinsX = VIEWPORT_WIDTH / 2 - layout.width / 2;
+        float coinsY = 350;
+        smallFont.draw(batch, coinsText, coinsX, coinsY);
+        
+        // Draw Continue button
+        drawButton("Continue", continueGameButton);
+        
+        // Draw New Game button
+        drawButton("New Game", newGameButtonMenu);
+        
+        batch.end();
     }
 }

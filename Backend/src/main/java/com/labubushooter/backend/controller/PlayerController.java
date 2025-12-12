@@ -7,7 +7,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -28,38 +30,53 @@ public class PlayerController {
     public ResponseEntity<?> getPlayerById(@PathVariable UUID playerId) {
         Optional<Player> player = playerService.getPlayerById(playerId);
         if (player.isPresent()) return ResponseEntity.ok(player.get());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Player not found");
     }
 
-    @GetMapping("/username/{username}")
-    public ResponseEntity<?> getPlayerByUsername(@PathVariable String username) {
-        Optional<Player> player = playerService.getPlayerByUsername(username);
-        if (player.isPresent()) return ResponseEntity.ok(player.get());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-    }
-
-    @GetMapping("/check-username/{username}")
-    public ResponseEntity<Boolean> checkUsername(@PathVariable String username) {
-        return ResponseEntity.ok(playerService.isUsernameExists(username));
-    }
-
-    @PostMapping
-    public ResponseEntity<?> createPlayer(@RequestBody Player player) {
+    @PostMapping("/login")
+    public ResponseEntity<?> loginOrCreate(@RequestBody Map<String, String> request) {
         try {
-            Player created = playerService.createPlayer(player);
-            return ResponseEntity.status(HttpStatus.CREATED).body(created);
-        } catch (RuntimeException ex) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+            String username = request.get("username");
+            if (username == null || username.trim().isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Username is required");
+            }
+
+            Player player = playerService.loginOrCreate(username.trim());
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("player", player);
+            response.put("message", "Login with username: " + username + " Success");
+            response.put("isNewPlayer", player.getLastStage() == 1 && player.getTotalCoins() == 0);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error: " + e.getMessage());
         }
     }
 
-    @PutMapping("/{playerId}")
-    public ResponseEntity<?> updatePlayer(@PathVariable UUID playerId, @RequestBody Player player) {
+    @PutMapping("/{playerId}/progress")
+    public ResponseEntity<?> updateProgress(
+            @PathVariable UUID playerId,
+            @RequestBody Map<String, Integer> progress) {
         try {
-            Player updated = playerService.updatePlayer(playerId, player);
+            Integer lastStage = progress.get("lastStage");
+            Integer coinsCollected = progress.get("coinsCollected");
+
+            Player updated = playerService.updatePlayerProgress(playerId, lastStage, coinsCollected);
             return ResponseEntity.ok(updated);
-        } catch (RuntimeException ex) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
+    }
+
+    @PutMapping("/{playerId}/reset")
+    public ResponseEntity<?> resetProgress(@PathVariable UUID playerId) {
+        try {
+            Player reset = playerService.resetPlayerProgress(playerId);
+            return ResponseEntity.ok(reset);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
     }
 
@@ -68,23 +85,8 @@ public class PlayerController {
         try {
             playerService.deletePlayer(playerId);
             return ResponseEntity.noContent().build();
-        } catch (RuntimeException ex) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
-    }
-
-    @GetMapping("/leaderboard/high-score")
-    public ResponseEntity<List<Player>> getLeaderboardByHighScore(@RequestParam(defaultValue = "10") int limit) {
-        return ResponseEntity.ok(playerService.getLeaderboardByHighScore(limit));
-    }
-
-    @GetMapping("/leaderboard/total-coins")
-    public ResponseEntity<List<Player>> getLeaderboardByTotalCoins() {
-        return ResponseEntity.ok(playerService.getLeaderboardByTotalCoins());
-    }
-
-    @GetMapping("/leaderboard/total-distance")
-    public ResponseEntity<List<Player>> getLeaderboardByTotalDistance() {
-        return ResponseEntity.ok(playerService.getLeaderboardByTotalDistance());
     }
 }

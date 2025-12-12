@@ -1,9 +1,17 @@
 package com.labubushooter.backend.model;
 
-import jakarta.persistence.*;
-import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 import java.util.UUID;
+
+import org.hibernate.annotations.CreationTimestamp;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "players")
@@ -17,23 +25,22 @@ public class Player {
     @Column(nullable = false, unique = true)
     private String username;
 
-    @Column(name = "high_score")
-    private Integer highScore = 0;
-
     @Column(name = "total_coins")
     private Integer totalCoins = 0;
 
-    @Column(name = "total_distance_travelled")
-    private Integer totalDistanceTravelled = 0;
+    @Column(name = "last_stage")
+    private Integer lastStage = 1;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    // Default constructor
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    // Constructor
     public Player() {}
 
-    // Constructor with username
     public Player(String username) {
         this.username = username;
     }
@@ -55,14 +62,6 @@ public class Player {
         this.username = username;
     }
 
-    public Integer getHighScore() {
-        return highScore;
-    }
-
-    public void setHighScore(Integer highScore) {
-        this.highScore = highScore;
-    }
-
     public Integer getTotalCoins() {
         return totalCoins;
     }
@@ -71,12 +70,12 @@ public class Player {
         this.totalCoins = totalCoins;
     }
 
-    public Integer getTotalDistanceTravelled() {
-        return totalDistanceTravelled;
+    public Integer getLastStage() {
+        return lastStage;
     }
 
-    public void setTotalDistanceTravelled(Integer totalDistanceTravelled) {
-        this.totalDistanceTravelled = totalDistanceTravelled;
+    public void setLastStage(Integer lastStage) {
+        this.lastStage = lastStage;
     }
 
     public LocalDateTime getCreatedAt() {
@@ -87,18 +86,16 @@ public class Player {
         this.createdAt = createdAt;
     }
 
-    // Business methods
-    public void updateHighScore(Integer newScore) {
-        if (newScore > this.highScore) {
-            this.highScore = newScore;
-        }
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
     }
 
-    public void addCoins(Integer coins) {
-        this.totalCoins += coins;
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
 
-    public void addDistance(Integer distance) {
-        this.totalDistanceTravelled += distance;
+    @PreUpdate
+    public void setLastUpdate() {
+        this.updatedAt = LocalDateTime.now();
     }
 }
