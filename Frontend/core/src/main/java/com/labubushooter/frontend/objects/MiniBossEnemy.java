@@ -30,6 +30,7 @@ public class MiniBossEnemy extends BossEnemy {
     private float flashTimer;
     private float superJumpFlashTimer;
     private float superJumpWarningTimer;
+    private long lastDamageTime; // Track last damage time for damage cooldown
 
     // State flags
     private boolean isWarning;
@@ -41,10 +42,6 @@ public class MiniBossEnemy extends BossEnemy {
 
     // Dash direction
     private float dashDirectionX;
-
-    // Player damage cooldown
-    private long lastDamageTime;
-    private static final long DAMAGE_COOLDOWN = 1000000000L; // 1 second in nanoseconds
 
     // Superjump system
     private float superJumpTimer;
@@ -271,15 +268,8 @@ public class MiniBossEnemy extends BossEnemy {
         // Apply gravity and platform collision
         applyGravityAndCollision(delta, platforms, grounds);
 
-        // Collision with player (melee damage)
-        if (collider.overlaps(player.bounds)) {
-            long currentTime = TimeUtils.nanoTime();
-            if (currentTime - lastDamageTime > DAMAGE_COOLDOWN) {
-                player.takeDamage(damage);
-                lastDamageTime = currentTime;
-                Gdx.app.log("MiniBoss", "Hit player for " + damage + " damage");
-            }
-        }
+        // Melee damage is now handled by PlayerEnemyCollisionHandler in the collision
+        // system
     }
 
     @Override
