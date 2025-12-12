@@ -23,7 +23,6 @@ public class CommonEnemy implements Pool.Poolable {
     private float velocityY = 0;
     private float speed; // Speed akan di-set per level
     private Texture texture;
-    private Texture coloredTexture; // Texture dengan warna random
     private float damageAmount;
 
     // Damage System
@@ -35,26 +34,12 @@ public class CommonEnemy implements Pool.Poolable {
     private static final float JUMP_THRESHOLD = 10f; // Threshold untuk X-axis alignment
 
     private static final float GRAVITY = -900f;
-    private static final float WIDTH = 40f;
-    private static final float HEIGHT = 60f;
+    private static final float WIDTH = 60f; // 40 * 1.5
+    private static final float HEIGHT = 90f; // 60 * 1.5
     private static final float SPAWN_Y = 300f; // Ground + 1f
 
     // Base speed untuk multiplier
     private static final float BASE_SPEED = 120f;
-
-    // Array warna untuk enemy (hindari ORANGE yang merupakan warna player)
-    private static final Color[] ENEMY_COLORS = {
-            Color.RED,
-            Color.SCARLET,
-            Color.MAROON,
-            Color.PURPLE,
-            Color.VIOLET,
-            Color.MAGENTA,
-            Color.PINK,
-            Color.CORAL,
-            Color.FIREBRICK,
-            Color.BROWN
-    };
 
     public CommonEnemy(Texture texture) {
         this.texture = texture;
@@ -104,28 +89,8 @@ public class CommonEnemy implements Pool.Poolable {
         this.grounded = false;
         this.lastDamageTime = TimeUtils.nanoTime();
 
-        // Generate random colored texture
-        generateRandomColorTexture();
-
         Gdx.app.log("Enemy", "Spawned at level " + level + " - HP: " + maxHealth +
                 ", Damage: " + damageAmount + ", Speed: " + speed);
-    }
-
-    private void generateRandomColorTexture() {
-        // Pilih warna random dari array
-        Color randomColor = ENEMY_COLORS[MathUtils.random(0, ENEMY_COLORS.length - 1)];
-
-        // Dispose texture lama jika ada
-        if (coloredTexture != null) {
-            coloredTexture.dispose();
-        }
-
-        // Buat texture baru dengan warna random
-        Pixmap pixmap = new Pixmap((int) WIDTH, (int) HEIGHT, Pixmap.Format.RGBA8888);
-        pixmap.setColor(randomColor);
-        pixmap.fill();
-        coloredTexture = new Texture(pixmap);
-        pixmap.dispose();
     }
 
     public void update(float delta, Array<Platform> platforms, Array<Ground> grounds) {
@@ -217,9 +182,7 @@ public class CommonEnemy implements Pool.Poolable {
         if (!spawned)
             return;
 
-        // Gunakan texture berwarna random
-        Texture texToDraw = (coloredTexture != null) ? coloredTexture : texture;
-        batch.draw(texToDraw, collider.x, collider.y, collider.width, collider.height);
+        batch.draw(texture, collider.x, collider.y, collider.width, collider.height);
     }
 
     @Override
@@ -235,12 +198,6 @@ public class CommonEnemy implements Pool.Poolable {
         this.velocityY = 0;
         this.grounded = false;
         this.lastDamageTime = 0;
-
-        // Dispose colored texture
-        if (coloredTexture != null) {
-            coloredTexture.dispose();
-            coloredTexture = null;
-        }
     }
 
     public boolean isActive() {

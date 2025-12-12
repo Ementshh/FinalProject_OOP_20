@@ -152,7 +152,8 @@ public class Main extends ApplicationAdapter {
         exitTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
         debugTex = createColorTexture(10, 600, Color.RED); // Debug marker
         levelIndicatorTex = createColorTexture(30, 30, Color.YELLOW); // Level indicator
-        enemyTex = createColorTexture(40, 60, Color.RED);
+        enemyTex = new Texture(Gdx.files.internal("enemy.png"));
+        enemyTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
 
         // Boss textures
         miniBossTex = createColorTexture(60, 90, Color.PURPLE);
