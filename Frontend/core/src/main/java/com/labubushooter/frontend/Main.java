@@ -139,7 +139,8 @@ public class Main extends ApplicationAdapter {
         // Create Textures
         playerTex = new Texture(Gdx.files.internal("player.png"));
         playerTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
-        platformTex = createColorTexture(100, 20, Color.FOREST);
+        platformTex = new Texture(Gdx.files.internal("ground.png"));
+        platformTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
         bulletTex = createColorTexture(10, 5, Color.YELLOW);
         pistolTex = createColorTexture(20, 10, Color.GRAY);
         mac10Tex = createColorTexture(30, 15, Color.LIME);
@@ -452,7 +453,7 @@ public class Main extends ApplicationAdapter {
         // FORCE-ADD: Base ground that spans the ENTIRE level width
         // Use extended width for ultra-wide screens (prevents visual gaps)
         float safeGroundWidth = Math.max(currentLevelWidth, 3000f);
-        Platform baseGround = new Platform(0, 0, safeGroundWidth, 50, platformTex);
+        Platform baseGround = new Platform(0, 0, safeGroundWidth, 100, platformTex);
         platforms.insert(0, baseGround);
 
         player.bounds.setPosition(strategy.getPlayerStartX(), strategy.getPlayerStartY());

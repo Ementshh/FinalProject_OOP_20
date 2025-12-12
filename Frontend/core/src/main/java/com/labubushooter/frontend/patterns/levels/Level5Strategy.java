@@ -8,10 +8,6 @@ import com.labubushooter.frontend.patterns.LevelStrategy;
 public class Level5Strategy implements LevelStrategy {
     @Override
     public void loadPlatforms(Array<Platform> platforms, Texture platformTex) {
-        // Oversized ground - extends beyond level boundaries for ultra-wide screens
-        // This ensures no visual gaps regardless of screen resolution
-        platforms.add(new Platform(-1000, 50, 4000, 50, platformTex));
-
         // Boss arena platforms - symmetric layout for combat
         // Left platform
         platforms.add(new Platform(200, 200, 200, 20, platformTex));

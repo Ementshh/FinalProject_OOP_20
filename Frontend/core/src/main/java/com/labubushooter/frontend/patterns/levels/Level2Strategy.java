@@ -8,9 +8,6 @@ import com.labubushooter.frontend.patterns.LevelStrategy;
 public class Level2Strategy implements LevelStrategy {
     @Override
     public void loadPlatforms(Array<Platform> platforms, Texture platformTex) {
-        // Ground - spans entire level
-        platforms.add(new Platform(0, 50, getLevelWidth(), 50, platformTex));
-
         // Stairway pattern in scrolling area
         platforms.add(new Platform(600, 150, 150, 20, platformTex));
         platforms.add(new Platform(900, 250, 150, 20, platformTex));

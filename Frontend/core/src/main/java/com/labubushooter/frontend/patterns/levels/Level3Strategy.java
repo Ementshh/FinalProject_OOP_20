@@ -8,9 +8,6 @@ import com.labubushooter.frontend.patterns.LevelStrategy;
 public class Level3Strategy implements LevelStrategy {
     @Override
     public void loadPlatforms(Array<Platform> platforms, Texture platformTex) {
-        // Ground - spans entire level
-        platforms.add(new Platform(0, 50, getLevelWidth(), 50, platformTex));
-
         // Gap jumping challenge in scrolling area
         platforms.add(new Platform(500, 200, 120, 20, platformTex));
         platforms.add(new Platform(800, 280, 120, 20, platformTex));

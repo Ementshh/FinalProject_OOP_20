@@ -1,3 +1,4 @@
 background.png
+ground.png
 libgdx.png
 player.png
