@@ -76,7 +76,7 @@ public abstract class BossEnemy {
         return health <= 0;
     }
 
-    protected void applyGravityAndCollision(float delta, Array<Platform> platforms) {
+    protected void applyGravityAndCollision(float delta, Array<Platform> platforms, Array<Ground> grounds) {
         // Apply gravity
         velY += GRAVITY * delta;
         bounds.y += velY * delta;
@@ -92,6 +92,17 @@ public abstract class BossEnemy {
                 // top)
                 if (velY < 0 && bounds.y + bounds.height / 2 > p.bounds.y + p.bounds.height) {
                     bounds.y = p.bounds.y + p.bounds.height;
+                    velY = 0;
+                    grounded = true;
+                }
+            }
+        }
+
+        // Ground collision - same behavior as platforms
+        for (Ground g : grounds) {
+            if (bounds.overlaps(g.bounds)) {
+                if (velY < 0 && bounds.y + bounds.height / 2 > g.bounds.y + g.bounds.height) {
+                    bounds.y = g.bounds.y + g.bounds.height;
                     velY = 0;
                     grounded = true;
                 }
@@ -148,5 +159,5 @@ public abstract class BossEnemy {
         batch.setColor(1f, 1f, 1f, 1f);
     }
 
-    public abstract void update(float delta, Array<Platform> platforms);
+    public abstract void update(float delta, Array<Platform> platforms, Array<Ground> grounds);
 }

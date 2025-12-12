@@ -19,6 +19,7 @@ import com.labubushooter.frontend.objects.Coin;
 import com.labubushooter.frontend.objects.CommonEnemy;
 import com.labubushooter.frontend.objects.EnemyBullet;
 import com.labubushooter.frontend.objects.FinalBoss;
+import com.labubushooter.frontend.objects.Ground;
 import com.labubushooter.frontend.objects.MiniBossEnemy;
 import com.labubushooter.frontend.objects.Platform;
 import com.labubushooter.frontend.objects.Player;
@@ -49,7 +50,7 @@ public class Main extends ApplicationAdapter {
     private int currentLevel = 1;
     private Map<Integer, LevelStrategy> levelStrategy;
 
-    Texture playerTex, platformTex, bulletTex, exitTex;
+    Texture playerTex, platformTex, groundTex, bulletTex, exitTex;
     Texture pistolTex, mac10Tex;
     Texture debugTex;
     Texture levelIndicatorTex;
@@ -62,6 +63,7 @@ public class Main extends ApplicationAdapter {
 
     Player player;
     Array<Platform> platforms;
+    Array<Ground> grounds;
 
     Pool<Bullet> bulletPool;
     Array<Bullet> activeBullets;
@@ -141,6 +143,8 @@ public class Main extends ApplicationAdapter {
         playerTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
         platformTex = new Texture(Gdx.files.internal("ground.png"));
         platformTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        groundTex = new Texture(Gdx.files.internal("ground_base.png"));
+        groundTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
         bulletTex = createColorTexture(10, 5, Color.YELLOW);
         pistolTex = createColorTexture(20, 10, Color.GRAY);
         mac10Tex = createColorTexture(30, 15, Color.LIME);
@@ -403,6 +407,11 @@ public class Main extends ApplicationAdapter {
         } else {
             platforms.clear();
         }
+        if (grounds == null) {
+            grounds = new Array<Ground>();
+        } else {
+            grounds.clear();
+        }
         activeBullets.clear();
 
         // Clear enemies when loading new level
@@ -450,12 +459,7 @@ public class Main extends ApplicationAdapter {
         }
 
         strategy.loadPlatforms(platforms, platformTex);
-
-        // FORCE-ADD: Base ground that spans the ENTIRE level width
-        // Use extended width for ultra-wide screens (prevents visual gaps)
-        float safeGroundWidth = Math.max(currentLevelWidth, 3000f);
-        Platform baseGround = new Platform(0, 0, safeGroundWidth, 100, platformTex);
-        platforms.insert(0, baseGround);
+        strategy.loadGround(grounds, groundTex);
 
         player.bounds.setPosition(strategy.getPlayerStartX(), strategy.getPlayerStartY());
 
@@ -673,15 +677,15 @@ public class Main extends ApplicationAdapter {
         }
 
         // --- UPDATE ---
-        player.update(delta, platforms);
+        player.update(delta, platforms, grounds);
 
         // Update bosses
         if (currentLevel == 3 && miniBoss != null && !miniBoss.isDead()) {
-            miniBoss.update(delta, platforms, player);
+            miniBoss.update(delta, platforms, grounds, player);
         }
 
         if (currentLevel == 5 && boss != null && !boss.isDead()) {
-            boss.update(delta, platforms, player, activeEnemyBullets, enemyBulletPool);
+            boss.update(delta, platforms, grounds, player, activeEnemyBullets, enemyBulletPool);
         }
 
         // Update enemy bullets
@@ -715,7 +719,7 @@ public class Main extends ApplicationAdapter {
         // Update enemies dengan platform collision
         for (int i = activeEnemies.size - 1; i >= 0; i--) {
             CommonEnemy enemy = activeEnemies.get(i);
-            enemy.update(delta, platforms);
+            enemy.update(delta, platforms, grounds);
 
             if (!enemy.isActive()) {
                 activeEnemies.removeIndex(i);
@@ -881,6 +885,10 @@ public class Main extends ApplicationAdapter {
             // Draw at native size - will crop naturally if larger than viewport
             batch.draw(backgroundTex, bgX, bgY, bgWidth, bgHeight);
         }
+
+        // Draw grounds
+        for (Ground g : grounds)
+            g.draw(batch);
 
         // Draw platforms
         for (Platform p : platforms)
@@ -1050,6 +1058,7 @@ public class Main extends ApplicationAdapter {
         shapeRenderer.dispose();
         playerTex.dispose();
         platformTex.dispose();
+        groundTex.dispose();
         bulletTex.dispose();
         debugTex.dispose();
         levelIndicatorTex.dispose();

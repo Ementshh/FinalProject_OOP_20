@@ -1,5 +1,6 @@
 background.png
 door.png
 ground.png
+ground_base.png
 libgdx.png
 player.png

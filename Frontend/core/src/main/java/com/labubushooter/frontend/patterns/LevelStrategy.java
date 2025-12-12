@@ -2,10 +2,13 @@ package com.labubushooter.frontend.patterns;
 
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.utils.Array;
+import com.labubushooter.frontend.objects.Ground;
 import com.labubushooter.frontend.objects.Platform;
 
 public interface LevelStrategy {
     void loadPlatforms(Array<Platform> platforms, Texture platformTex);
+
+    void loadGround(Array<Ground> grounds, Texture groundTex);
 
     float getLevelWidth();
 

@@ -85,7 +85,7 @@ public class Player extends GameObject {
         this.weaponAngle = 0f;
     }
 
-    public void update(float delta, Array<Platform> platforms) {
+    public void update(float delta, Array<Platform> platforms, Array<Ground> grounds) {
         // Health Regeneration Logic
         long currentTime = TimeUtils.nanoTime();
         if (health < MAX_HEALTH && currentTime - lastDamageTime > REGEN_DELAY) {
@@ -122,6 +122,17 @@ public class Player extends GameObject {
             if (bounds.overlaps(p.bounds)) {
                 if (velY < 0 && bounds.y + bounds.height / 2 > p.bounds.y + p.bounds.height) {
                     bounds.y = p.bounds.y + p.bounds.height;
+                    velY = 0;
+                    grounded = true;
+                }
+            }
+        }
+
+        // Ground Collisions
+        for (Ground g : grounds) {
+            if (bounds.overlaps(g.bounds)) {
+                if (velY < 0 && bounds.y + bounds.height / 2 > g.bounds.y + g.bounds.height) {
+                    bounds.y = g.bounds.y + g.bounds.height;
                     velY = 0;
                     grounded = true;
                 }

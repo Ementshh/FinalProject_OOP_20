@@ -113,12 +113,12 @@ public class FinalBoss extends BossEnemy {
     }
 
     @Override
-    public void update(float delta, Array<Platform> platforms) {
+    public void update(float delta, Array<Platform> platforms, Array<Ground> grounds) {
         // This method is called from parent, but we need additional parameters
         // Will be overridden with proper signature
     }
 
-    public void update(float delta, Array<Platform> platforms, Player player,
+    public void update(float delta, Array<Platform> platforms, Array<Ground> grounds, Player player,
             Array<EnemyBullet> bullets, Pool<EnemyBullet> bulletPool) {
         if (isDead()) {
             active = false;
@@ -141,7 +141,7 @@ public class FinalBoss extends BossEnemy {
             }
 
             // Don't move during phase transition
-            applyGravityAndCollision(delta, platforms);
+            applyGravityAndCollision(delta, platforms, grounds);
             return;
         }
 
@@ -214,7 +214,7 @@ public class FinalBoss extends BossEnemy {
             }
 
             // Don't move or shoot during warning
-            applyGravityAndCollision(delta, platforms);
+            applyGravityAndCollision(delta, platforms, grounds);
             return;
         }
 
@@ -228,7 +228,7 @@ public class FinalBoss extends BossEnemy {
             }
 
             // Don't move or shoot during stun
-            applyGravityAndCollision(delta, platforms);
+            applyGravityAndCollision(delta, platforms, grounds);
             return;
         }
 
@@ -267,7 +267,7 @@ public class FinalBoss extends BossEnemy {
         }
 
         // Apply gravity and platform collision
-        applyGravityAndCollision(delta, platforms);
+        applyGravityAndCollision(delta, platforms, grounds);
 
         // Collision with player (melee damage)
         if (collider.overlaps(player.bounds)) {
