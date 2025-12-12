@@ -1,4 +1,5 @@
 background.png
+door.png
 ground.png
 libgdx.png
 player.png

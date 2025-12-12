@@ -144,7 +144,8 @@ public class Main extends ApplicationAdapter {
         bulletTex = createColorTexture(10, 5, Color.YELLOW);
         pistolTex = createColorTexture(20, 10, Color.GRAY);
         mac10Tex = createColorTexture(30, 15, Color.LIME);
-        exitTex = createColorTexture(30, 100, Color.FOREST);
+        exitTex = new Texture(Gdx.files.internal("door.png"));
+        exitTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
         debugTex = createColorTexture(10, 600, Color.RED); // Debug marker
         levelIndicatorTex = createColorTexture(30, 30, Color.YELLOW); // Level indicator
         enemyTex = createColorTexture(40, 60, Color.RED);
@@ -895,7 +896,7 @@ public class Main extends ApplicationAdapter {
         }
 
         if (bossDefeated) {
-            batch.draw(exitTex, currentLevelWidth - 80, 50);
+            batch.draw(exitTex, currentLevelWidth - 80, 100, 45, 150);
         }
 
         // Draw enemies
