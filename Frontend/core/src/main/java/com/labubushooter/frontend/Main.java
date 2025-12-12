@@ -156,7 +156,8 @@ public class Main extends ApplicationAdapter {
         enemyTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
 
         // Boss textures
-        miniBossTex = createColorTexture(60, 90, Color.PURPLE);
+        miniBossTex = new Texture(Gdx.files.internal("miniboss.png"));
+        miniBossTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
         bossTex = createColorTexture(60, 100, Color.MAROON);
         enemyBulletTex = createColorTexture(8, 8, Color.ORANGE);
         whiteFlashTex = createColorTexture(60, 90, Color.WHITE);

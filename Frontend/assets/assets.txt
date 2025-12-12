@@ -4,4 +4,5 @@ enemy.png
 ground.png
 ground_base.png
 libgdx.png
+miniboss.png
 player.png
