@@ -1,4 +1,5 @@
 background.png
+boss.png
 door.png
 enemy.png
 ground.png
