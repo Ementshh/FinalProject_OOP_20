@@ -23,7 +23,6 @@ public class CommonEnemy implements Pool.Poolable {
     private float velocityY = 0;
     private float speed; // Speed akan di-set per level
     private Texture texture;
-    private Texture coloredTexture; // Texture dengan warna random
     private float damageAmount;
 
     // Damage System
@@ -31,30 +30,16 @@ public class CommonEnemy implements Pool.Poolable {
     private static final long DAMAGE_COOLDOWN = 1000000000L; // 1 second in nanoseconds
 
     // Jump System
-    private static final float JUMP_POWER = 500f; 
+    private static final float JUMP_POWER = 500f;
     private static final float JUMP_THRESHOLD = 10f; // Threshold untuk X-axis alignment
 
     private static final float GRAVITY = -900f;
-    private static final float WIDTH = 40f;
-    private static final float HEIGHT = 60f;
+    private static final float WIDTH = 60f; // 40 * 1.5
+    private static final float HEIGHT = 90f; // 60 * 1.5
     private static final float SPAWN_Y = 300f; // Ground + 1f
-    
+
     // Base speed untuk multiplier
     private static final float BASE_SPEED = 120f;
-    
-    // Array warna untuk enemy (hindari ORANGE yang merupakan warna player)
-    private static final Color[] ENEMY_COLORS = {
-        Color.RED,
-        Color.SCARLET,
-        Color.MAROON,
-        Color.PURPLE,
-        Color.VIOLET,
-        Color.MAGENTA,
-        Color.PINK,
-        Color.CORAL,
-        Color.FIREBRICK,
-        Color.BROWN
-    };
 
     public CommonEnemy(Texture texture) {
         this.texture = texture;
@@ -72,7 +57,7 @@ public class CommonEnemy implements Pool.Poolable {
     public void init(float x, Player target, int level) {
         this.collider.setPosition(x, SPAWN_Y);
         this.target = target;
-        
+
         // Set health, damage, and speed based on level
         switch (level) {
             case 1:
@@ -96,40 +81,21 @@ public class CommonEnemy implements Pool.Poolable {
                 this.speed = BASE_SPEED;
                 break;
         }
-        
+
         this.health = this.maxHealth;
         this.spawned = true;
         this.velocityX = 0;
         this.velocityY = 0;
         this.grounded = false;
         this.lastDamageTime = TimeUtils.nanoTime();
-        
-        // Generate random colored texture
-        generateRandomColorTexture();
-        
-        Gdx.app.log("Enemy", "Spawned at level " + level + " - HP: " + maxHealth + 
-                    ", Damage: " + damageAmount + ", Speed: " + speed);
-    }
-    
-    private void generateRandomColorTexture() {
-        // Pilih warna random dari array
-        Color randomColor = ENEMY_COLORS[MathUtils.random(0, ENEMY_COLORS.length - 1)];
-        
-        // Dispose texture lama jika ada
-        if (coloredTexture != null) {
-            coloredTexture.dispose();
-        }
-        
-        // Buat texture baru dengan warna random
-        Pixmap pixmap = new Pixmap((int)WIDTH, (int)HEIGHT, Pixmap.Format.RGBA8888);
-        pixmap.setColor(randomColor);
-        pixmap.fill();
-        coloredTexture = new Texture(pixmap);
-        pixmap.dispose();
+
+        Gdx.app.log("Enemy", "Spawned at level " + level + " - HP: " + maxHealth +
+                ", Damage: " + damageAmount + ", Speed: " + speed);
     }
 
-    public void update(float delta, Array<Platform> platforms) {
-        if (!spawned || target == null) return;
+    public void update(float delta, Array<Platform> platforms, Array<Ground> grounds) {
+        if (!spawned || target == null)
+            return;
 
         // Homing movement (X-axis only)
         float targetCenterX = target.bounds.x + target.bounds.width / 2f;
@@ -158,7 +124,8 @@ public class CommonEnemy implements Pool.Poolable {
         collider.x += velocityX * delta;
 
         // Boundary check (X-axis)
-        if (collider.x < 0) collider.x = 0;
+        if (collider.x < 0)
+            collider.x = 0;
         if (collider.x + collider.width > Player.LEVEL_WIDTH) {
             collider.x = Player.LEVEL_WIDTH - collider.width;
         }
@@ -173,6 +140,17 @@ public class CommonEnemy implements Pool.Poolable {
             if (collider.overlaps(p.bounds)) {
                 if (velocityY < 0 && collider.y + collider.height / 2 > p.bounds.y + p.bounds.height) {
                     collider.y = p.bounds.y + p.bounds.height;
+                    velocityY = 0;
+                    grounded = true;
+                }
+            }
+        }
+
+        // Ground collision detection
+        for (Ground g : grounds) {
+            if (collider.overlaps(g.bounds)) {
+                if (velocityY < 0 && collider.y + collider.height / 2 > g.bounds.y + g.bounds.height) {
+                    collider.y = g.bounds.y + g.bounds.height;
                     velocityY = 0;
                     grounded = true;
                 }
@@ -201,11 +179,10 @@ public class CommonEnemy implements Pool.Poolable {
     }
 
     public void draw(SpriteBatch batch) {
-        if (!spawned) return;
+        if (!spawned)
+            return;
 
-        // Gunakan texture berwarna random
-        Texture texToDraw = (coloredTexture != null) ? coloredTexture : texture;
-        batch.draw(texToDraw, collider.x, collider.y, collider.width, collider.height);
+        batch.draw(texture, collider.x, collider.y, collider.width, collider.height);
     }
 
     @Override
@@ -221,12 +198,6 @@ public class CommonEnemy implements Pool.Poolable {
         this.velocityY = 0;
         this.grounded = false;
         this.lastDamageTime = 0;
-        
-        // Dispose colored texture
-        if (coloredTexture != null) {
-            coloredTexture.dispose();
-            coloredTexture = null;
-        }
     }
 
     public boolean isActive() {

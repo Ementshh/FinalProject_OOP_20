@@ -19,6 +19,7 @@ import com.labubushooter.frontend.objects.Coin;
 import com.labubushooter.frontend.objects.CommonEnemy;
 import com.labubushooter.frontend.objects.EnemyBullet;
 import com.labubushooter.frontend.objects.FinalBoss;
+import com.labubushooter.frontend.objects.Ground;
 import com.labubushooter.frontend.objects.MiniBossEnemy;
 import com.labubushooter.frontend.objects.Platform;
 import com.labubushooter.frontend.objects.Player;
@@ -40,7 +41,7 @@ public class Main extends ApplicationAdapter {
     OrthographicCamera camera;
     Viewport viewport;
 
-    static final float VIEWPORT_WIDTH = 800f;
+    static final float VIEWPORT_WIDTH = 1066f; // 16:9 aspect ratio
     static final float VIEWPORT_HEIGHT = 600f;
 
     private final float LEVEL_EXIT_THRESHOLD = 100f;
@@ -49,7 +50,7 @@ public class Main extends ApplicationAdapter {
     private int currentLevel = 1;
     private Map<Integer, LevelStrategy> levelStrategy;
 
-    Texture playerTex, platformTex, bulletTex, exitTex;
+    Texture playerTex, platformTex, groundTex, bulletTex, exitTex;
     Texture pistolTex, mac10Tex;
     Texture debugTex;
     Texture levelIndicatorTex;
@@ -58,9 +59,11 @@ public class Main extends ApplicationAdapter {
     // Boss textures
     Texture miniBossTex, bossTex, enemyBulletTex;
     Texture whiteFlashTex, redFlashTex, yellowFlashTex;
+    Texture backgroundTex;
 
     Player player;
     Array<Platform> platforms;
+    Array<Ground> grounds;
 
     Pool<Bullet> bulletPool;
     Array<Bullet> activeBullets;
@@ -118,8 +121,10 @@ public class Main extends ApplicationAdapter {
         batch = new SpriteBatch();
         shapeRenderer = new ShapeRenderer();
 
-        // Setup Camera with ExtendViewport for fullscreen without black bars
-        // ExtendViewport shows MORE of the level horizontally on wider screens
+        // Setup Camera with ExtendViewport for fullscreen scaling
+        // ExtendViewport maintains minimum 800x600 world units and extends horizontally
+        // on wider screens
+        // No black bars - fills entire screen while keeping gameplay area consistent
         camera = new OrthographicCamera();
         viewport = new ExtendViewport(VIEWPORT_WIDTH, VIEWPORT_HEIGHT, camera);
         viewport.apply();
@@ -134,19 +139,27 @@ public class Main extends ApplicationAdapter {
         layout = new GlyphLayout();
 
         // Create Textures
-        playerTex = createColorTexture(40, 60, Color.ORANGE);
-        platformTex = createColorTexture(100, 20, Color.FOREST);
+        playerTex = new Texture(Gdx.files.internal("player.png"));
+        playerTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        platformTex = new Texture(Gdx.files.internal("ground.png"));
+        platformTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        groundTex = new Texture(Gdx.files.internal("ground_base.png"));
+        groundTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
         bulletTex = createColorTexture(10, 5, Color.YELLOW);
         pistolTex = createColorTexture(20, 10, Color.GRAY);
         mac10Tex = createColorTexture(30, 15, Color.LIME);
-        exitTex = createColorTexture(30, 100, Color.FOREST);
+        exitTex = new Texture(Gdx.files.internal("door.png"));
+        exitTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
         debugTex = createColorTexture(10, 600, Color.RED); // Debug marker
         levelIndicatorTex = createColorTexture(30, 30, Color.YELLOW); // Level indicator
-        enemyTex = createColorTexture(40, 60, Color.RED);
+        enemyTex = new Texture(Gdx.files.internal("enemy.png"));
+        enemyTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
 
         // Boss textures
-        miniBossTex = createColorTexture(60, 90, Color.PURPLE);
-        bossTex = createColorTexture(60, 100, Color.MAROON);
+        miniBossTex = new Texture(Gdx.files.internal("miniboss.png"));
+        miniBossTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        bossTex = new Texture(Gdx.files.internal("boss.png"));
+        bossTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
         enemyBulletTex = createColorTexture(8, 8, Color.ORANGE);
         whiteFlashTex = createColorTexture(60, 90, Color.WHITE);
         redFlashTex = createColorTexture(60, 100, Color.RED);
@@ -163,6 +176,11 @@ public class Main extends ApplicationAdapter {
 
         // Setup Enemy Pool
         random = new Random();
+
+        // Load background image
+        backgroundTex = new Texture(Gdx.files.internal("background.png"));
+        backgroundTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+
         enemyPool = new Pool<CommonEnemy>() {
             @Override
             protected CommonEnemy newObject() {
@@ -279,8 +297,8 @@ public class Main extends ApplicationAdapter {
     }
 
     private void spawnEnemy() {
-        float cameraLeft = camera.position.x - VIEWPORT_WIDTH / 2;
-        float cameraRight = camera.position.x + VIEWPORT_WIDTH / 2;
+        float cameraLeft = camera.position.x - viewport.getWorldWidth() / 2;
+        float cameraRight = camera.position.x + viewport.getWorldWidth() / 2;
 
         // Spawn area dengan buffer zone di luar layar
         final float SPAWN_BUFFER = 200f; // Jarak spawn di luar layar
@@ -392,6 +410,11 @@ public class Main extends ApplicationAdapter {
         } else {
             platforms.clear();
         }
+        if (grounds == null) {
+            grounds = new Array<Ground>();
+        } else {
+            grounds.clear();
+        }
         activeBullets.clear();
 
         // Clear enemies when loading new level
@@ -439,12 +462,7 @@ public class Main extends ApplicationAdapter {
         }
 
         strategy.loadPlatforms(platforms, platformTex);
-
-        // FORCE-ADD: Base ground that spans the ENTIRE level width
-        // Use extended width for ultra-wide screens (prevents visual gaps)
-        float safeGroundWidth = Math.max(currentLevelWidth, 3000f);
-        Platform baseGround = new Platform(0, 0, safeGroundWidth, 50, platformTex);
-        platforms.insert(0, baseGround);
+        strategy.loadGround(grounds, groundTex);
 
         player.bounds.setPosition(strategy.getPlayerStartX(), strategy.getPlayerStartY());
 
@@ -662,15 +680,15 @@ public class Main extends ApplicationAdapter {
         }
 
         // --- UPDATE ---
-        player.update(delta, platforms);
+        player.update(delta, platforms, grounds);
 
         // Update bosses
         if (currentLevel == 3 && miniBoss != null && !miniBoss.isDead()) {
-            miniBoss.update(delta, platforms, player);
+            miniBoss.update(delta, platforms, grounds, player);
         }
 
         if (currentLevel == 5 && boss != null && !boss.isDead()) {
-            boss.update(delta, platforms, player, activeEnemyBullets, enemyBulletPool);
+            boss.update(delta, platforms, grounds, player, activeEnemyBullets, enemyBulletPool);
         }
 
         // Update enemy bullets
@@ -678,7 +696,7 @@ public class Main extends ApplicationAdapter {
             EnemyBullet eb = activeEnemyBullets.get(i);
             eb.update(delta);
 
-            if (eb.isOutOfBounds(currentLevelWidth, VIEWPORT_HEIGHT)) {
+            if (eb.isOutOfBounds(currentLevelWidth, viewport.getWorldHeight())) {
                 activeEnemyBullets.removeIndex(i);
                 enemyBulletPool.free(eb);
             }
@@ -704,7 +722,7 @@ public class Main extends ApplicationAdapter {
         // Update enemies dengan platform collision
         for (int i = activeEnemies.size - 1; i >= 0; i--) {
             CommonEnemy enemy = activeEnemies.get(i);
-            enemy.update(delta, platforms);
+            enemy.update(delta, platforms, grounds);
 
             if (!enemy.isActive()) {
                 activeEnemies.removeIndex(i);
@@ -824,9 +842,9 @@ public class Main extends ApplicationAdapter {
         for (int i = activeBullets.size - 1; i >= 0; i--) {
             Bullet b = activeBullets.get(i);
             b.update(delta);
-            
+
             boolean shouldRemove = false;
-            
+
             // Check collision with platforms (walls)
             for (Platform p : platforms) {
                 if (b.bounds.overlaps(p.bounds)) {
@@ -834,12 +852,12 @@ public class Main extends ApplicationAdapter {
                     break;
                 }
             }
-            
+
             // Check if bullet traveled too far vertically
-            if (!shouldRemove && b.isOutOfVerticalBounds(VIEWPORT_HEIGHT)) {
+            if (!shouldRemove && b.isOutOfVerticalBounds(viewport.getWorldHeight())) {
                 shouldRemove = true;
             }
-            
+
             if (shouldRemove) {
                 activeBullets.removeIndex(i);
                 bulletPool.free(b);
@@ -857,6 +875,24 @@ public class Main extends ApplicationAdapter {
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
+        // Draw background at native resolution (crop if doesn't fit)
+        if (backgroundTex != null) {
+            // Get actual texture dimensions
+            float bgWidth = backgroundTex.getWidth();
+            float bgHeight = backgroundTex.getHeight();
+
+            // Position background at world origin - scrolls naturally with camera
+            float bgX = 0; // Start from world origin
+            float bgY = (VIEWPORT_HEIGHT - bgHeight) / 2; // Centered vertically
+
+            // Draw at native size - will crop naturally if larger than viewport
+            batch.draw(backgroundTex, bgX, bgY, bgWidth, bgHeight);
+        }
+
+        // Draw grounds
+        for (Ground g : grounds)
+            g.draw(batch);
+
         // Draw platforms
         for (Platform p : platforms)
             p.draw(batch);
@@ -871,7 +907,7 @@ public class Main extends ApplicationAdapter {
         }
 
         if (bossDefeated) {
-            batch.draw(exitTex, currentLevelWidth - 80, 50);
+            batch.draw(exitTex, currentLevelWidth - 80, 100, 45, 150);
         }
 
         // Draw enemies
@@ -1025,6 +1061,7 @@ public class Main extends ApplicationAdapter {
         shapeRenderer.dispose();
         playerTex.dispose();
         platformTex.dispose();
+        groundTex.dispose();
         bulletTex.dispose();
         debugTex.dispose();
         levelIndicatorTex.dispose();
@@ -1035,6 +1072,7 @@ public class Main extends ApplicationAdapter {
         whiteFlashTex.dispose();
         redFlashTex.dispose();
         yellowFlashTex.dispose();
+        backgroundTex.dispose();
         font.dispose();
         smallFont.dispose();
     }

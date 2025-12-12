@@ -20,7 +20,7 @@ public class Player extends GameObject {
     // Health System
     public float health;
     public static final float MAX_HEALTH = 20f;
-    
+
     // Health Regeneration System
     private long lastDamageTime;
     private long lastRegenTime;
@@ -35,17 +35,17 @@ public class Player extends GameObject {
     final float JUMP_POWER = 500f;
     final float SPEED = 250f;
     public static float LEVEL_WIDTH = 2400f;
-    
+
     public Texture pistolTex;
     public Texture mac10Tex;
-    
+
     // Mouse aiming
     private Vector2 mouseWorldPos;
     private float weaponAngle;
     public OrthographicCamera camera;
 
     public Player(Texture tex) {
-        super(100, 300, 40, 60, tex);
+        super(100, 300, 50, 75, tex); // Increased from 40x60 to 50x75 (1.25x larger)
         this.shootingStrategy = null;
         this.health = MAX_HEALTH;
         this.lastDamageTime = TimeUtils.nanoTime();
@@ -64,7 +64,8 @@ public class Player extends GameObject {
 
     public void takeDamage(float damage) {
         health -= damage;
-        if (health < 0) health = 0;
+        if (health < 0)
+            health = 0;
         lastDamageTime = TimeUtils.nanoTime(); // Reset damage timer
         Gdx.app.log("Player", "Health: " + health);
     }
@@ -84,13 +85,14 @@ public class Player extends GameObject {
         this.weaponAngle = 0f;
     }
 
-    public void update(float delta, Array<Platform> platforms) {
+    public void update(float delta, Array<Platform> platforms, Array<Ground> grounds) {
         // Health Regeneration Logic
         long currentTime = TimeUtils.nanoTime();
         if (health < MAX_HEALTH && currentTime - lastDamageTime > REGEN_DELAY) {
             if (currentTime - lastRegenTime > REGEN_INTERVAL) {
                 health += REGEN_AMOUNT;
-                if (health > MAX_HEALTH) health = MAX_HEALTH;
+                if (health > MAX_HEALTH)
+                    health = MAX_HEALTH;
                 lastRegenTime = currentTime;
                 Gdx.app.log("Player", "Health regenerated: " + health);
             }
@@ -126,35 +128,46 @@ public class Player extends GameObject {
             }
         }
 
+        // Ground Collisions
+        for (Ground g : grounds) {
+            if (bounds.overlaps(g.bounds)) {
+                if (velY < 0 && bounds.y + bounds.height / 2 > g.bounds.y + g.bounds.height) {
+                    bounds.y = g.bounds.y + g.bounds.height;
+                    velY = 0;
+                    grounded = true;
+                }
+            }
+        }
+
         // Reset position
         if (bounds.y < 0) {
             bounds.setPosition(100, 400);
             velY = 0;
         }
-        
+
         // Update mouse world position and weapon angle
         if (camera != null) {
             updateMouseAiming();
         }
     }
-    
+
     private void updateMouseAiming() {
         // Convert screen coordinates to world coordinates
         Vector3 mousePos3D = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
         camera.unproject(mousePos3D);
         mouseWorldPos.set(mousePos3D.x, mousePos3D.y);
-        
+
         // Calculate player center
         float playerCenterX = bounds.x + bounds.width / 2;
         float playerCenterY = bounds.y + bounds.height / 2;
-        
+
         // Calculate direction to mouse
         float dx = mouseWorldPos.x - playerCenterX;
         float dy = mouseWorldPos.y - playerCenterY;
-        
+
         // Calculate weapon angle (smooth 360° rotation)
         weaponAngle = (float) Math.toDegrees(Math.atan2(dy, dx));
-        
+
         // Determine facing direction based on mouse X position
         if (mouseWorldPos.x >= playerCenterX) {
             facingRight = true;
@@ -173,39 +186,39 @@ public class Player extends GameObject {
     public Vector2 getShootDirection() {
         float playerCenterX = bounds.x + bounds.width / 2;
         float playerCenterY = bounds.y + bounds.height / 2;
-        
+
         float dx = mouseWorldPos.x - playerCenterX;
         float dy = mouseWorldPos.y - playerCenterY;
-        
+
         // Normalize
         float length = (float) Math.sqrt(dx * dx + dy * dy);
         if (length > 0) {
             dx /= length;
             dy /= length;
         }
-        
+
         return new Vector2(dx, dy);
     }
-    
+
     public Vector2 getShootStartPosition() {
         float playerCenterX = bounds.x + bounds.width / 2;
         float playerCenterY = bounds.y + bounds.height / 2;
-        
+
         Vector2 dir = getShootDirection();
         float offsetDistance = 25f;
-        
+
         return new Vector2(
-            playerCenterX + dir.x * offsetDistance,
-            playerCenterY + dir.y * offsetDistance
-        );
+                playerCenterX + dir.x * offsetDistance,
+                playerCenterY + dir.y * offsetDistance);
     }
 
     public void shoot(Array<Bullet> activeBullets, Pool<Bullet> pool) {
-        if (shootingStrategy == null) return;
+        if (shootingStrategy == null)
+            return;
 
         Vector2 startPos = getShootStartPosition();
         Vector2 direction = getShootDirection();
-        
+
         shootingStrategy.shoot(startPos.x, startPos.y, direction, activeBullets, pool);
     }
 
@@ -223,46 +236,46 @@ public class Player extends GameObject {
             // Pistol: 25x8 horizontal rectangle (seperti gambar 1)
             if (strategyName.contains("Pistol")) {
                 currentWeaponTex = pistolTex;
-                w = 25; 
+                w = 25;
                 h = 8;
-            } 
+            }
             // SMG/Mac10: 30x10 horizontal rectangle (seperti gambar 2)
             else if (strategyName.contains("Mac10")) {
                 currentWeaponTex = mac10Tex;
-                w = 30; 
+                w = 30;
                 h = 10;
             }
 
             if (currentWeaponTex != null) {
                 float playerCenterX = bounds.x + bounds.width / 2;
                 float playerCenterY = bounds.y + bounds.height / 2;
-                
+
                 // Origin point di grip (ujung belakang senjata - pojok kiri tengah)
-                float originX = 5f;    // Grip position dari kiri weapon
+                float originX = 5f; // Grip position dari kiri weapon
                 float originY = h / 2; // Center vertikal
-                
+
                 // Weapon position di player center
                 float weaponX = playerCenterX;
                 float weaponY = playerCenterY;
-                
+
                 // Y-axis flip jika mouse di kiri player (mirror terhadap Y-axis)
                 float scaleY = facingRight ? 1 : -1;
-                
+
                 // Draw weapon - rotation smooth 360° dengan Y-axis mirroring
                 batch.draw(
-                    currentWeaponTex,
-                    weaponX - originX,      // x position (offset by grip origin)
-                    weaponY - originY,      // y position (offset by grip origin)
-                    originX,                // origin x (grip point - rotation pivot)
-                    originY,                // origin y (center vertikal)
-                    w,                      // width
-                    h,                      // height
-                    1,                      // scale x
-                    scaleY,                 // scale y (flip Y-axis saat facing left)
-                    weaponAngle,            // rotation angle (smooth 360°)
-                    0, 0,                   // source x, y
-                    (int)w, (int)h,         // source width, height
-                    false, false            // flip x, y
+                        currentWeaponTex,
+                        weaponX - originX, // x position (offset by grip origin)
+                        weaponY - originY, // y position (offset by grip origin)
+                        originX, // origin x (grip point - rotation pivot)
+                        originY, // origin y (center vertikal)
+                        w, // width
+                        h, // height
+                        1, // scale x
+                        scaleY, // scale y (flip Y-axis saat facing left)
+                        weaponAngle, // rotation angle (smooth 360°)
+                        0, 0, // source x, y
+                        (int) w, (int) h, // source width, height
+                        false, false // flip x, y
                 );
             }
         }

@@ -96,12 +96,12 @@ public class MiniBossEnemy extends BossEnemy {
     }
 
     @Override
-    public void update(float delta, Array<Platform> platforms) {
+    public void update(float delta, Array<Platform> platforms, Array<Ground> grounds) {
         // This method is called from parent, but we need Player reference
         // Will be overridden with proper signature
     }
 
-    public void update(float delta, Array<Platform> platforms, Player player) {
+    public void update(float delta, Array<Platform> platforms, Array<Ground> grounds, Player player) {
         if (isDead()) {
             active = false;
             return;
@@ -269,7 +269,7 @@ public class MiniBossEnemy extends BossEnemy {
         }
 
         // Apply gravity and platform collision
-        applyGravityAndCollision(delta, platforms);
+        applyGravityAndCollision(delta, platforms, grounds);
 
         // Collision with player (melee damage)
         if (collider.overlaps(player.bounds)) {
