@@ -153,6 +153,9 @@ public class Main extends ApplicationAdapter {
     private Rectangle continueGameButton;
     private Rectangle newGameButtonMenu;
 
+    // Debug Manager
+    private DebugManager debugManager;
+
     @Override
     public void create() {
         batch = new SpriteBatch();
@@ -291,6 +294,9 @@ public class Main extends ApplicationAdapter {
         // Initialize API service
         playerApi = new PlayerApiService();
         coinsCollectedThisSession = 0;
+
+        // Initialize Debug Manager
+        debugManager = new DebugManager();
 
         // Continue/New Game buttons
         continueGameButton = new Rectangle(centerX, 270, buttonWidth, buttonHeight);
@@ -662,6 +668,18 @@ public class Main extends ApplicationAdapter {
     @Override
     public void render() {
         float delta = Gdx.graphics.getDeltaTime();
+
+        // ==================== DEBUG MODE CHECK ====================
+        // Right Ctrl + D to activate debug mode (skip username & backend)
+        if (debugManager.checkDebugActivation()) {
+            username = debugManager.getDebugUsername();
+            currentPlayerData = debugManager.createDebugPlayerData();
+            coinsCollectedThisSession = 0;
+            isNewPlayer = true;
+            gameState = GameState.PLAYING;
+            loadLevel(debugManager.getDebugStartingLevel());
+            return;
+        }
 
         // Handle different game states
         switch (gameState) {
@@ -1402,6 +1420,15 @@ public class Main extends ApplicationAdapter {
 
             // YES - Restart game with same username
             if (confirmYesButton.contains(touchPos.x, touchPos.y)) {
+                // Skip backend reset in debug mode
+                if (debugManager != null && debugManager.isDebugModeActive()) {
+                    debugManager.logSkippedAction("Reset progress on backend");
+                    currentPlayerData.lastStage = 1;
+                    coinsCollectedThisSession = 0;
+                    restartGameSameUser();
+                    return;
+                }
+
                 // Reset progress on server
                 playerApi.resetProgress(currentPlayerData.playerId, new PlayerApiService.SaveCallback() {
                     @Override
@@ -1546,6 +1573,17 @@ public class Main extends ApplicationAdapter {
 
     // ==================== BACKEND INTEGRATION METHODS ====================
     private void saveGameProgress() {
+        // Skip save in debug mode
+        if (debugManager != null && debugManager.isDebugModeActive()) {
+            debugManager.logSkippedAction("Save to backend");
+            if (currentPlayerData != null) {
+                currentPlayerData.lastStage = currentLevel;
+                currentPlayerData.totalCoins += coinsCollectedThisSession;
+                coinsCollectedThisSession = 0;
+            }
+            return;
+        }
+
         if (currentPlayerData != null) {
             playerApi.saveProgress(
                 currentPlayerData.playerId,
@@ -1584,6 +1622,16 @@ public class Main extends ApplicationAdapter {
             
             // Start new game
             else if (newGameButtonMenu.contains(touchPos.x, touchPos.y)) {
+                // Skip backend reset in debug mode
+                if (debugManager != null && debugManager.isDebugModeActive()) {
+                    debugManager.logSkippedAction("Reset progress on backend");
+                    currentPlayerData.lastStage = 1;
+                    coinsCollectedThisSession = 0;
+                    gameState = GameState.PLAYING;
+                    loadLevel(1);
+                    return;
+                }
+
                 // Reset progress on server
                 playerApi.resetProgress(currentPlayerData.playerId, new PlayerApiService.SaveCallback() {
                     @Override
