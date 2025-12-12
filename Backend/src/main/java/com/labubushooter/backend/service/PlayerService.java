@@ -3,10 +3,8 @@ package com.labubushooter.backend.service;
 import com.labubushooter.backend.model.Player;
 import com.labubushooter.backend.repository.PlayerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -29,59 +27,45 @@ public class PlayerService {
         return playerRepository.findByUsername(username);
     }
 
-    public Player createPlayer(Player player) {
-        if (playerRepository.existsByUsername(player.getUsername())) {
-            throw new RuntimeException("Username already exists: " + player.getUsername());
+    public Player createPlayer(String username) {
+        if (playerRepository.existsByUsername(username)) {
+            throw new RuntimeException("Username already exists: " + username);
         }
+        Player player = new Player(username);
         return playerRepository.save(player);
     }
 
-    public Player updatePlayer(UUID playerId, Player updatedPlayer) {
-        Player existingPlayer = playerRepository.findById(playerId)
-                .orElseThrow(() -> new RuntimeException("Player not found: " + playerId));
-
-        if (updatedPlayer.getUsername() != null) {
-            existingPlayer.setUsername(updatedPlayer.getUsername());
+    public Player loginOrCreate(String username) {
+        Optional<Player> existingPlayer = playerRepository.findByUsername(username);
+        if (existingPlayer.isPresent()) {
+            return existingPlayer.get();
+        } else {
+            Player newPlayer = new Player(username);
+            return playerRepository.save(newPlayer);
         }
-        if (updatedPlayer.getHighScore() != null) {
-            existingPlayer.setHighScore(updatedPlayer.getHighScore());
-        }
-        if (updatedPlayer.getTotalCoins() != null) {
-            existingPlayer.setTotalCoins(updatedPlayer.getTotalCoins());
-        }
-        if (updatedPlayer.getTotalDistanceTravelled() != null) {
-            existingPlayer.setTotalDistanceTravelled(updatedPlayer.getTotalDistanceTravelled());
-        }
-
-        return playerRepository.save(existingPlayer);
     }
 
-    public void deletePlayer(UUID playerId) {
-        if (!playerRepository.existsById(playerId)) {
-            throw new RuntimeException("Player not found: " + playerId);
-        }
-        playerRepository.deleteById(playerId);
-    }
-
-    public Player updatePlayerStats(UUID playerId, Integer scoreValue, Integer coinsCollected, Integer distanceTravelled) {
+    public Player updatePlayerProgress(UUID playerId, Integer lastStage, Integer coinsCollected) {
         Player player = playerRepository.findById(playerId)
                 .orElseThrow(() -> new RuntimeException("Player not found: " + playerId));
 
-        if (scoreValue != null) {
-            Integer current = player.getHighScore();
-            if (current == null || scoreValue > current) {
-                player.setHighScore(scoreValue);
-            }
+        if (lastStage != null) {
+            player.setLastStage(lastStage);
         }
         if (coinsCollected != null) {
-            int base = player.getTotalCoins() == null ? 0 : player.getTotalCoins();
-            player.setTotalCoins(base + coinsCollected);
-        }
-        if (distanceTravelled != null) {
-            int base = player.getTotalDistanceTravelled() == null ? 0 : player.getTotalDistanceTravelled();
-            player.setTotalDistanceTravelled(base + distanceTravelled);
+            int currentCoins = player.getTotalCoins() != null ? player.getTotalCoins() : 0;
+            player.setTotalCoins(currentCoins + coinsCollected);
         }
 
+        return playerRepository.save(player);
+    }
+
+    public Player resetPlayerProgress(UUID playerId) {
+        Player player = playerRepository.findById(playerId)
+                .orElseThrow(() -> new RuntimeException("Player not found: " + playerId));
+
+        player.setLastStage(1);
+        // Don't reset total coins - keep lifetime stats
         return playerRepository.save(player);
     }
 
@@ -89,17 +73,10 @@ public class PlayerService {
         return playerRepository.existsByUsername(username);
     }
 
-    public List<Player> getLeaderboardByHighScore(int limit) {
-        List<Player> sorted = playerRepository.findAll(Sort.by(Sort.Direction.DESC, "highScore"));
-        int toIndex = Math.min(Math.max(limit, 1), sorted.size());
-        return new ArrayList<>(sorted.subList(0, toIndex));
-    }
-
-    public List<Player> getLeaderboardByTotalCoins() {
-        return playerRepository.findAll(Sort.by(Sort.Direction.DESC, "totalCoins"));
-    }
-
-    public List<Player> getLeaderboardByTotalDistance() {
-        return playerRepository.findAll(Sort.by(Sort.Direction.DESC, "totalDistanceTravelled"));
+    public void deletePlayer(UUID playerId) {
+        if (!playerRepository.existsById(playerId)) {
+            throw new RuntimeException("Player not found: " + playerId);
+        }
+        playerRepository.deleteById(playerId);
     }
 }

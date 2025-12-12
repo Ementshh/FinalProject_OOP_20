@@ -31,6 +31,8 @@ import com.labubushooter.frontend.patterns.levels.*;
 import com.labubushooter.frontend.patterns.coins.LinePattern;
 import com.labubushooter.frontend.patterns.weapons.Mac10Strategy;
 import com.labubushooter.frontend.patterns.weapons.PistolStrategy;
+import com.labubushooter.frontend.services.PlayerApiService;
+import com.labubushooter.frontend.services.PlayerApiService.PlayerData;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -137,6 +139,16 @@ public class Main extends ApplicationAdapter {
     // Username Input
     private Rectangle startGameButton;
     private StringBuilder usernameInput;
+
+    // Backend Integration
+    private PlayerApiService playerApi;
+    private PlayerData currentPlayerData;
+    private int coinsCollectedThisSession;
+    private boolean isNewPlayer;
+
+    // Continue/New Game buttons
+    private Rectangle continueGameButton;
+    private Rectangle newGameButtonMenu;
 
     @Override
     public void create() {
@@ -257,6 +269,14 @@ public class Main extends ApplicationAdapter {
 
         // Start game button
         startGameButton = new Rectangle(centerX, 200, buttonWidth, buttonHeight);
+
+        // Initialize API service
+        playerApi = new PlayerApiService();
+        coinsCollectedThisSession = 0;
+
+        // Continue/New Game buttons
+        continueGameButton = new Rectangle(centerX, 270, buttonWidth, buttonHeight);
+        newGameButtonMenu = new Rectangle(centerX, 170, buttonWidth, buttonHeight);
 
         // Don't load level yet - wait for username input
         // loadLevel(currentLevel);
@@ -632,6 +652,15 @@ public class Main extends ApplicationAdapter {
                 renderUsernameInput();
                 return;
 
+            case LOADING_PLAYER_DATA:
+                renderLoading();
+                return;
+
+            case CONTINUE_OR_NEW:
+                handleContinueOrNew();
+                renderContinueOrNew();
+                return;
+
             case PAUSED:
                 handlePauseMenu();
                 renderPauseMenu();
@@ -855,9 +884,11 @@ public class Main extends ApplicationAdapter {
         if (bossDefeated && player.bounds.x + player.bounds.width >= currentLevelWidth - LEVEL_EXIT_THRESHOLD) {
             if (currentLevel == 5) {
                 // Level 5 completed - trigger victory!
+                saveGameProgress(); // Save final progress
                 gameState = GameState.VICTORY;
                 Gdx.app.log("Game", "VICTORY! Game Completed!");
             } else {
+                saveGameProgress(); // Save after each level
                 loadLevel(currentLevel + 1);
             }
         }
@@ -884,6 +915,7 @@ public class Main extends ApplicationAdapter {
             if (coin.isColliding(player.bounds)) {
                 coin.active = false;
                 coinScore++;
+                coinsCollectedThisSession++; // Track session coins
                 activeCoins.removeIndex(i);
                 coinPool.free(coin);
                 Gdx.app.log("Coin", "Collected! Total: " + coinScore);
@@ -1138,9 +1170,33 @@ public class Main extends ApplicationAdapter {
 
             if (startGameButton.contains(touchPos.x, touchPos.y) && usernameInput.length() > 0) {
                 username = usernameInput.toString();
-                gameState = GameState.PLAYING;
-                loadLevel(1);
-                Gdx.app.log("Game", "Starting game with username: " + username);
+                gameState = GameState.LOADING_PLAYER_DATA;
+
+                // Call API to login/create player
+                playerApi.login(username, new PlayerApiService.LoginCallback() {
+                    @Override
+                    public void onSuccess(PlayerData playerData, boolean isNew) {
+                        currentPlayerData = playerData;
+                        isNewPlayer = isNew;
+                        coinsCollectedThisSession = 0;
+
+                        if (isNew || playerData.lastStage == 1) {
+                            // New player - start from level 1
+                            gameState = GameState.PLAYING;
+                            loadLevel(1);
+                        } else {
+                            // Existing player - show continue/new menu
+                            gameState = GameState.CONTINUE_OR_NEW;
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(String error) {
+                        Gdx.app.error("Game", "Login failed: " + error);
+                        gameState = GameState.USERNAME_INPUT;
+                        // Show error message to user
+                    }
+                });
             }
         }
     }
@@ -1227,7 +1283,8 @@ public class Main extends ApplicationAdapter {
 
             // Save Game (placeholder)
             else if (saveButton.contains(touchPos.x, touchPos.y)) {
-                Gdx.app.log("Game", "Save Game clicked (not implemented yet)");
+                saveGameProgress();
+                Gdx.app.log("Game", "Game saved manually");
             }
 
             // New Game - Show confirmation
@@ -1236,10 +1293,22 @@ public class Main extends ApplicationAdapter {
                 Gdx.app.log("Game", "Showing restart confirmation");
             }
 
-            // Quit
+            // Quit with auto-save
             else if (quitButton.contains(touchPos.x, touchPos.y)) {
-                Gdx.app.log("Game", "Quitting game (auto-save placeholder)");
-                Gdx.app.exit();
+                saveGameProgress();
+                Gdx.app.log("Game", "Quitting game with auto-save");
+                // Give time for save request
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            Thread.sleep(500); // Wait for save
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        Gdx.app.exit();
+                    }
+                }).start();
             }
         }
     }
@@ -1295,7 +1364,21 @@ public class Main extends ApplicationAdapter {
 
             // YES - Restart game with same username
             if (confirmYesButton.contains(touchPos.x, touchPos.y)) {
-                restartGameSameUser();
+                // Reset progress on server
+                playerApi.resetProgress(currentPlayerData.playerId, new PlayerApiService.SaveCallback() {
+                    @Override
+                    public void onSuccess() {
+                        currentPlayerData.lastStage = 1;
+                        coinsCollectedThisSession = 0;
+                        restartGameSameUser();
+                    }
+
+                    @Override
+                    public void onFailure(String error) {
+                        Gdx.app.error("Game", "Failed to reset: " + error);
+                        restartGameSameUser(); // Continue anyway
+                    }
+                });
             }
 
             // NO - Back to pause menu
@@ -1421,5 +1504,118 @@ public class Main extends ApplicationAdapter {
         boss = null;
 
         Gdx.app.log("Game", "Returned to username input");
+    }
+
+    // ==================== BACKEND INTEGRATION METHODS ====================
+    private void saveGameProgress() {
+        if (currentPlayerData != null) {
+            playerApi.saveProgress(
+                currentPlayerData.playerId,
+                currentLevel,
+                coinsCollectedThisSession,
+                new PlayerApiService.SaveCallback() {
+                    @Override
+                    public void onSuccess() {
+                        Gdx.app.log("Game", "Progress saved: Stage " + currentLevel + 
+                                   ", Coins: " + coinsCollectedThisSession);
+                        currentPlayerData.lastStage = currentLevel;
+                        currentPlayerData.totalCoins += coinsCollectedThisSession;
+                        coinsCollectedThisSession = 0; // Reset session counter
+                    }
+                    
+                    @Override
+                    public void onFailure(String error) {
+                        Gdx.app.error("Game", "Failed to save progress: " + error);
+                    }
+                }
+            );
+        }
+    }
+
+    private void handleContinueOrNew() {
+        if (Gdx.input.justTouched()) {
+            Vector3 touchPos = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
+            camera.unproject(touchPos);
+            
+            // Continue from last stage
+            if (continueGameButton.contains(touchPos.x, touchPos.y)) {
+                gameState = GameState.PLAYING;
+                loadLevel(currentPlayerData.lastStage);
+                Gdx.app.log("Game", "Continuing from stage " + currentPlayerData.lastStage);
+            }
+            
+            // Start new game
+            else if (newGameButtonMenu.contains(touchPos.x, touchPos.y)) {
+                // Reset progress on server
+                playerApi.resetProgress(currentPlayerData.playerId, new PlayerApiService.SaveCallback() {
+                    @Override
+                    public void onSuccess() {
+                        currentPlayerData.lastStage = 1;
+                        coinsCollectedThisSession = 0;
+                        gameState = GameState.PLAYING;
+                        loadLevel(1);
+                        Gdx.app.log("Game", "Starting new game");
+                    }
+                    
+                    @Override
+                    public void onFailure(String error) {
+                        Gdx.app.error("Game", "Failed to reset progress: " + error);
+                    }
+                });
+            }
+        }
+    }
+
+    private void renderLoading() {
+        Gdx.gl.glClearColor(0.15f, 0.15f, 0.2f, 1);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+        
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
+        
+        String loadingText = "Loading...";
+        layout.setText(font, loadingText);
+        float x = VIEWPORT_WIDTH / 2 - layout.width / 2;
+        float y = VIEWPORT_HEIGHT / 2;
+        font.draw(batch, loadingText, x, y);
+        
+        batch.end();
+    }
+
+    private void renderContinueOrNew() {
+        Gdx.gl.glClearColor(0.15f, 0.15f, 0.2f, 1);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+        
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
+        
+        // Draw welcome message
+        String welcomeText = "Welcome back, " + username + "!";
+        layout.setText(font, welcomeText);
+        float welcomeX = VIEWPORT_WIDTH / 2 - layout.width / 2;
+        float welcomeY = 450;
+        font.draw(batch, welcomeText, welcomeX, welcomeY);
+        
+        // Draw last stage info
+        String stageText = "Last Stage: " + currentPlayerData.lastStage;
+        layout.setText(smallFont, stageText);
+        float stageX = VIEWPORT_WIDTH / 2 - layout.width / 2;
+        float stageY = 380;
+        smallFont.draw(batch, stageText, stageX, stageY);
+        
+        // Draw total coins
+        String coinsText = "Total Coins: " + currentPlayerData.totalCoins;
+        layout.setText(smallFont, coinsText);
+        float coinsX = VIEWPORT_WIDTH / 2 - layout.width / 2;
+        float coinsY = 350;
+        smallFont.draw(batch, coinsText, coinsX, coinsY);
+        
+        // Draw Continue button
+        drawButton("Continue", continueGameButton);
+        
+        // Draw New Game button
+        drawButton("New Game", newGameButtonMenu);
+        
+        batch.end();
     }
 }
