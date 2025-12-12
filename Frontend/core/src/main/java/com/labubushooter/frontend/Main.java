@@ -34,16 +34,21 @@ import com.labubushooter.frontend.patterns.weapons.Mac10Strategy;
 import com.labubushooter.frontend.patterns.weapons.PistolStrategy;
 import com.labubushooter.frontend.services.PlayerApiService;
 import com.labubushooter.frontend.services.PlayerApiService.PlayerData;
+import com.labubushooter.frontend.states.*;
+import com.labubushooter.frontend.states.GameContext;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
 public class Main extends ApplicationAdapter {
-    SpriteBatch batch;
-    ShapeRenderer shapeRenderer;
-    OrthographicCamera camera;
-    Viewport viewport;
+    // State Pattern - replaces switch statement for game states
+    public GameContext gameContext;
+
+    public SpriteBatch batch;
+    public ShapeRenderer shapeRenderer;
+    public OrthographicCamera camera;
+    public Viewport viewport;
 
     static final float VIEWPORT_WIDTH = 1066f; // 16:9 aspect ratio
     static final float VIEWPORT_HEIGHT = 600f;
@@ -54,43 +59,43 @@ public class Main extends ApplicationAdapter {
     private int currentLevel = 1;
     private Map<Integer, LevelStrategy> levelStrategy;
 
-    Texture playerTex, platformTex, groundTex, bulletTex, exitTex;
-    Texture pistolTex, mac10Tex;
-    Texture debugTex;
-    Texture levelIndicatorTex;
-    Texture enemyTex;
+    public Texture playerTex, platformTex, groundTex, bulletTex, exitTex;
+    public Texture pistolTex, mac10Tex;
+    public Texture debugTex;
+    public Texture levelIndicatorTex;
+    public Texture enemyTex;
 
     // Boss textures
     Texture miniBossTex, bossTex, enemyBulletTex;
     Texture whiteFlashTex, redFlashTex, yellowFlashTex;
     Texture backgroundTex;
 
-    Player player;
-    Array<Platform> platforms;
-    Array<Ground> grounds;
+    public Player player;
+    public Array<Platform> platforms;
+    public Array<Ground> grounds;
 
-    Pool<Bullet> bulletPool;
-    Array<Bullet> activeBullets;
+    public Pool<Bullet> bulletPool;
+    public Array<Bullet> activeBullets;
 
     // Enemy Pool System
-    Pool<CommonEnemy> enemyPool;
-    Array<CommonEnemy> activeEnemies;
-    private long lastEnemySpawnTime;
-    private long nextEnemySpawnDelay;
-    private Random random;
+    public Pool<CommonEnemy> enemyPool;
+    public Array<CommonEnemy> activeEnemies;
+    public long lastEnemySpawnTime;
+    public long nextEnemySpawnDelay;
+    public Random random;
 
     // Boss System
-    MiniBossEnemy miniBoss;
-    FinalBoss boss;
-    Pool<EnemyBullet> enemyBulletPool;
-    Array<EnemyBullet> activeEnemyBullets;
+    public MiniBossEnemy miniBoss;
+    public FinalBoss boss;
+    public Pool<EnemyBullet> enemyBulletPool;
+    public Array<EnemyBullet> activeEnemyBullets;
 
     // Coin System
-    Pool<Coin> coinPool;
-    Array<Coin> activeCoins;
-    CoinPattern coinPattern;
-    private int coinScore = 0;
-    private Array<float[]> coinSpawnLocations;
+    public Pool<Coin> coinPool;
+    public Array<Coin> activeCoins;
+    public CoinPattern coinPattern;
+    public int coinScore = 0;
+    public Array<float[]> coinSpawnLocations;
 
     // MAX ENEMY PER LEVEL
     private static final int MAX_ENEMIES_LEVEL1 = 6;
@@ -110,51 +115,51 @@ public class Main extends ApplicationAdapter {
     private static final long LEVEL4_MIN_SPAWN = 1000000000L;
     private static final long LEVEL4_MAX_SPAWN = 3000000000L;
 
-    PistolStrategy pistolStrategy;
-    Mac10Strategy mac10Strategy;
+    public PistolStrategy pistolStrategy;
+    public Mac10Strategy mac10Strategy;
 
     // Game Over System
-    private boolean isGameOver = false;
-    private boolean isVictory = false;
-    private BitmapFont font;
-    private BitmapFont smallFont;
-    private GlyphLayout layout;
+    public boolean isGameOver = false;
+    public boolean isVictory = false;
+    public BitmapFont font;
+    public BitmapFont smallFont;
+    public GlyphLayout layout;
 
     // Game State System
-    private GameState gameState = GameState.USERNAME_INPUT;
-    private String username = "";
-    private static final int MAX_USERNAME_LENGTH = 20;
+    private GameState gameState = GameState.USERNAME_INPUT; // Keep for backward compatibility during refactor
+    public String username = "";
+    public static final int MAX_USERNAME_LENGTH = 20;
 
     // UI Textures
-    private Texture buttonTex;
-    private Texture buttonHoverTex;
+    public Texture buttonTex;
+    public Texture buttonHoverTex;
 
     // Pause Menu Buttons
-    private Rectangle continueButton;
-    private Rectangle saveButton;
-    private Rectangle newGameButton;
-    private Rectangle quitButton;
+    public Rectangle continueButton;
+    public Rectangle saveButton;
+    public Rectangle newGameButton;
+    public Rectangle quitButton;
 
     // Restart Confirmation Buttons
-    private Rectangle confirmYesButton;
-    private Rectangle confirmNoButton;
+    public Rectangle confirmYesButton;
+    public Rectangle confirmNoButton;
 
     // Username Input
-    private Rectangle startGameButton;
-    private StringBuilder usernameInput;
+    public Rectangle startGameButton;
+    public StringBuilder usernameInput;
 
     // Backend Integration
-    private PlayerApiService playerApi;
-    private PlayerData currentPlayerData;
-    private int coinsCollectedThisSession;
-    private boolean isNewPlayer;
+    public PlayerApiService playerApi;
+    public PlayerData currentPlayerData;
+    public int coinsCollectedThisSession;
+    public boolean isNewPlayer;
 
     // Continue/New Game buttons
-    private Rectangle continueGameButton;
-    private Rectangle newGameButtonMenu;
+    public Rectangle continueGameButton;
+    public Rectangle newGameButtonMenu;
 
     // Debug Manager
-    private DebugManager debugManager;
+    public DebugManager debugManager;
 
     @Override
     public void create() {
@@ -285,7 +290,8 @@ public class Main extends ApplicationAdapter {
 
         // Confirmation buttons (smaller)
         float confirmButtonWidth = 200f;
-        confirmYesButton = new Rectangle(VIEWPORT_WIDTH / 2 - confirmButtonWidth - 20, 200, confirmButtonWidth, buttonHeight);
+        confirmYesButton = new Rectangle(VIEWPORT_WIDTH / 2 - confirmButtonWidth - 20, 200, confirmButtonWidth,
+                buttonHeight);
         confirmNoButton = new Rectangle(VIEWPORT_WIDTH / 2 + 20, 200, confirmButtonWidth, buttonHeight);
 
         // Start game button
@@ -301,6 +307,10 @@ public class Main extends ApplicationAdapter {
         // Continue/New Game buttons
         continueGameButton = new Rectangle(centerX, 270, buttonWidth, buttonHeight);
         newGameButtonMenu = new Rectangle(centerX, 170, buttonWidth, buttonHeight);
+
+        // Initialize State Pattern
+        gameContext = new GameContext();
+        gameContext.setState(new UsernameInputState(this, gameContext));
 
         // Don't load level yet - wait for username input
         // loadLevel(currentLevel);
@@ -677,72 +687,26 @@ public class Main extends ApplicationAdapter {
             coinsCollectedThisSession = 0;
             isNewPlayer = true;
             gameState = GameState.PLAYING;
+            gameContext.setState(new PlayingState(this, gameContext));
             loadLevel(debugManager.getDebugStartingLevel());
             return;
         }
 
-        // Handle different game states
-        switch (gameState) {
-            case USERNAME_INPUT:
-                handleUsernameInput();
-                renderUsernameInput();
-                return;
+        // ==================== STATE PATTERN - NO MORE SWITCH! ====================
+        // Handle input, update, and render through current state
+        gameContext.handleInput();
+        gameContext.update(delta);
+        gameContext.render();
+    }
 
-            case LOADING_PLAYER_DATA:
-                renderLoading();
-                return;
+    // ==================== PUBLIC METHODS FOR STATE PATTERN ====================
+    // These methods are called by state classes to handle game logic
 
-            case CONTINUE_OR_NEW:
-                handleContinueOrNew();
-                renderContinueOrNew();
-                return;
-
-            case PAUSED:
-                handlePauseMenu();
-                renderPauseMenu();
-                return;
-
-            case RESTART_CONFIRM:
-                handleRestartConfirm();
-                renderRestartConfirm();
-                return;
-
-            case VICTORY:
-                if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
-                    restartToUsernameInput();
-                }
-                if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
-                    Gdx.app.exit();
-                }
-                renderVictory();
-                return;
-
-            case GAME_OVER:
-                if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
-                    restartToUsernameInput();
-                }
-                renderGameOver();
-                return;
-
-            case PLAYING:
-                // Game logic here
-                break;
-        }
-
-        // Check if player is dead
-        if (player.isDead()) {
-            gameState = GameState.GAME_OVER;
-            Gdx.app.log("Game", "GAME OVER");
-            return;
-        }
-
-        // Check for PAUSE
-        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
-            gameState = GameState.PAUSED;
-            Gdx.app.log("Game", "PAUSED");
-            return;
-        }
-
+    /**
+     * Handles game input during PLAYING state.
+     * Called by PlayingState.
+     */
+    public void handleGameInput() {
         // --- SECRET LEVEL SKIP ---
         if (Gdx.input.isKeyJustPressed(Input.Keys.F3)) {
             loadLevel(3);
@@ -796,7 +760,15 @@ public class Main extends ApplicationAdapter {
                 }
             }
         }
+    }
 
+    /**
+     * Updates game logic during PLAYING state.
+     * Called by PlayingState.
+     * 
+     * @param delta Time since last frame
+     */
+    public void updateGameLogic(float delta) {
         // --- UPDATE ---
         player.update(delta, platforms, grounds);
 
@@ -922,6 +894,7 @@ public class Main extends ApplicationAdapter {
                 // Level 5 completed - trigger victory!
                 saveGameProgress(); // Save final progress
                 gameState = GameState.VICTORY;
+                gameContext.setState(new VictoryState(this, gameContext));
                 Gdx.app.log("Game", "VICTORY! Game Completed!");
             } else {
                 saveGameProgress(); // Save after each level
@@ -984,12 +957,13 @@ public class Main extends ApplicationAdapter {
                 bulletPool.free(b);
             }
         }
-
-        // --- DRAW ---
-        renderGame();
     }
 
-    private void renderGame() {
+    /**
+     * Renders the game during PLAYING state.
+     * Called by PlayingState.
+     */
+    public void renderGame() {
         Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
@@ -1102,7 +1076,7 @@ public class Main extends ApplicationAdapter {
         batch.end();
     }
 
-    private void renderGameOver() {
+    public void renderGameOver() {
         Gdx.gl.glClearColor(0.1f, 0.1f, 0.1f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
@@ -1126,7 +1100,7 @@ public class Main extends ApplicationAdapter {
         batch.end();
     }
 
-    private void renderVictory() {
+    public void renderVictory() {
         Gdx.gl.glClearColor(0.1f, 0.3f, 0.1f, 1); // Green tint for victory
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
@@ -1196,17 +1170,20 @@ public class Main extends ApplicationAdapter {
         backgroundTex.dispose();
         font.dispose();
         smallFont.dispose();
-        if (buttonTex != null) buttonTex.dispose();
-        if (buttonHoverTex != null) buttonHoverTex.dispose();
+        if (buttonTex != null)
+            buttonTex.dispose();
+        if (buttonHoverTex != null)
+            buttonHoverTex.dispose();
     }
 
     // ==================== USERNAME INPUT ====================
-    private void handleUsernameInput() {
+    public void handleUsernameInput() {
         // Handle text input
         Gdx.input.setInputProcessor(new com.badlogic.gdx.InputAdapter() {
             @Override
             public boolean keyTyped(char character) {
-                if (gameState != GameState.USERNAME_INPUT) return false;
+                if (gameState != GameState.USERNAME_INPUT)
+                    return false;
 
                 if (character == '\b' && usernameInput.length() > 0) {
                     // Backspace
@@ -1227,6 +1204,7 @@ public class Main extends ApplicationAdapter {
             if (startGameButton.contains(touchPos.x, touchPos.y) && usernameInput.length() > 0) {
                 username = usernameInput.toString();
                 gameState = GameState.LOADING_PLAYER_DATA;
+                gameContext.setState(new LoadingPlayerDataState(this, gameContext));
 
                 // Call API to login/create player
                 playerApi.login(username, new PlayerApiService.LoginCallback() {
@@ -1239,10 +1217,12 @@ public class Main extends ApplicationAdapter {
                         if (isNew || playerData.lastStage == 1) {
                             // New player - start from level 1
                             gameState = GameState.PLAYING;
+                            gameContext.setState(new PlayingState(Main.this, gameContext));
                             loadLevel(1);
                         } else {
                             // Existing player - show continue/new menu
                             gameState = GameState.CONTINUE_OR_NEW;
+                            gameContext.setState(new ContinueOrNewState(Main.this, gameContext));
                         }
                     }
 
@@ -1250,6 +1230,7 @@ public class Main extends ApplicationAdapter {
                     public void onFailure(String error) {
                         Gdx.app.error("Game", "Login failed: " + error);
                         gameState = GameState.USERNAME_INPUT;
+                        gameContext.setState(new UsernameInputState(Main.this, gameContext));
                         // Show error message to user
                     }
                 });
@@ -1257,7 +1238,7 @@ public class Main extends ApplicationAdapter {
         }
     }
 
-    private void renderUsernameInput() {
+    public void renderUsernameInput() {
         Gdx.gl.glClearColor(0.15f, 0.15f, 0.2f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
@@ -1318,13 +1299,9 @@ public class Main extends ApplicationAdapter {
     }
 
     // ==================== PAUSE MENU ====================
-    private void handlePauseMenu() {
-        // Resume with ESC
-        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
-            gameState = GameState.PLAYING;
-            Gdx.app.log("Game", "RESUMED");
-            return;
-        }
+    public void handlePauseMenu() {
+        // Resume with ESC - handled in PausedState
+        // This method only handles button clicks
 
         // Check button clicks
         if (Gdx.input.justTouched()) {
@@ -1334,6 +1311,7 @@ public class Main extends ApplicationAdapter {
             // Continue
             if (continueButton.contains(touchPos.x, touchPos.y)) {
                 gameState = GameState.PLAYING;
+                gameContext.setState(new PlayingState(this, gameContext));
                 Gdx.app.log("Game", "RESUMED");
             }
 
@@ -1346,6 +1324,7 @@ public class Main extends ApplicationAdapter {
             // New Game - Show confirmation
             else if (newGameButton.contains(touchPos.x, touchPos.y)) {
                 gameState = GameState.RESTART_CONFIRM;
+                gameContext.setState(new RestartConfirmState(this, gameContext));
                 Gdx.app.log("Game", "Showing restart confirmation");
             }
 
@@ -1369,7 +1348,7 @@ public class Main extends ApplicationAdapter {
         }
     }
 
-    private void renderPauseMenu() {
+    public void renderPauseMenu() {
         // Draw game in background (dimmed)
         renderGame();
 
@@ -1405,10 +1384,11 @@ public class Main extends ApplicationAdapter {
     }
 
     // ==================== RESTART CONFIRMATION ====================
-    private void handleRestartConfirm() {
+    public void handleRestartConfirm() {
         // ESC to cancel
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             gameState = GameState.PAUSED;
+            gameContext.setState(new PausedState(this, gameContext));
             Gdx.app.log("Game", "Restart cancelled");
             return;
         }
@@ -1449,12 +1429,13 @@ public class Main extends ApplicationAdapter {
             // NO - Back to pause menu
             else if (confirmNoButton.contains(touchPos.x, touchPos.y)) {
                 gameState = GameState.PAUSED;
+                gameContext.setState(new PausedState(this, gameContext));
                 Gdx.app.log("Game", "Restart cancelled");
             }
         }
     }
 
-    private void renderRestartConfirm() {
+    public void renderRestartConfirm() {
         // Draw game in background (dimmed)
         renderGame();
 
@@ -1539,13 +1520,15 @@ public class Main extends ApplicationAdapter {
 
         // Resume game
         gameState = GameState.PLAYING;
+        gameContext.setState(new PlayingState(this, gameContext));
     }
 
-    private void restartToUsernameInput() {
+    public void restartToUsernameInput() {
         // Clear username and go back to input screen
         usernameInput.setLength(0);
         username = "";
         gameState = GameState.USERNAME_INPUT;
+        gameContext.setState(new UsernameInputState(this, gameContext));
 
         // Clear game state
         for (CommonEnemy enemy : activeEnemies) {
@@ -1586,40 +1569,40 @@ public class Main extends ApplicationAdapter {
 
         if (currentPlayerData != null) {
             playerApi.saveProgress(
-                currentPlayerData.playerId,
-                currentLevel,
-                coinsCollectedThisSession,
-                new PlayerApiService.SaveCallback() {
-                    @Override
-                    public void onSuccess() {
-                        Gdx.app.log("Game", "Progress saved: Stage " + currentLevel + 
-                                   ", Coins: " + coinsCollectedThisSession);
-                        currentPlayerData.lastStage = currentLevel;
-                        currentPlayerData.totalCoins += coinsCollectedThisSession;
-                        coinsCollectedThisSession = 0; // Reset session counter
-                    }
-                    
-                    @Override
-                    public void onFailure(String error) {
-                        Gdx.app.error("Game", "Failed to save progress: " + error);
-                    }
-                }
-            );
+                    currentPlayerData.playerId,
+                    currentLevel,
+                    coinsCollectedThisSession,
+                    new PlayerApiService.SaveCallback() {
+                        @Override
+                        public void onSuccess() {
+                            Gdx.app.log("Game", "Progress saved: Stage " + currentLevel +
+                                    ", Coins: " + coinsCollectedThisSession);
+                            currentPlayerData.lastStage = currentLevel;
+                            currentPlayerData.totalCoins += coinsCollectedThisSession;
+                            coinsCollectedThisSession = 0; // Reset session counter
+                        }
+
+                        @Override
+                        public void onFailure(String error) {
+                            Gdx.app.error("Game", "Failed to save progress: " + error);
+                        }
+                    });
         }
     }
 
-    private void handleContinueOrNew() {
+    public void handleContinueOrNew() {
         if (Gdx.input.justTouched()) {
             Vector3 touchPos = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
             camera.unproject(touchPos);
-            
+
             // Continue from last stage
             if (continueGameButton.contains(touchPos.x, touchPos.y)) {
                 gameState = GameState.PLAYING;
+                gameContext.setState(new PlayingState(this, gameContext));
                 loadLevel(currentPlayerData.lastStage);
                 Gdx.app.log("Game", "Continuing from stage " + currentPlayerData.lastStage);
             }
-            
+
             // Start new game
             else if (newGameButtonMenu.contains(touchPos.x, touchPos.y)) {
                 // Skip backend reset in debug mode
@@ -1628,6 +1611,7 @@ public class Main extends ApplicationAdapter {
                     currentPlayerData.lastStage = 1;
                     coinsCollectedThisSession = 0;
                     gameState = GameState.PLAYING;
+                    gameContext.setState(new PlayingState(this, gameContext));
                     loadLevel(1);
                     return;
                 }
@@ -1639,10 +1623,11 @@ public class Main extends ApplicationAdapter {
                         currentPlayerData.lastStage = 1;
                         coinsCollectedThisSession = 0;
                         gameState = GameState.PLAYING;
+                        gameContext.setState(new PlayingState(Main.this, gameContext));
                         loadLevel(1);
                         Gdx.app.log("Game", "Starting new game");
                     }
-                    
+
                     @Override
                     public void onFailure(String error) {
                         Gdx.app.error("Game", "Failed to reset progress: " + error);
@@ -1652,56 +1637,56 @@ public class Main extends ApplicationAdapter {
         }
     }
 
-    private void renderLoading() {
+    public void renderLoading() {
         Gdx.gl.glClearColor(0.15f, 0.15f, 0.2f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-        
+
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
-        
+
         String loadingText = "Loading...";
         layout.setText(font, loadingText);
         float x = VIEWPORT_WIDTH / 2 - layout.width / 2;
         float y = VIEWPORT_HEIGHT / 2;
         font.draw(batch, loadingText, x, y);
-        
+
         batch.end();
     }
 
-    private void renderContinueOrNew() {
+    public void renderContinueOrNew() {
         Gdx.gl.glClearColor(0.15f, 0.15f, 0.2f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-        
+
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
-        
+
         // Draw welcome message
         String welcomeText = "Welcome back, " + username + "!";
         layout.setText(font, welcomeText);
         float welcomeX = VIEWPORT_WIDTH / 2 - layout.width / 2;
         float welcomeY = 450;
         font.draw(batch, welcomeText, welcomeX, welcomeY);
-        
+
         // Draw last stage info
         String stageText = "Last Stage: " + currentPlayerData.lastStage;
         layout.setText(smallFont, stageText);
         float stageX = VIEWPORT_WIDTH / 2 - layout.width / 2;
         float stageY = 380;
         smallFont.draw(batch, stageText, stageX, stageY);
-        
+
         // Draw total coins
         String coinsText = "Total Coins: " + currentPlayerData.totalCoins;
         layout.setText(smallFont, coinsText);
         float coinsX = VIEWPORT_WIDTH / 2 - layout.width / 2;
         float coinsY = 350;
         smallFont.draw(batch, coinsText, coinsX, coinsY);
-        
+
         // Draw Continue button
         drawButton("Continue", continueGameButton);
-        
+
         // Draw New Game button
         drawButton("New Game", newGameButtonMenu);
-        
+
         batch.end();
     }
 }
