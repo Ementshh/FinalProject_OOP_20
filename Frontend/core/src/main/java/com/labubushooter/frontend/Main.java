@@ -32,8 +32,12 @@ import com.labubushooter.frontend.patterns.levels.*;
 import com.labubushooter.frontend.patterns.coins.LinePattern;
 import com.labubushooter.frontend.patterns.weapons.Mac10Strategy;
 import com.labubushooter.frontend.patterns.weapons.PistolStrategy;
+import com.labubushooter.frontend.services.BackgroundRenderer;
+import com.labubushooter.frontend.patterns.ScalingMode;
 import com.labubushooter.frontend.services.PlayerApiService;
 import com.labubushooter.frontend.services.PlayerApiService.PlayerData;
+import com.labubushooter.frontend.patterns.IBackgroundRenderStrategy;
+import com.labubushooter.frontend.patterns.StaticBackgroundStrategy;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -64,6 +68,9 @@ public class Main extends ApplicationAdapter {
     Texture miniBossTex, bossTex, enemyBulletTex;
     Texture whiteFlashTex, redFlashTex, yellowFlashTex;
     Texture backgroundTex;
+
+    // Background rendering manager (Strategy Pattern)
+    private BackgroundRenderer backgroundRenderer;
 
     Player player;
     Array<Platform> platforms;
@@ -221,6 +228,13 @@ public class Main extends ApplicationAdapter {
         backgroundTex = new Texture(Gdx.files.internal("background.png"));
         backgroundTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
 
+        // Initialize background renderer with FIT_HEIGHT scaling
+        // Scales 5400×1080px background to 3000×600px to show entire vertical content
+        // Scale factor: 600/1080 = 0.556 (preserves aspect ratio)
+        // Horizontal coverage: 3000px (sufficient for all levels: L1-4=2400px, L5=800px)
+        IBackgroundRenderStrategy bgStrategy = new StaticBackgroundStrategy(ScalingMode.FIT_HEIGHT);
+        backgroundRenderer = new BackgroundRenderer(backgroundTex, bgStrategy);
+
         enemyPool = new Pool<CommonEnemy>() {
             @Override
             protected CommonEnemy newObject() {
@@ -285,7 +299,8 @@ public class Main extends ApplicationAdapter {
 
         // Confirmation buttons (smaller)
         float confirmButtonWidth = 200f;
-        confirmYesButton = new Rectangle(VIEWPORT_WIDTH / 2 - confirmButtonWidth - 20, 200, confirmButtonWidth, buttonHeight);
+        confirmYesButton = new Rectangle(VIEWPORT_WIDTH / 2 - confirmButtonWidth - 20, 200, confirmButtonWidth,
+                buttonHeight);
         confirmNoButton = new Rectangle(VIEWPORT_WIDTH / 2 + 20, 200, confirmButtonWidth, buttonHeight);
 
         // Start game button
@@ -996,19 +1011,11 @@ public class Main extends ApplicationAdapter {
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
-        // Draw background at native resolution (crop if doesn't fit)
-        if (backgroundTex != null) {
-            // Get actual texture dimensions
-            float bgWidth = backgroundTex.getWidth();
-            float bgHeight = backgroundTex.getHeight();
-
-            // Position background at world origin - scrolls naturally with camera
-            float bgX = 0; // Start from world origin
-            float bgY = (VIEWPORT_HEIGHT - bgHeight) / 2; // Centered vertically
-
-            // Draw at native size - will crop naturally if larger than viewport
-            batch.draw(backgroundTex, bgX, bgY, bgWidth, bgHeight);
-        }
+        // Draw background using BackgroundRenderer (Strategy Pattern)
+        // Background anchored at world origin (x=0), renders at native 5400x1080px
+        // Viewport acts as sliding window showing different portions as camera moves
+        backgroundRenderer.render(batch, camera, viewport.getWorldWidth(), viewport.getWorldHeight(),
+                currentLevelWidth);
 
         // Draw grounds
         for (Ground g : grounds)
@@ -1196,8 +1203,10 @@ public class Main extends ApplicationAdapter {
         backgroundTex.dispose();
         font.dispose();
         smallFont.dispose();
-        if (buttonTex != null) buttonTex.dispose();
-        if (buttonHoverTex != null) buttonHoverTex.dispose();
+        if (buttonTex != null)
+            buttonTex.dispose();
+        if (buttonHoverTex != null)
+            buttonHoverTex.dispose();
     }
 
     // ==================== USERNAME INPUT ====================
@@ -1206,7 +1215,8 @@ public class Main extends ApplicationAdapter {
         Gdx.input.setInputProcessor(new com.badlogic.gdx.InputAdapter() {
             @Override
             public boolean keyTyped(char character) {
-                if (gameState != GameState.USERNAME_INPUT) return false;
+                if (gameState != GameState.USERNAME_INPUT)
+                    return false;
 
                 if (character == '\b' && usernameInput.length() > 0) {
                     // Backspace
@@ -1586,25 +1596,24 @@ public class Main extends ApplicationAdapter {
 
         if (currentPlayerData != null) {
             playerApi.saveProgress(
-                currentPlayerData.playerId,
-                currentLevel,
-                coinsCollectedThisSession,
-                new PlayerApiService.SaveCallback() {
-                    @Override
-                    public void onSuccess() {
-                        Gdx.app.log("Game", "Progress saved: Stage " + currentLevel + 
-                                   ", Coins: " + coinsCollectedThisSession);
-                        currentPlayerData.lastStage = currentLevel;
-                        currentPlayerData.totalCoins += coinsCollectedThisSession;
-                        coinsCollectedThisSession = 0; // Reset session counter
-                    }
-                    
-                    @Override
-                    public void onFailure(String error) {
-                        Gdx.app.error("Game", "Failed to save progress: " + error);
-                    }
-                }
-            );
+                    currentPlayerData.playerId,
+                    currentLevel,
+                    coinsCollectedThisSession,
+                    new PlayerApiService.SaveCallback() {
+                        @Override
+                        public void onSuccess() {
+                            Gdx.app.log("Game", "Progress saved: Stage " + currentLevel +
+                                    ", Coins: " + coinsCollectedThisSession);
+                            currentPlayerData.lastStage = currentLevel;
+                            currentPlayerData.totalCoins += coinsCollectedThisSession;
+                            coinsCollectedThisSession = 0; // Reset session counter
+                        }
+
+                        @Override
+                        public void onFailure(String error) {
+                            Gdx.app.error("Game", "Failed to save progress: " + error);
+                        }
+                    });
         }
     }
 
@@ -1612,14 +1621,14 @@ public class Main extends ApplicationAdapter {
         if (Gdx.input.justTouched()) {
             Vector3 touchPos = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
             camera.unproject(touchPos);
-            
+
             // Continue from last stage
             if (continueGameButton.contains(touchPos.x, touchPos.y)) {
                 gameState = GameState.PLAYING;
                 loadLevel(currentPlayerData.lastStage);
                 Gdx.app.log("Game", "Continuing from stage " + currentPlayerData.lastStage);
             }
-            
+
             // Start new game
             else if (newGameButtonMenu.contains(touchPos.x, touchPos.y)) {
                 // Skip backend reset in debug mode
@@ -1642,7 +1651,7 @@ public class Main extends ApplicationAdapter {
                         loadLevel(1);
                         Gdx.app.log("Game", "Starting new game");
                     }
-                    
+
                     @Override
                     public void onFailure(String error) {
                         Gdx.app.error("Game", "Failed to reset progress: " + error);
@@ -1655,53 +1664,53 @@ public class Main extends ApplicationAdapter {
     private void renderLoading() {
         Gdx.gl.glClearColor(0.15f, 0.15f, 0.2f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-        
+
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
-        
+
         String loadingText = "Loading...";
         layout.setText(font, loadingText);
         float x = VIEWPORT_WIDTH / 2 - layout.width / 2;
         float y = VIEWPORT_HEIGHT / 2;
         font.draw(batch, loadingText, x, y);
-        
+
         batch.end();
     }
 
     private void renderContinueOrNew() {
         Gdx.gl.glClearColor(0.15f, 0.15f, 0.2f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-        
+
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
-        
+
         // Draw welcome message
         String welcomeText = "Welcome back, " + username + "!";
         layout.setText(font, welcomeText);
         float welcomeX = VIEWPORT_WIDTH / 2 - layout.width / 2;
         float welcomeY = 450;
         font.draw(batch, welcomeText, welcomeX, welcomeY);
-        
+
         // Draw last stage info
         String stageText = "Last Stage: " + currentPlayerData.lastStage;
         layout.setText(smallFont, stageText);
         float stageX = VIEWPORT_WIDTH / 2 - layout.width / 2;
         float stageY = 380;
         smallFont.draw(batch, stageText, stageX, stageY);
-        
+
         // Draw total coins
         String coinsText = "Total Coins: " + currentPlayerData.totalCoins;
         layout.setText(smallFont, coinsText);
         float coinsX = VIEWPORT_WIDTH / 2 - layout.width / 2;
         float coinsY = 350;
         smallFont.draw(batch, coinsText, coinsX, coinsY);
-        
+
         // Draw Continue button
         drawButton("Continue", continueGameButton);
-        
+
         // Draw New Game button
         drawButton("New Game", newGameButtonMenu);
-        
+
         batch.end();
     }
 }
