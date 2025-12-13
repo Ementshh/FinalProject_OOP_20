@@ -23,11 +23,8 @@ public class CommonEnemy implements Pool.Poolable {
     private float velocityY = 0;
     private float speed; // Speed akan di-set per level
     private Texture texture;
-    private float damageAmount;
-
-    // Damage System
-    private long lastDamageTime;
-    private static final long DAMAGE_COOLDOWN = 1000000000L; // 1 second in nanoseconds
+    public float damageAmount; // Changed to public for access from collision events
+    private long lastDamageTime; // Track last damage time for damage cooldown
 
     // Jump System
     private static final float JUMP_POWER = 500f;
@@ -162,13 +159,8 @@ public class CommonEnemy implements Pool.Poolable {
             spawned = false;
         }
 
-        // Damage player if touching (damage per second based on level)
-        if (collider.overlaps(target.bounds)) {
-            if (TimeUtils.nanoTime() - lastDamageTime > DAMAGE_COOLDOWN) {
-                target.takeDamage(damageAmount);
-                lastDamageTime = TimeUtils.nanoTime();
-            }
-        }
+        // Melee damage is now handled by PlayerEnemyCollisionHandler in the collision
+        // system
     }
 
     public void takeDamage(float damage) {

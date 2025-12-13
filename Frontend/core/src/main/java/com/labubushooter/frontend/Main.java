@@ -21,6 +21,11 @@ import com.labubushooter.frontend.patterns.weapons.Mac10Strategy;
 import com.labubushooter.frontend.patterns.weapons.PistolStrategy;
 import com.labubushooter.frontend.screens.*;
 import com.labubushooter.frontend.services.PlayerApiService;
+import com.labubushooter.frontend.services.PlayerApiService.PlayerData;
+import com.labubushooter.frontend.systems.CollisionEventBus;
+import com.labubushooter.frontend.systems.CollisionDetectionSystem;
+import com.labubushooter.frontend.collision.*;
+import com.labubushooter.frontend.events.*;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -211,15 +216,116 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
         player.mac10Tex = mac10Tex;
         player.camera = camera;
         player.setWeapon(null);
-        
-        // Services
+
+        // Initialize Level Strategies
+        levelStrategy = new HashMap<>();
+        levelStrategy.put(1, new Level1Strategy());
+        levelStrategy.put(2, new Level2Strategy());
+        levelStrategy.put(3, new Level3Strategy());
+        levelStrategy.put(4, new Level4Strategy());
+        levelStrategy.put(5, new Level5Strategy());
+
+        // Create UI textures
+        buttonTex = createColorTexture(500, 80, new Color(0.7f, 0.7f, 0.7f, 1f));
+        buttonHoverTex = createColorTexture(500, 80, new Color(0.9f, 0.9f, 0.9f, 1f));
+
+        // Initialize username input
+        usernameInput = new StringBuilder();
+
+        // Initialize pause menu buttons (centered on screen)
+        float buttonWidth = 500f;
+        float buttonHeight = 80f;
+        float centerX = VIEWPORT_WIDTH / 2 - buttonWidth / 2;
+
+        continueButton = new Rectangle(centerX, 370, buttonWidth, buttonHeight);
+        saveButton = new Rectangle(centerX, 270, buttonWidth, buttonHeight);
+        newGameButton = new Rectangle(centerX, 170, buttonWidth, buttonHeight);
+        quitButton = new Rectangle(centerX, 70, buttonWidth, buttonHeight);
+
+        // Confirmation buttons (smaller)
+        float confirmButtonWidth = 200f;
+        confirmYesButton = new Rectangle(VIEWPORT_WIDTH / 2 - confirmButtonWidth - 20, 200, confirmButtonWidth,
+                buttonHeight);
+        confirmNoButton = new Rectangle(VIEWPORT_WIDTH / 2 + 20, 200, confirmButtonWidth, buttonHeight);
+
+        // Start game button
+        startGameButton = new Rectangle(centerX, 200, buttonWidth, buttonHeight);
+
+        // Initialize API service
         playerApi = new PlayerApiService();
         debugManager = new DebugManager();
-        random = new Random();
-        
-        // Initialize arrays
-        platforms = new Array<>();
-        grounds = new Array<>();
+
+        // Continue/New Game buttons
+        continueGameButton = new Rectangle(centerX, 270, buttonWidth, buttonHeight);
+        newGameButtonMenu = new Rectangle(centerX, 170, buttonWidth, buttonHeight);
+
+        // Initialize Collision System
+        collisionEventBus = new CollisionEventBus();
+
+        // Create handlers with constructor dependencies
+        playerEnemyCollisionHandler = new PlayerEnemyCollisionHandler();
+        bulletEnemyCollisionHandler = new BulletEnemyCollisionHandler(bulletPool, activeBullets);
+        enemyBulletPlayerCollisionHandler = new EnemyBulletPlayerCollisionHandler(enemyBulletPool, activeEnemyBullets);
+        coinCollectionHandler = new CoinCollectionHandler(coinPool, activeCoins);
+
+        // Subscribe handlers to event types
+        collisionEventBus.subscribe(PlayerEnemyCollisionEvent.class, playerEnemyCollisionHandler);
+        collisionEventBus.subscribe(BulletEnemyCollisionEvent.class, bulletEnemyCollisionHandler);
+        collisionEventBus.subscribe(EnemyBulletPlayerCollisionEvent.class, enemyBulletPlayerCollisionHandler);
+        collisionEventBus.subscribe(PlayerCoinCollisionEvent.class, coinCollectionHandler);
+
+        // Create detection system
+        collisionDetectionSystem = new CollisionDetectionSystem(collisionEventBus);
+
+        // Don't load level yet - wait for username input
+        // loadLevel(currentLevel);
+    }
+
+    private void resetEnemySpawnTimer() {
+        lastEnemySpawnTime = TimeUtils.nanoTime();
+
+        // Set spawn delay based on current level
+        long minDelay, maxDelay;
+
+        switch (currentLevel) {
+            case 1:
+                minDelay = LEVEL1_MIN_SPAWN;
+                maxDelay = LEVEL1_MAX_SPAWN;
+                break;
+            case 2:
+                minDelay = LEVEL2_MIN_SPAWN;
+                maxDelay = LEVEL2_MAX_SPAWN;
+                break;
+            case 4:
+                minDelay = LEVEL4_MIN_SPAWN;
+                maxDelay = LEVEL4_MAX_SPAWN;
+                break;
+            default:
+                // Level 3 and 5 don't spawn enemies, but set default just in case
+                minDelay = 10000000000L;
+                maxDelay = 15000000000L;
+                break;
+        }
+
+        nextEnemySpawnDelay = minDelay + (long) (random.nextFloat() * (maxDelay - minDelay));
+    }
+
+    // Method to spawn initial enemies at level start
+    private void spawnInitialEnemiesForLevel(int level) {
+        // Only spawn initial enemy for levels 1, 2, and 4
+        if (level != 1 && level != 2 && level != 4) {
+            return;
+        }
+
+        // Get spawn positions for this level
+        float[] spawnPositions = getInitialEnemySpawnPositions(level);
+
+        for (float spawnX : spawnPositions) {
+            CommonEnemy enemy = enemyPool.obtain();
+            enemy.init(spawnX, player, level);
+            activeEnemies.add(enemy);
+            Gdx.app.log("InitialEnemy", "Spawned initial enemy at X: " + spawnX + " for level " + level);
+        }
     }
     
     private void initializeGameContext() {
@@ -299,40 +405,62 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
             public void saveProgress() {
                 Main.this.saveProgress();
             }
-            
-            @Override
-            public void restartGame() {
-                Main.this.restartGame();
-            }
-        });
-        
-        // Create screens with GamePlayScreen reference
-        UsernameInputScreen usernameScreen = new UsernameInputScreen(gameContext);
-        usernameScreen.setGamePlayScreen(gamePlayScreen);
-        
-        ContinueOrNewScreen continueOrNewScreen = new ContinueOrNewScreen(gameContext);
-        continueOrNewScreen.setGamePlayScreen(gamePlayScreen);
-        
-        PauseScreen pauseScreen = new PauseScreen(gameContext);
-        pauseScreen.setGameRenderer(() -> gamePlayScreen.renderGameOnly());
-        
-        RestartConfirmScreen restartScreen = new RestartConfirmScreen(gameContext);
-        restartScreen.setGameRenderer(() -> gamePlayScreen.renderGameOnly());
-        
-        // Register all screens
-        screenManager.registerScreen(GameState.USERNAME_INPUT, usernameScreen);
-        screenManager.registerScreen(GameState.LOADING_PLAYER_DATA, new LoadingScreen(gameContext));
-        screenManager.registerScreen(GameState.CONTINUE_OR_NEW, continueOrNewScreen);
-        screenManager.registerScreen(GameState.PLAYING, gamePlayScreen);
-        screenManager.registerScreen(GameState.PAUSED, pauseScreen);
-        screenManager.registerScreen(GameState.RESTART_CONFIRM, restartScreen);
-        screenManager.registerScreen(GameState.GAME_OVER, new GameOverScreen(gameContext));
-        screenManager.registerScreen(GameState.VICTORY, new VictoryScreen(gameContext));
-        
-        screenManager.setGamePlayScreen(gamePlayScreen);
-        
-        // Set initial screen
-        screenManager.setScreen(GameState.USERNAME_INPUT);
+
+        } while (Math.abs(spawnX - player.bounds.x) < PLAYER_SAFETY_ZONE ||
+                (spawnX >= cameraLeft && spawnX <= cameraRight)); // Pastikan di luar layar
+
+        CommonEnemy enemy = enemyPool.obtain();
+        enemy.init(spawnX, player, currentLevel);
+        activeEnemies.add(enemy);
+
+        Gdx.app.log("EnemySpawn", "Spawned at X: " + spawnX +
+                " (Camera: " + cameraLeft + " - " + cameraRight +
+                ", Player: " + player.bounds.x + ")");
+    }
+
+    private int getMaxEnemiesForLevel(int level) {
+        switch (level) {
+            case 1:
+                return MAX_ENEMIES_LEVEL1; // 6 enemies
+            case 2:
+                return MAX_ENEMIES_LEVEL2; // 7 enemies
+            case 4:
+                return MAX_ENEMIES_LEVEL4; // 8 enemies
+            default:
+                return 5; // Default
+        }
+    }
+
+    private void restartGame() {
+        gameState = GameState.PLAYING;
+        currentLevel = 1;
+
+        // Clear all enemies
+        for (CommonEnemy enemy : activeEnemies) {
+            enemyPool.free(enemy);
+        }
+        activeEnemies.clear();
+
+        // Clear all bullets
+        activeBullets.clear();
+
+        // Clear all coins
+        for (Coin coin : activeCoins) {
+            coinPool.free(coin);
+        }
+        activeCoins.clear();
+        coinScore = 0;
+        coinCollectionHandler.setCoinScore(0);
+        coinCollectionHandler.setCoinsCollectedThisSession(0);
+
+        // Reset player
+        player.reset();
+        player.setWeapon(null);
+
+        // Reload level 1
+        loadLevel(1);
+
+        Gdx.app.log("Game", "Game Restarted");
     }
     
     // ==================== GameCallback IMPLEMENTATION ====================
@@ -570,9 +698,442 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
             screenManager.setScreen(GameState.PLAYING);
             return;
         }
-        
-        // Render via ScreenManager
-        screenManager.render(delta);
+
+        // Handle different game states
+        switch (gameState) {
+            case USERNAME_INPUT:
+                handleUsernameInput();
+                renderUsernameInput();
+                return;
+
+            case LOADING_PLAYER_DATA:
+                renderLoading();
+                return;
+
+            case CONTINUE_OR_NEW:
+                handleContinueOrNew();
+                renderContinueOrNew();
+                return;
+
+            case PAUSED:
+                handlePauseMenu();
+                renderPauseMenu();
+                return;
+
+            case RESTART_CONFIRM:
+                handleRestartConfirm();
+                renderRestartConfirm();
+                return;
+
+            case VICTORY:
+                if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+                    restartToUsernameInput();
+                }
+                if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+                    Gdx.app.exit();
+                }
+                renderVictory();
+                return;
+
+            case GAME_OVER:
+                if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+                    restartToUsernameInput();
+                }
+                renderGameOver();
+                return;
+
+            case PLAYING:
+                // Game logic here
+                break;
+        }
+
+        // Check if player is dead
+        if (player.isDead()) {
+            gameState = GameState.GAME_OVER;
+            Gdx.app.log("Game", "GAME OVER");
+            return;
+        }
+
+        // Check for PAUSE
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            gameState = GameState.PAUSED;
+            Gdx.app.log("Game", "PAUSED");
+            return;
+        }
+
+        // --- SECRET LEVEL SKIP ---
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F3)) {
+            loadLevel(3);
+            Gdx.app.log("Debug", "Skipped to Level 3 (Mini Boss)");
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F5)) {
+            loadLevel(5);
+            Gdx.app.log("Debug", "Skipped to Level 5 (Final Boss)");
+        }
+
+        // --- DEBUG: INSTA-KILL BOSS ---
+        if (Gdx.input.isKeyJustPressed(Input.Keys.K)) {
+            if (currentLevel == 3 && miniBoss != null && !miniBoss.isDead()) {
+                miniBoss.takeDamage(999999f);
+                Gdx.app.log("Debug", "Mini Boss instantly killed!");
+            }
+            if (currentLevel == 5 && boss != null && !boss.isDead()) {
+                boss.takeDamage(999999f);
+                Gdx.app.log("Debug", "Final Boss instantly killed!");
+            }
+        }
+
+        // --- WEAPON SWITCHING ---
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) {
+            player.setWeapon(pistolStrategy);
+            Gdx.app.log("WeaponSystem", "Pistol Equipped");
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)) {
+            player.setWeapon(mac10Strategy);
+            Gdx.app.log("WeaponSystem", "Mac-10 Equipped");
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_3)) {
+            player.setWeapon(null);
+            Gdx.app.log("WeaponSystem", "Unarmed");
+        }
+
+        // --- JUMP ---
+        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE))
+            player.jump();
+
+        // --- MOUSE SHOOTING ---
+        ShootingStrategy currentWeapon = player.getWeapon();
+        if (currentWeapon != null) {
+            if (currentWeapon.isAutomatic()) {
+                if (Gdx.input.isButtonPressed(Input.Buttons.LEFT)) {
+                    player.shoot(activeBullets, bulletPool);
+                }
+            } else {
+                if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) {
+                    player.shoot(activeBullets, bulletPool);
+                }
+            }
+        }
+
+        // --- UPDATE ---
+        player.update(delta, platforms, grounds);
+
+        // Update bosses
+        if (currentLevel == 3 && miniBoss != null && !miniBoss.isDead()) {
+            miniBoss.update(delta, platforms, grounds, player);
+        }
+
+        if (currentLevel == 5 && boss != null && !boss.isDead()) {
+            boss.update(delta, platforms, grounds, player, activeEnemyBullets, enemyBulletPool);
+        }
+
+        // Update enemy bullets
+        for (int i = activeEnemyBullets.size - 1; i >= 0; i--) {
+            EnemyBullet eb = activeEnemyBullets.get(i);
+            eb.update(delta);
+
+            if (eb.isOutOfBounds(currentLevelWidth, viewport.getWorldHeight())) {
+                activeEnemyBullets.removeIndex(i);
+                enemyBulletPool.free(eb);
+            }
+        }
+
+        // Spawn enemy based on timer - DENGAN BATASAN JUMLAH
+        if (currentLevel != 3 && currentLevel != 5) {
+            if (TimeUtils.nanoTime() - lastEnemySpawnTime > nextEnemySpawnDelay) {
+                int maxEnemies = getMaxEnemiesForLevel(currentLevel);
+
+                // Hanya spawn jika belum mencapai batas
+                if (activeEnemies.size < maxEnemies) {
+                    spawnEnemy();
+                    resetEnemySpawnTimer();
+                    Gdx.app.log("EnemySpawn", "Active enemies: " + activeEnemies.size + "/" + maxEnemies);
+                } else {
+                    // Reset timer agar tidak terus mengecek
+                    resetEnemySpawnTimer();
+                }
+            }
+        }
+
+        // Update enemies dengan platform collision
+        for (int i = activeEnemies.size - 1; i >= 0; i--) {
+            CommonEnemy enemy = activeEnemies.get(i);
+            enemy.update(delta, platforms, grounds);
+
+            if (!enemy.isActive()) {
+                activeEnemies.removeIndex(i);
+                enemyPool.free(enemy);
+            }
+        }
+
+        // Collision Detection System - handles all combat collisions and coin
+        // collection
+        collisionDetectionSystem.detectCollisions(
+                activeBullets,
+                activeEnemies,
+                activeEnemyBullets,
+                activeCoins,
+                player,
+                miniBoss,
+                boss,
+                currentLevel);
+
+        // Sync coin scores from handler to Main
+        coinScore = coinCollectionHandler.getCoinScore();
+        coinsCollectedThisSession = coinCollectionHandler.getCoinsCollectedThisSession();
+
+        // Check Level Exit (with boss defeat requirement)
+        boolean bossDefeated = true;
+        if (currentLevel == 3 && miniBoss != null) {
+            bossDefeated = miniBoss.isDead();
+        }
+        if (currentLevel == 5 && boss != null) {
+            bossDefeated = boss.isDead();
+        }
+
+        if (bossDefeated && player.bounds.x + player.bounds.width >= currentLevelWidth - LEVEL_EXIT_THRESHOLD) {
+            if (currentLevel == 5) {
+                // Level 5 completed - trigger victory!
+                saveGameProgress(); // Save final progress
+                gameState = GameState.VICTORY;
+                Gdx.app.log("Game", "VICTORY! Game Completed!");
+            } else {
+                saveGameProgress(); // Save after each level
+                loadLevel(currentLevel + 1);
+            }
+        }
+
+        // --- CAMERA FOLLOW LOGIC ---
+        float halfViewport = viewport.getWorldWidth() / 2;
+        float levelMid = currentLevelWidth / 2;
+
+        if (viewport.getWorldWidth() >= currentLevelWidth) {
+            camera.position.x = levelMid;
+        } else {
+            float targetX = player.bounds.x + player.bounds.width / 2;
+            camera.position.x = MathUtils.clamp(targetX, halfViewport, currentLevelWidth - halfViewport);
+        }
+
+        camera.update();
+
+        // Update Coins - collision detection handled by CollisionDetectionSystem
+        for (int i = activeCoins.size - 1; i >= 0; i--) {
+            Coin coin = activeCoins.get(i);
+            coin.update(delta);
+            // Coin collection is now handled by CoinCollectionHandler
+            // Coin TIDAK dihapus ketika keluar layar
+        }
+
+        // Update Bullets dengan collision check
+        for (int i = activeBullets.size - 1; i >= 0; i--) {
+            Bullet b = activeBullets.get(i);
+            b.update(delta);
+
+            boolean shouldRemove = false;
+
+            // Check collision with platforms (walls)
+            for (Platform p : platforms) {
+                if (b.bounds.overlaps(p.bounds)) {
+                    shouldRemove = true;
+                    break;
+                }
+            }
+
+            // Check if bullet traveled too far vertically
+            if (!shouldRemove && b.isOutOfVerticalBounds(viewport.getWorldHeight())) {
+                shouldRemove = true;
+            }
+
+            if (shouldRemove) {
+                activeBullets.removeIndex(i);
+                bulletPool.free(b);
+            }
+        }
+
+        // --- DRAW ---
+        renderGame();
+    }
+
+    private void renderGame() {
+        Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
+
+        // Draw background at native resolution (crop if doesn't fit)
+        if (backgroundTex != null) {
+            // Get actual texture dimensions
+            float bgWidth = backgroundTex.getWidth();
+            float bgHeight = backgroundTex.getHeight();
+
+            // Position background at world origin - scrolls naturally with camera
+            float bgX = 0; // Start from world origin
+            float bgY = (VIEWPORT_HEIGHT - bgHeight) / 2; // Centered vertically
+
+            // Draw at native size - will crop naturally if larger than viewport
+            batch.draw(backgroundTex, bgX, bgY, bgWidth, bgHeight);
+        }
+
+        // Draw grounds
+        for (Ground g : grounds)
+            g.draw(batch);
+
+        // Draw platforms
+        for (Platform p : platforms)
+            p.draw(batch);
+
+        // Draw exit door (conditional for boss levels)
+        boolean bossDefeated = true;
+        if (currentLevel == 3 && miniBoss != null) {
+            bossDefeated = miniBoss.isDead();
+        }
+        if (currentLevel == 5 && boss != null) {
+            bossDefeated = boss.isDead();
+        }
+
+        if (bossDefeated) {
+            batch.draw(exitTex, currentLevelWidth - 80, 100, 45, 150);
+        }
+
+        // Draw enemies
+        for (CommonEnemy enemy : activeEnemies) {
+            enemy.draw(batch);
+        }
+
+        // Draw bullets
+        for (Bullet b : activeBullets)
+            batch.draw(bulletTex, b.bounds.x, b.bounds.y);
+
+        player.draw(batch);
+
+        // Draw bosses
+        if (miniBoss != null && !miniBoss.isDead()) {
+            miniBoss.draw(batch);
+        }
+
+        if (boss != null && !boss.isDead()) {
+            boss.draw(batch);
+        }
+
+        // Draw enemy bullets
+        for (EnemyBullet eb : activeEnemyBullets) {
+            eb.draw(batch);
+        }
+
+        batch.end();
+
+        // RENDER COINS DENGAN SHAPERENDERER (SETELAH BATCH.END)
+        shapeRenderer.setProjectionMatrix(camera.combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        for (Coin coin : activeCoins) {
+            coin.renderShape(shapeRenderer);
+        }
+        shapeRenderer.end();
+
+        // RENDER UI DAN DEBUG (GUNAKAN BATCH LAGI)
+        batch.begin();
+
+        // Debug markers
+        if (currentLevel == 5) {
+            // Level 5: Draw at viewport edges for fullscreen
+            float leftEdge = camera.position.x - viewport.getWorldWidth() / 2;
+            float rightEdge = camera.position.x + viewport.getWorldWidth() / 2 - 10;
+            batch.draw(debugTex, leftEdge, 0);
+            batch.draw(debugTex, rightEdge, 0);
+        } else {
+            // Other levels: Draw at level boundaries
+            batch.draw(debugTex, 0, 0);
+            batch.draw(debugTex, currentLevelWidth - 10, 0);
+        } // Level indicator
+        float levelIndicatorStartX = camera.position.x - viewport.getWorldWidth() / 2 + 20;
+        float levelIndicatorY = camera.position.y + viewport.getWorldHeight() / 2 - 50;
+        for (int i = 0; i < currentLevel; i++) {
+            batch.draw(levelIndicatorTex, levelIndicatorStartX + (i * 35), levelIndicatorY);
+        }
+
+        // Draw Health Bar
+        String healthText = "HP: " + (int) player.health + "/" + (int) Player.MAX_HEALTH;
+        float healthX = camera.position.x - viewport.getWorldWidth() / 2 + 20;
+        float healthY = camera.position.y + viewport.getWorldHeight() / 2 - 80;
+        smallFont.draw(batch, healthText, healthX, healthY);
+
+        // Draw Coin Score
+        String coinText = "Coins: " + coinScore;
+        float coinX = camera.position.x - viewport.getWorldWidth() / 2 + 20;
+        float coinY = healthY - 30; // Below health
+        smallFont.draw(batch, coinText, coinX, coinY);
+
+        batch.end();
+    }
+
+    private void renderGameOver() {
+        Gdx.gl.glClearColor(0.1f, 0.1f, 0.1f, 1);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
+
+        // Draw "GAME OVER" text
+        String gameOverText = "GAME OVER";
+        layout.setText(font, gameOverText);
+        float gameOverX = camera.position.x - layout.width / 2;
+        float gameOverY = camera.position.y + 50;
+        font.draw(batch, gameOverText, gameOverX, gameOverY);
+
+        // Draw "press space to restart" text
+        String restartText = "Press SPACE to restart";
+        layout.setText(smallFont, restartText);
+        float restartX = camera.position.x - layout.width / 2;
+        float restartY = camera.position.y - 20;
+        smallFont.draw(batch, restartText, restartX, restartY);
+
+        batch.end();
+    }
+
+    private void renderVictory() {
+        Gdx.gl.glClearColor(0.1f, 0.3f, 0.1f, 1); // Green tint for victory
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
+
+        // Draw "VICTORY!" text
+        String victoryText = "VICTORY!";
+        layout.setText(font, victoryText);
+        float victoryX = camera.position.x - layout.width / 2;
+        float victoryY = camera.position.y + 100;
+        font.draw(batch, victoryText, victoryX, victoryY);
+
+        // Draw "Game Completed!" text
+        String completedText = "Game Completed!";
+        layout.setText(smallFont, completedText);
+        float completedX = camera.position.x - layout.width / 2;
+        float completedY = camera.position.y + 50;
+        smallFont.draw(batch, completedText, completedX, completedY);
+
+        // Draw coin score
+        String coinsText = "Total Coins Collected: " + coinScore;
+        layout.setText(smallFont, coinsText);
+        float coinsX = camera.position.x - layout.width / 2;
+        float coinsY = camera.position.y;
+        smallFont.draw(batch, coinsText, coinsX, coinsY);
+
+        // Draw replay instruction
+        String replayText = "Press SPACE to Play Again";
+        layout.setText(smallFont, replayText);
+        float replayX = camera.position.x - layout.width / 2;
+        float replayY = camera.position.y - 50;
+        smallFont.draw(batch, replayText, replayX, replayY);
+
+        // Draw quit instruction
+        String quitText = "Press ESC to Quit";
+        layout.setText(smallFont, quitText);
+        float quitX = camera.position.x - layout.width / 2;
+        float quitY = camera.position.y - 80;
+        smallFont.draw(batch, quitText, quitX, quitY);
+
+        batch.end();
     }
     
     @Override
@@ -583,40 +1144,550 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
     
     @Override
     public void dispose() {
-        // Dispose batch and shapeRenderer
-        if (batch != null) batch.dispose();
-        if (shapeRenderer != null) shapeRenderer.dispose();
-        
-        // Dispose fonts
-        if (font != null) font.dispose();
-        if (smallFont != null) smallFont.dispose();
-        
-        // Dispose textures
-        disposeTexture(playerTex);
-        disposeTexture(platformTex);
-        disposeTexture(groundTex);
-        disposeTexture(bulletTex);
-        disposeTexture(exitTex);
-        disposeTexture(pistolTex);
-        disposeTexture(mac10Tex);
-        disposeTexture(debugTex);
-        disposeTexture(levelIndicatorTex);
-        disposeTexture(enemyTex);
-        disposeTexture(backgroundTex);
-        disposeTexture(miniBossTex);
-        disposeTexture(bossTex);
-        disposeTexture(enemyBulletTex);
-        disposeTexture(whiteFlashTex);
-        disposeTexture(redFlashTex);
-        disposeTexture(yellowFlashTex);
-        disposeTexture(buttonTex);
-        disposeTexture(buttonHoverTex);
-        
-        // Dispose screen manager
-        if (screenManager != null) screenManager.dispose();
+        batch.dispose();
+        shapeRenderer.dispose();
+        playerTex.dispose();
+        platformTex.dispose();
+        groundTex.dispose();
+        bulletTex.dispose();
+        debugTex.dispose();
+        levelIndicatorTex.dispose();
+        enemyTex.dispose();
+        miniBossTex.dispose();
+        bossTex.dispose();
+        enemyBulletTex.dispose();
+        whiteFlashTex.dispose();
+        redFlashTex.dispose();
+        yellowFlashTex.dispose();
+        backgroundTex.dispose();
+        font.dispose();
+        smallFont.dispose();
+        if (buttonTex != null)
+            buttonTex.dispose();
+        if (buttonHoverTex != null)
+            buttonHoverTex.dispose();
     }
-    
-    private void disposeTexture(Texture texture) {
-        if (texture != null) texture.dispose();
+
+    // ==================== USERNAME INPUT ====================
+    private void handleUsernameInput() {
+        // Handle text input
+        Gdx.input.setInputProcessor(new com.badlogic.gdx.InputAdapter() {
+            @Override
+            public boolean keyDown(int keycode) {
+                // Debug mode: Right Ctrl + D to skip login
+                if (keycode == Input.Keys.D && (Gdx.input.isKeyPressed(Input.Keys.CONTROL_RIGHT) ||
+                        Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT))) {
+                    Gdx.app.log("Debug", "Debug mode activated - skipping login");
+                    username = "DEBUG_USER";
+                    gameState = GameState.PLAYING;
+                    loadLevel(1);
+                    return true;
+                }
+                return false;
+            }
+
+            @Override
+            public boolean keyTyped(char character) {
+                if (gameState != GameState.USERNAME_INPUT)
+                    return false;
+
+                if (character == '\b' && usernameInput.length() > 0) {
+                    // Backspace
+                    usernameInput.deleteCharAt(usernameInput.length() - 1);
+                } else if (Character.isLetterOrDigit(character) && usernameInput.length() < MAX_USERNAME_LENGTH) {
+                    // Add character
+                    usernameInput.append(character);
+                }
+                return true;
+            }
+        });
+
+        // Check start button click
+        if (Gdx.input.justTouched()) {
+            Vector3 touchPos = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
+            camera.unproject(touchPos);
+
+            if (startGameButton.contains(touchPos.x, touchPos.y) && usernameInput.length() > 0) {
+                username = usernameInput.toString();
+                gameState = GameState.LOADING_PLAYER_DATA;
+
+                // Call API to login/create player
+                playerApi.login(username, new PlayerApiService.LoginCallback() {
+                    @Override
+                    public void onSuccess(PlayerData playerData, boolean isNew) {
+                        currentPlayerData = playerData;
+                        isNewPlayer = isNew;
+                        coinsCollectedThisSession = 0;
+
+                        if (isNew || playerData.lastStage == 1) {
+                            // New player - start from level 1
+                            gameState = GameState.PLAYING;
+                            loadLevel(1);
+                        } else {
+                            // Existing player - show continue/new menu
+                            gameState = GameState.CONTINUE_OR_NEW;
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(String error) {
+                        Gdx.app.error("Game", "Login failed: " + error);
+                        gameState = GameState.USERNAME_INPUT;
+                        // Show error message to user
+                    }
+                });
+            }
+        }
+    }
+
+    private void renderUsernameInput() {
+        Gdx.gl.glClearColor(0.15f, 0.15f, 0.2f, 1);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
+
+        // Draw title "LABUBOOM"
+        String title = "LABUBOOM";
+        layout.setText(font, title);
+        float titleX = VIEWPORT_WIDTH / 2 - layout.width / 2;
+        float titleY = 500;
+        font.draw(batch, title, titleX, titleY);
+
+        // Draw "Enter Your Name:"
+        String prompt = "Enter Your Name:";
+        layout.setText(smallFont, prompt);
+        float promptX = VIEWPORT_WIDTH / 2 - layout.width / 2;
+        float promptY = 380;
+        smallFont.draw(batch, prompt, promptX, promptY);
+
+        // Draw username input box background
+        batch.setColor(0.3f, 0.3f, 0.3f, 1f);
+        batch.draw(buttonTex, VIEWPORT_WIDTH / 2 - 250, 300, 500, 60);
+        batch.setColor(1, 1, 1, 1);
+
+        // Draw username text
+        String displayText = usernameInput.length() > 0 ? usernameInput.toString() : "Username...";
+        layout.setText(smallFont, displayText);
+        float textX = VIEWPORT_WIDTH / 2 - layout.width / 2;
+        float textY = 340;
+
+        if (usernameInput.length() > 0) {
+            smallFont.draw(batch, displayText, textX, textY);
+        } else {
+            // Draw placeholder in gray
+            smallFont.setColor(0.5f, 0.5f, 0.5f, 1f);
+            smallFont.draw(batch, displayText, textX, textY);
+            smallFont.setColor(1, 1, 1, 1);
+        }
+
+        // Draw Start Game button
+        boolean canStart = usernameInput.length() > 0;
+        if (canStart) {
+            batch.draw(buttonTex, startGameButton.x, startGameButton.y, startGameButton.width, startGameButton.height);
+        } else {
+            batch.setColor(0.4f, 0.4f, 0.4f, 1f);
+            batch.draw(buttonTex, startGameButton.x, startGameButton.y, startGameButton.width, startGameButton.height);
+            batch.setColor(1, 1, 1, 1);
+        }
+
+        String buttonText = "START GAME";
+        layout.setText(font, buttonText);
+        float btnTextX = startGameButton.x + startGameButton.width / 2 - layout.width / 2;
+        float btnTextY = startGameButton.y + startGameButton.height / 2 + layout.height / 2;
+        font.draw(batch, buttonText, btnTextX, btnTextY);
+
+        batch.end();
+    }
+
+    // ==================== PAUSE MENU ====================
+    private void handlePauseMenu() {
+        // Resume with ESC
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            gameState = GameState.PLAYING;
+            Gdx.app.log("Game", "RESUMED");
+            return;
+        }
+
+        // Check button clicks
+        if (Gdx.input.justTouched()) {
+            Vector3 touchPos = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
+            camera.unproject(touchPos);
+
+            // Continue
+            if (continueButton.contains(touchPos.x, touchPos.y)) {
+                gameState = GameState.PLAYING;
+                Gdx.app.log("Game", "RESUMED");
+            }
+
+            // Save Game (placeholder)
+            else if (saveButton.contains(touchPos.x, touchPos.y)) {
+                saveGameProgress();
+                Gdx.app.log("Game", "Game saved manually");
+            }
+
+            // New Game - Show confirmation
+            else if (newGameButton.contains(touchPos.x, touchPos.y)) {
+                gameState = GameState.RESTART_CONFIRM;
+                Gdx.app.log("Game", "Showing restart confirmation");
+            }
+
+            // Quit with auto-save
+            else if (quitButton.contains(touchPos.x, touchPos.y)) {
+                saveGameProgress();
+                Gdx.app.log("Game", "Quitting game with auto-save");
+                // Give time for save request
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            Thread.sleep(500); // Wait for save
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        Gdx.app.exit();
+                    }
+                }).start();
+            }
+        }
+    }
+
+    private void renderPauseMenu() {
+        // Draw game in background (dimmed)
+        renderGame();
+
+        // Draw overlay
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+
+        shapeRenderer.setProjectionMatrix(camera.combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(0, 0, 0, 0.6f);
+        shapeRenderer.rect(0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+        shapeRenderer.end();
+
+        Gdx.gl.glDisable(GL20.GL_BLEND);
+
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
+
+        // Draw "Game Paused" title
+        String title = "Game Paused";
+        layout.setText(font, title);
+        float titleX = VIEWPORT_WIDTH / 2 - layout.width / 2;
+        float titleY = 500;
+        font.draw(batch, title, titleX, titleY);
+
+        // Draw buttons
+        drawButton("Continue", continueButton);
+        drawButton("Save Game", saveButton);
+        drawButton("New Game", newGameButton);
+        drawButton("Quit (Auto Save)", quitButton);
+
+        batch.end();
+    }
+
+    // ==================== RESTART CONFIRMATION ====================
+    private void handleRestartConfirm() {
+        // ESC to cancel
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            gameState = GameState.PAUSED;
+            Gdx.app.log("Game", "Restart cancelled");
+            return;
+        }
+
+        // Check button clicks
+        if (Gdx.input.justTouched()) {
+            Vector3 touchPos = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
+            camera.unproject(touchPos);
+
+            // YES - Restart game with same username
+            if (confirmYesButton.contains(touchPos.x, touchPos.y)) {
+                // Skip backend reset in debug mode
+                if (debugManager != null && debugManager.isDebugModeActive()) {
+                    debugManager.logSkippedAction("Reset progress on backend");
+                    currentPlayerData.lastStage = 1;
+                    coinsCollectedThisSession = 0;
+                    restartGameSameUser();
+                    return;
+                }
+
+                // Reset progress on server
+                playerApi.resetProgress(currentPlayerData.playerId, new PlayerApiService.SaveCallback() {
+                    @Override
+                    public void onSuccess() {
+                        currentPlayerData.lastStage = 1;
+                        coinsCollectedThisSession = 0;
+                        restartGameSameUser();
+                    }
+
+                    @Override
+                    public void onFailure(String error) {
+                        Gdx.app.error("Game", "Failed to reset: " + error);
+                        restartGameSameUser(); // Continue anyway
+                    }
+                });
+            }
+
+            // NO - Back to pause menu
+            else if (confirmNoButton.contains(touchPos.x, touchPos.y)) {
+                gameState = GameState.PAUSED;
+                Gdx.app.log("Game", "Restart cancelled");
+            }
+        }
+    }
+
+    private void renderRestartConfirm() {
+        // Draw game in background (dimmed)
+        renderGame();
+
+        // Draw overlay
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+
+        shapeRenderer.setProjectionMatrix(camera.combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(0, 0, 0, 0.6f);
+        shapeRenderer.rect(0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+        shapeRenderer.end();
+
+        Gdx.gl.glDisable(GL20.GL_BLEND);
+
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
+
+        // Draw "Restart?" title
+        String title = "Restart?";
+        layout.setText(font, title);
+        float titleX = VIEWPORT_WIDTH / 2 - layout.width / 2;
+        float titleY = 400;
+        font.draw(batch, title, titleX, titleY);
+
+        // Draw YES/NO buttons
+        drawButton("Yes", confirmYesButton);
+        drawButton("No", confirmNoButton);
+
+        batch.end();
+    }
+
+    // ==================== HELPER METHODS ====================
+    private void drawButton(String text, Rectangle button) {
+        // Check hover
+        Vector3 mousePos = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
+        camera.unproject(mousePos);
+        boolean hover = button.contains(mousePos.x, mousePos.y);
+
+        // Draw button background
+        Texture btnTex = hover ? buttonHoverTex : buttonTex;
+        batch.draw(btnTex, button.x, button.y, button.width, button.height);
+
+        // Draw button text
+        layout.setText(smallFont, text);
+        float textX = button.x + button.width / 2 - layout.width / 2;
+        float textY = button.y + button.height / 2 + layout.height / 2;
+
+        smallFont.setColor(0.2f, 0.2f, 0.2f, 1f);
+        smallFont.draw(batch, text, textX, textY);
+        smallFont.setColor(1, 1, 1, 1);
+    }
+
+    private void restartGameSameUser() {
+        Gdx.app.log("Game", "Restarting game with username: " + username);
+
+        // Clear game state
+        for (CommonEnemy enemy : activeEnemies) {
+            enemyPool.free(enemy);
+        }
+        activeEnemies.clear();
+        activeBullets.clear();
+        activeEnemyBullets.clear();
+
+        for (Coin coin : activeCoins) {
+            coinPool.free(coin);
+        }
+        activeCoins.clear();
+        coinScore = 0;
+        coinCollectionHandler.setCoinScore(0);
+        coinCollectionHandler.setCoinsCollectedThisSession(0);
+
+        // Reset player
+        player.reset();
+        player.setWeapon(null);
+
+        // Reset bosses
+        miniBoss = null;
+        boss = null;
+
+        // Load level 1
+        currentLevel = 1;
+        loadLevel(1);
+
+        // Resume game
+        gameState = GameState.PLAYING;
+    }
+
+    private void restartToUsernameInput() {
+        // Clear username and go back to input screen
+        usernameInput.setLength(0);
+        username = "";
+        gameState = GameState.USERNAME_INPUT;
+
+        // Clear game state
+        for (CommonEnemy enemy : activeEnemies) {
+            enemyPool.free(enemy);
+        }
+        activeEnemies.clear();
+        activeBullets.clear();
+        activeEnemyBullets.clear();
+
+        for (Coin coin : activeCoins) {
+            coinPool.free(coin);
+        }
+        activeCoins.clear();
+        coinScore = 0;
+        coinCollectionHandler.setCoinScore(0);
+        coinCollectionHandler.setCoinsCollectedThisSession(0);
+
+        player.reset();
+        player.setWeapon(null);
+        currentLevel = 1;
+
+        miniBoss = null;
+        boss = null;
+
+        Gdx.app.log("Game", "Returned to username input");
+    }
+
+    // ==================== BACKEND INTEGRATION METHODS ====================
+    private void saveGameProgress() {
+        // Skip save in debug mode
+        if (debugManager != null && debugManager.isDebugModeActive()) {
+            debugManager.logSkippedAction("Save to backend");
+            if (currentPlayerData != null) {
+                currentPlayerData.lastStage = currentLevel;
+                currentPlayerData.totalCoins += coinsCollectedThisSession;
+                coinsCollectedThisSession = 0;
+            }
+            return;
+        }
+
+        if (currentPlayerData != null) {
+            playerApi.saveProgress(
+                    currentPlayerData.playerId,
+                    currentLevel,
+                    coinsCollectedThisSession,
+                    new PlayerApiService.SaveCallback() {
+                        @Override
+                        public void onSuccess() {
+                            Gdx.app.log("Game", "Progress saved: Stage " + currentLevel +
+                                    ", Coins: " + coinsCollectedThisSession);
+                            currentPlayerData.lastStage = currentLevel;
+                            currentPlayerData.totalCoins += coinsCollectedThisSession;
+                            coinsCollectedThisSession = 0; // Reset session counter
+                        }
+
+                        @Override
+                        public void onFailure(String error) {
+                            Gdx.app.error("Game", "Failed to save progress: " + error);
+                        }
+                    });
+        }
+    }
+
+    private void handleContinueOrNew() {
+        if (Gdx.input.justTouched()) {
+            Vector3 touchPos = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
+            camera.unproject(touchPos);
+
+            // Continue from last stage
+            if (continueGameButton.contains(touchPos.x, touchPos.y)) {
+                gameState = GameState.PLAYING;
+                loadLevel(currentPlayerData.lastStage);
+                Gdx.app.log("Game", "Continuing from stage " + currentPlayerData.lastStage);
+            }
+
+            // Start new game
+            else if (newGameButtonMenu.contains(touchPos.x, touchPos.y)) {
+                // Skip backend reset in debug mode
+                if (debugManager != null && debugManager.isDebugModeActive()) {
+                    debugManager.logSkippedAction("Reset progress on backend");
+                    currentPlayerData.lastStage = 1;
+                    coinsCollectedThisSession = 0;
+                    gameState = GameState.PLAYING;
+                    loadLevel(1);
+                    return;
+                }
+
+                // Reset progress on server
+                playerApi.resetProgress(currentPlayerData.playerId, new PlayerApiService.SaveCallback() {
+                    @Override
+                    public void onSuccess() {
+                        currentPlayerData.lastStage = 1;
+                        coinsCollectedThisSession = 0;
+                        gameState = GameState.PLAYING;
+                        loadLevel(1);
+                        Gdx.app.log("Game", "Starting new game");
+                    }
+
+                    @Override
+                    public void onFailure(String error) {
+                        Gdx.app.error("Game", "Failed to reset progress: " + error);
+                    }
+                });
+            }
+        }
+    }
+
+    private void renderLoading() {
+        Gdx.gl.glClearColor(0.15f, 0.15f, 0.2f, 1);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
+
+        String loadingText = "Loading...";
+        layout.setText(font, loadingText);
+        float x = VIEWPORT_WIDTH / 2 - layout.width / 2;
+        float y = VIEWPORT_HEIGHT / 2;
+        font.draw(batch, loadingText, x, y);
+
+        batch.end();
+    }
+
+    private void renderContinueOrNew() {
+        Gdx.gl.glClearColor(0.15f, 0.15f, 0.2f, 1);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
+
+        // Draw welcome message
+        String welcomeText = "Welcome back, " + username + "!";
+        layout.setText(font, welcomeText);
+        float welcomeX = VIEWPORT_WIDTH / 2 - layout.width / 2;
+        float welcomeY = 450;
+        font.draw(batch, welcomeText, welcomeX, welcomeY);
+
+        // Draw last stage info
+        String stageText = "Last Stage: " + currentPlayerData.lastStage;
+        layout.setText(smallFont, stageText);
+        float stageX = VIEWPORT_WIDTH / 2 - layout.width / 2;
+        float stageY = 380;
+        smallFont.draw(batch, stageText, stageX, stageY);
+
+        // Draw total coins
+        String coinsText = "Total Coins: " + currentPlayerData.totalCoins;
+        layout.setText(smallFont, coinsText);
+        float coinsX = VIEWPORT_WIDTH / 2 - layout.width / 2;
+        float coinsY = 350;
+        smallFont.draw(batch, coinsText, coinsX, coinsY);
+
+        // Draw Continue button
+        drawButton("Continue", continueGameButton);
+
+        // Draw New Game button
+        drawButton("New Game", newGameButtonMenu);
+
+        batch.end();
     }
 }
