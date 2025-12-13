@@ -34,6 +34,10 @@ import com.labubushooter.frontend.patterns.weapons.Mac10Strategy;
 import com.labubushooter.frontend.patterns.weapons.PistolStrategy;
 import com.labubushooter.frontend.services.PlayerApiService;
 import com.labubushooter.frontend.services.PlayerApiService.PlayerData;
+import com.labubushooter.frontend.systems.CollisionEventBus;
+import com.labubushooter.frontend.systems.CollisionDetectionSystem;
+import com.labubushooter.frontend.collision.*;
+import com.labubushooter.frontend.events.*;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -285,7 +289,8 @@ public class Main extends ApplicationAdapter {
 
         // Confirmation buttons (smaller)
         float confirmButtonWidth = 200f;
-        confirmYesButton = new Rectangle(VIEWPORT_WIDTH / 2 - confirmButtonWidth - 20, 200, confirmButtonWidth, buttonHeight);
+        confirmYesButton = new Rectangle(VIEWPORT_WIDTH / 2 - confirmButtonWidth - 20, 200, confirmButtonWidth,
+                buttonHeight);
         confirmNoButton = new Rectangle(VIEWPORT_WIDTH / 2 + 20, 200, confirmButtonWidth, buttonHeight);
 
         // Start game button
@@ -301,6 +306,24 @@ public class Main extends ApplicationAdapter {
         // Continue/New Game buttons
         continueGameButton = new Rectangle(centerX, 270, buttonWidth, buttonHeight);
         newGameButtonMenu = new Rectangle(centerX, 170, buttonWidth, buttonHeight);
+
+        // Initialize Collision System
+        collisionEventBus = new CollisionEventBus();
+
+        // Create handlers with constructor dependencies
+        playerEnemyCollisionHandler = new PlayerEnemyCollisionHandler();
+        bulletEnemyCollisionHandler = new BulletEnemyCollisionHandler(bulletPool, activeBullets);
+        enemyBulletPlayerCollisionHandler = new EnemyBulletPlayerCollisionHandler(enemyBulletPool, activeEnemyBullets);
+        coinCollectionHandler = new CoinCollectionHandler(coinPool, activeCoins);
+
+        // Subscribe handlers to event types
+        collisionEventBus.subscribe(PlayerEnemyCollisionEvent.class, playerEnemyCollisionHandler);
+        collisionEventBus.subscribe(BulletEnemyCollisionEvent.class, bulletEnemyCollisionHandler);
+        collisionEventBus.subscribe(EnemyBulletPlayerCollisionEvent.class, enemyBulletPlayerCollisionHandler);
+        collisionEventBus.subscribe(PlayerCoinCollisionEvent.class, coinCollectionHandler);
+
+        // Create detection system
+        collisionDetectionSystem = new CollisionDetectionSystem(collisionEventBus);
 
         // Don't load level yet - wait for username input
         // loadLevel(currentLevel);
@@ -460,6 +483,8 @@ public class Main extends ApplicationAdapter {
         }
         activeCoins.clear();
         coinScore = 0;
+        coinCollectionHandler.setCoinScore(0);
+        coinCollectionHandler.setCoinsCollectedThisSession(0);
 
         // Reset player
         player.reset();
@@ -848,65 +873,21 @@ public class Main extends ApplicationAdapter {
             }
         }
 
-        // Check bullet-enemy collisions
-        for (int i = activeEnemies.size - 1; i >= 0; i--) {
-            CommonEnemy enemy = activeEnemies.get(i);
+        // Collision Detection System - handles all combat collisions and coin
+        // collection
+        collisionDetectionSystem.detectCollisions(
+                activeBullets,
+                activeEnemies,
+                activeEnemyBullets,
+                activeCoins,
+                player,
+                miniBoss,
+                boss,
+                currentLevel);
 
-            for (int j = activeBullets.size - 1; j >= 0; j--) {
-                Bullet bullet = activeBullets.get(j);
-
-                if (enemy.collider.overlaps(bullet.bounds)) {
-                    enemy.takeDamage(bullet.damage);
-                    activeBullets.removeIndex(j);
-                    bulletPool.free(bullet);
-
-                    Gdx.app.log("Combat", "Enemy hit! Health: " + enemy.health);
-                    break;
-                }
-            }
-        }
-
-        // Check bullet-miniboss collisions
-        if (miniBoss != null && !miniBoss.isDead()) {
-            for (int j = activeBullets.size - 1; j >= 0; j--) {
-                Bullet bullet = activeBullets.get(j);
-
-                if (bullet.bounds.overlaps(miniBoss.collider)) {
-                    miniBoss.takeDamage(bullet.damage);
-                    activeBullets.removeIndex(j);
-                    bulletPool.free(bullet);
-                    Gdx.app.log("Combat", "Mini Boss hit! Health: " + miniBoss.health);
-                    break;
-                }
-            }
-        }
-
-        // Check bullet-boss collisions
-        if (boss != null && !boss.isDead()) {
-            for (int j = activeBullets.size - 1; j >= 0; j--) {
-                Bullet bullet = activeBullets.get(j);
-
-                if (bullet.bounds.overlaps(boss.collider)) {
-                    boss.takeDamage(bullet.damage);
-                    activeBullets.removeIndex(j);
-                    bulletPool.free(bullet);
-                    Gdx.app.log("Combat", "Boss hit! Health: " + boss.health);
-                    break;
-                }
-            }
-        }
-
-        // Check enemy bullet-player collisions
-        for (int i = activeEnemyBullets.size - 1; i >= 0; i--) {
-            EnemyBullet eb = activeEnemyBullets.get(i);
-
-            if (eb.bounds.overlaps(player.bounds)) {
-                player.takeDamage(eb.damage);
-                activeEnemyBullets.removeIndex(i);
-                enemyBulletPool.free(eb);
-                Gdx.app.log("Combat", "Player hit by enemy bullet!");
-            }
-        }
+        // Sync coin scores from handler to Main
+        coinScore = coinCollectionHandler.getCoinScore();
+        coinsCollectedThisSession = coinCollectionHandler.getCoinsCollectedThisSession();
 
         // Check Level Exit (with boss defeat requirement)
         boolean bossDefeated = true;
@@ -942,20 +923,11 @@ public class Main extends ApplicationAdapter {
 
         camera.update();
 
-        // Update Coins - HANYA HAPUS SAAT DIKUMPULKAN
+        // Update Coins - collision detection handled by CollisionDetectionSystem
         for (int i = activeCoins.size - 1; i >= 0; i--) {
             Coin coin = activeCoins.get(i);
             coin.update(delta);
-
-            // Check coin collection - GUNAKAN isColliding
-            if (coin.isColliding(player.bounds)) {
-                coin.active = false;
-                coinScore++;
-                coinsCollectedThisSession++; // Track session coins
-                activeCoins.removeIndex(i);
-                coinPool.free(coin);
-                Gdx.app.log("Coin", "Collected! Total: " + coinScore);
-            }
+            // Coin collection is now handled by CoinCollectionHandler
             // Coin TIDAK dihapus ketika keluar layar
         }
 
@@ -1196,8 +1168,10 @@ public class Main extends ApplicationAdapter {
         backgroundTex.dispose();
         font.dispose();
         smallFont.dispose();
-        if (buttonTex != null) buttonTex.dispose();
-        if (buttonHoverTex != null) buttonHoverTex.dispose();
+        if (buttonTex != null)
+            buttonTex.dispose();
+        if (buttonHoverTex != null)
+            buttonHoverTex.dispose();
     }
 
     // ==================== USERNAME INPUT ====================
@@ -1205,8 +1179,23 @@ public class Main extends ApplicationAdapter {
         // Handle text input
         Gdx.input.setInputProcessor(new com.badlogic.gdx.InputAdapter() {
             @Override
+            public boolean keyDown(int keycode) {
+                // Debug mode: Right Ctrl + D to skip login
+                if (keycode == Input.Keys.D && (Gdx.input.isKeyPressed(Input.Keys.CONTROL_RIGHT) ||
+                        Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT))) {
+                    Gdx.app.log("Debug", "Debug mode activated - skipping login");
+                    username = "DEBUG_USER";
+                    gameState = GameState.PLAYING;
+                    loadLevel(1);
+                    return true;
+                }
+                return false;
+            }
+
+            @Override
             public boolean keyTyped(char character) {
-                if (gameState != GameState.USERNAME_INPUT) return false;
+                if (gameState != GameState.USERNAME_INPUT)
+                    return false;
 
                 if (character == '\b' && usernameInput.length() > 0) {
                     // Backspace
@@ -1524,6 +1513,8 @@ public class Main extends ApplicationAdapter {
         }
         activeCoins.clear();
         coinScore = 0;
+        coinCollectionHandler.setCoinScore(0);
+        coinCollectionHandler.setCoinsCollectedThisSession(0);
 
         // Reset player
         player.reset();
@@ -1560,6 +1551,8 @@ public class Main extends ApplicationAdapter {
         }
         activeCoins.clear();
         coinScore = 0;
+        coinCollectionHandler.setCoinScore(0);
+        coinCollectionHandler.setCoinsCollectedThisSession(0);
 
         player.reset();
         player.setWeapon(null);
@@ -1586,25 +1579,24 @@ public class Main extends ApplicationAdapter {
 
         if (currentPlayerData != null) {
             playerApi.saveProgress(
-                currentPlayerData.playerId,
-                currentLevel,
-                coinsCollectedThisSession,
-                new PlayerApiService.SaveCallback() {
-                    @Override
-                    public void onSuccess() {
-                        Gdx.app.log("Game", "Progress saved: Stage " + currentLevel + 
-                                   ", Coins: " + coinsCollectedThisSession);
-                        currentPlayerData.lastStage = currentLevel;
-                        currentPlayerData.totalCoins += coinsCollectedThisSession;
-                        coinsCollectedThisSession = 0; // Reset session counter
-                    }
-                    
-                    @Override
-                    public void onFailure(String error) {
-                        Gdx.app.error("Game", "Failed to save progress: " + error);
-                    }
-                }
-            );
+                    currentPlayerData.playerId,
+                    currentLevel,
+                    coinsCollectedThisSession,
+                    new PlayerApiService.SaveCallback() {
+                        @Override
+                        public void onSuccess() {
+                            Gdx.app.log("Game", "Progress saved: Stage " + currentLevel +
+                                    ", Coins: " + coinsCollectedThisSession);
+                            currentPlayerData.lastStage = currentLevel;
+                            currentPlayerData.totalCoins += coinsCollectedThisSession;
+                            coinsCollectedThisSession = 0; // Reset session counter
+                        }
+
+                        @Override
+                        public void onFailure(String error) {
+                            Gdx.app.error("Game", "Failed to save progress: " + error);
+                        }
+                    });
         }
     }
 
@@ -1612,14 +1604,14 @@ public class Main extends ApplicationAdapter {
         if (Gdx.input.justTouched()) {
             Vector3 touchPos = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
             camera.unproject(touchPos);
-            
+
             // Continue from last stage
             if (continueGameButton.contains(touchPos.x, touchPos.y)) {
                 gameState = GameState.PLAYING;
                 loadLevel(currentPlayerData.lastStage);
                 Gdx.app.log("Game", "Continuing from stage " + currentPlayerData.lastStage);
             }
-            
+
             // Start new game
             else if (newGameButtonMenu.contains(touchPos.x, touchPos.y)) {
                 // Skip backend reset in debug mode
@@ -1642,7 +1634,7 @@ public class Main extends ApplicationAdapter {
                         loadLevel(1);
                         Gdx.app.log("Game", "Starting new game");
                     }
-                    
+
                     @Override
                     public void onFailure(String error) {
                         Gdx.app.error("Game", "Failed to reset progress: " + error);
@@ -1655,53 +1647,53 @@ public class Main extends ApplicationAdapter {
     private void renderLoading() {
         Gdx.gl.glClearColor(0.15f, 0.15f, 0.2f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-        
+
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
-        
+
         String loadingText = "Loading...";
         layout.setText(font, loadingText);
         float x = VIEWPORT_WIDTH / 2 - layout.width / 2;
         float y = VIEWPORT_HEIGHT / 2;
         font.draw(batch, loadingText, x, y);
-        
+
         batch.end();
     }
 
     private void renderContinueOrNew() {
         Gdx.gl.glClearColor(0.15f, 0.15f, 0.2f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-        
+
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
-        
+
         // Draw welcome message
         String welcomeText = "Welcome back, " + username + "!";
         layout.setText(font, welcomeText);
         float welcomeX = VIEWPORT_WIDTH / 2 - layout.width / 2;
         float welcomeY = 450;
         font.draw(batch, welcomeText, welcomeX, welcomeY);
-        
+
         // Draw last stage info
         String stageText = "Last Stage: " + currentPlayerData.lastStage;
         layout.setText(smallFont, stageText);
         float stageX = VIEWPORT_WIDTH / 2 - layout.width / 2;
         float stageY = 380;
         smallFont.draw(batch, stageText, stageX, stageY);
-        
+
         // Draw total coins
         String coinsText = "Total Coins: " + currentPlayerData.totalCoins;
         layout.setText(smallFont, coinsText);
         float coinsX = VIEWPORT_WIDTH / 2 - layout.width / 2;
         float coinsY = 350;
         smallFont.draw(batch, coinsText, coinsX, coinsY);
-        
+
         // Draw Continue button
         drawButton("Continue", continueGameButton);
-        
+
         // Draw New Game button
         drawButton("New Game", newGameButtonMenu);
-        
+
         batch.end();
     }
 }

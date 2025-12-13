@@ -31,6 +31,7 @@ public class FinalBoss extends BossEnemy {
     private float upwardShotStunTimer;
     private boolean isUpwardShotStunned;
     private Texture upwardShotFlashTexture;
+    private long lastDamageTime; // Track last damage time for damage cooldown
     private static final float MIN_UPWARD_SHOT_TIME = 2.0f;
     private static final float MAX_UPWARD_SHOT_TIME = 5.0f;
     private static final float HEIGHT_THRESHOLD = 50f;
@@ -68,10 +69,6 @@ public class FinalBoss extends BossEnemy {
     // Bullet properties
     private static final float BULLET_SPEED = 300f;
     private static final float BULLET_DAMAGE = 5.0f;
-
-    // Player damage cooldown
-    private long lastDamageTime;
-    private static final long DAMAGE_COOLDOWN = 1000000000L; // 1 second
 
     private Texture enemyBulletTex;
 
@@ -269,15 +266,8 @@ public class FinalBoss extends BossEnemy {
         // Apply gravity and platform collision
         applyGravityAndCollision(delta, platforms, grounds);
 
-        // Collision with player (melee damage)
-        if (collider.overlaps(player.bounds)) {
-            long currentTime = TimeUtils.nanoTime();
-            if (currentTime - lastDamageTime > DAMAGE_COOLDOWN) {
-                player.takeDamage(damage);
-                lastDamageTime = currentTime;
-                Gdx.app.log("Boss", "Hit player for " + damage + " damage");
-            }
-        }
+        // Melee damage is now handled by PlayerEnemyCollisionHandler in the collision
+        // system
     }
 
     private void updatePhase() {
