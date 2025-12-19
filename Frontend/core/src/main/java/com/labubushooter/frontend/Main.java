@@ -153,6 +153,9 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
         
         // Generated textures
         bulletTex = createColorTexture(10, 5, Color.YELLOW);
+        bulletTex = new Texture(Gdx.files.internal("bullet.png"));
+        bulletTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+
         pistolTex = createColorTexture(20, 10, Color.GRAY);
         mac10Tex = createColorTexture(30, 15, Color.LIME);
         debugTex = createColorTexture(10, 600, Color.RED);

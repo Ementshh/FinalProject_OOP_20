@@ -1,5 +1,6 @@
 package com.labubushooter.frontend.patterns.weapons;
 
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
@@ -19,10 +20,10 @@ public class PistolStrategy implements ShootingStrategy {
     }
 
     @Override
-    public void shoot(float x, float y, Vector2 direction, Array<Bullet> activeBullets, Pool<Bullet> bulletPool) {
+    public void shoot(float x, float y, Vector2 direction, Array<Bullet> activeBullets, Pool<Bullet> bulletPool, Texture bulletTexture) {
         if (TimeUtils.nanoTime() - lastShotTime > FIRE_RATE_DELAY) {
             Bullet b = bulletPool.obtain();
-            b.init(x, y, direction, BULLET_SPEED, DAMAGE);
+            b.init(x, y, direction, BULLET_SPEED, DAMAGE, bulletTexture);
             activeBullets.add(b);
             lastShotTime = TimeUtils.nanoTime();
         }

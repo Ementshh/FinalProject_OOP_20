@@ -212,14 +212,14 @@ public class Player extends GameObject {
                 playerCenterY + dir.y * offsetDistance);
     }
 
-    public void shoot(Array<Bullet> activeBullets, Pool<Bullet> pool) {
+    public void shoot(Array<Bullet> activeBullets, Pool<Bullet> pool, Texture bulletTexture) {
         if (shootingStrategy == null)
             return;
 
         Vector2 startPos = getShootStartPosition();
         Vector2 direction = getShootDirection();
 
-        shootingStrategy.shoot(startPos.x, startPos.y, direction, activeBullets, pool);
+        shootingStrategy.shoot(startPos.x, startPos.y, direction, activeBullets, pool, bulletTexture);
     }
 
     @Override

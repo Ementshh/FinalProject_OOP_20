@@ -119,11 +119,17 @@ public class GamePlayScreen extends BaseScreen {
         if (currentWeapon != null) {
             if (currentWeapon.isAutomatic()) {
                 if (Gdx.input.isButtonPressed(Input.Buttons.LEFT)) {
-                    context.player.shoot(context.activeBullets, context.bulletPool);
+                    ShootingStrategy weapon = context.player.getWeapon();
+                    if (weapon != null && weapon.isAutomatic()) {
+                        context.player.shoot(context.activeBullets, context.bulletPool, context.bulletTex);
+                    }
                 }
             } else {
                 if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) {
-                    context.player.shoot(context.activeBullets, context.bulletPool);
+                    ShootingStrategy weapon = context.player.getWeapon();
+                    if (weapon != null && !weapon.isAutomatic()) {
+                        context.player.shoot(context.activeBullets, context.bulletPool, context.bulletTex);
+                    }
                 }
             }
         }
@@ -450,7 +456,8 @@ public class GamePlayScreen extends BaseScreen {
         
         // Draw bullets
         for (Bullet b : context.activeBullets) {
-            context.batch.draw(context.bulletTex, b.bounds.x, b.bounds.y);
+            b.draw(context.batch, context.bulletTex);
+            //context.batch.draw(context.bulletTex, b.bounds.x, b.bounds.y);
         }
         
         // Draw player
