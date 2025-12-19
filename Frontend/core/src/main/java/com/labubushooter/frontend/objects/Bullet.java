@@ -17,7 +17,7 @@ public class Bullet implements Pool.Poolable {
     private float startY;
 
     public Bullet() {
-        this.bounds = new Rectangle(0, 0, 10, 5);
+        this.bounds = new Rectangle(0, 0, 8, 5);
         this.velocity = new Vector2(0, 0);
         this.active = false;
         this.damage = 0;
