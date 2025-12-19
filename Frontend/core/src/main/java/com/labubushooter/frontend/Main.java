@@ -150,14 +150,21 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
         miniBossTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
         bossTex = new Texture(Gdx.files.internal("boss.png"));
         bossTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+
+        // Weapon Textures
+        pistolTex = new Texture(Gdx.files.internal("pistol.png"));
+        pistolTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        //mac10Tex = new Texture(Gdx.files.internal("mac10.png")); // Jika ada
+        //mac10Tex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        //pistolTex = createColorTexture(20, 10, Color.GRAY);
+        mac10Tex = createColorTexture(30, 15, Color.LIME);
         
         // Generated textures
         bulletTex = createColorTexture(10, 5, Color.YELLOW);
         bulletTex = new Texture(Gdx.files.internal("bullet.png"));
         bulletTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
 
-        pistolTex = createColorTexture(20, 10, Color.GRAY);
-        mac10Tex = createColorTexture(30, 15, Color.LIME);
+
         debugTex = createColorTexture(10, 600, Color.RED);
         levelIndicatorTex = createColorTexture(30, 30, Color.YELLOW);
         enemyBulletTex = createColorTexture(8, 8, Color.ORANGE);
@@ -202,8 +209,8 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
         
         // Patterns & strategies
         coinPattern = new LinePattern();
-        pistolStrategy = new PistolStrategy();
-        mac10Strategy = new Mac10Strategy();
+        pistolStrategy = new PistolStrategy(pistolTex);
+        mac10Strategy = new Mac10Strategy(mac10Tex);
         
         levelStrategies = new HashMap<>();
         levelStrategies.put(1, new Level1Strategy());
@@ -214,8 +221,6 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
         
         // Player
         player = new Player(playerTex);
-        player.pistolTex = pistolTex;
-        player.mac10Tex = mac10Tex;
         player.camera = camera;
         player.setWeapon(null);
         

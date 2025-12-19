@@ -14,6 +14,12 @@ public class Mac10Strategy implements ShootingStrategy {
     private final float DAMAGE = 2f;
     private final float BULLET_SPEED = 800f;
 
+    private final WeaponRenderer renderer;
+
+    public Mac10Strategy(Texture mac10Texture) {
+        this.renderer = new Mac10Renderer(mac10Texture);
+    }
+
     @Override
     public boolean isAutomatic() {
         return true;
@@ -28,5 +34,9 @@ public class Mac10Strategy implements ShootingStrategy {
             activeBullets.add(b);
             lastShotTime = TimeUtils.nanoTime();
         }
+    }
+
+    public WeaponRenderer getRenderer() {
+        return renderer;
     }
 }

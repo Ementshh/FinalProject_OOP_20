@@ -14,6 +14,12 @@ public class PistolStrategy implements ShootingStrategy {
     private final float DAMAGE = 4f;
     private final float BULLET_SPEED = 750f;
 
+    private final WeaponRenderer renderer;
+
+    public PistolStrategy(Texture pistolTexture){
+        this.renderer = new PistolRenderer(pistolTexture);
+    }
+
     @Override
     public boolean isAutomatic() {
         return false;
@@ -27,5 +33,9 @@ public class PistolStrategy implements ShootingStrategy {
             activeBullets.add(b);
             lastShotTime = TimeUtils.nanoTime();
         }
+    }
+
+    public WeaponRenderer getRenderer() {
+        return renderer;
     }
 }

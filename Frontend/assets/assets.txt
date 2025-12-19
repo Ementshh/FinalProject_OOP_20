@@ -7,4 +7,5 @@ ground.png
 ground_base.png
 libgdx.png
 miniboss.png
+pistol.png
 player.png
