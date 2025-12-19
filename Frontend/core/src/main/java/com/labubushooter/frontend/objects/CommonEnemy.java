@@ -68,12 +68,12 @@ public class CommonEnemy implements Pool.Poolable {
             case 2:
                 this.maxHealth = 15f;
                 this.damageAmount = 1.5f;
-                this.speed = BASE_SPEED * 1.5f; // 1.5x lebih cepat
+                this.speed = BASE_SPEED * 1.4f; // 1.4x lebih cepat
                 break;
             case 4:
                 this.maxHealth = 20f;
                 this.damageAmount = 1.5f;
-                this.speed = BASE_SPEED * 1.8f; // 1.8x lebih cepat
+                this.speed = BASE_SPEED * 1.6f; // 1.6x lebih cepat
                 break;
             default:
                 this.maxHealth = 10f;
