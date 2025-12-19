@@ -1,42 +1,46 @@
 package com.labubushooter.frontend.patterns;
 
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.OrthographicCamera;
 
 /**
- * Static background rendering strategy with configurable scaling.
+ * Static background rendering strategy with configurable scaling and alignment.
  * Anchors background to world origin, creating natural scrolling effect.
- * Supports multiple scaling modes via ScalingMode enum.
+ * Supports multiple scaling modes and vertical alignment strategies.
  * 
  * SOLID Principles Applied:
  * - Single Responsibility: Handles static background positioning and scaling
- * - Open/Closed: Scaling modes can be extended via ScalingMode enum without modifying this class
- * - Dependency Inversion: Depends on ScalingMode abstraction
+ * - Open/Closed: Extensible via ScalingMode and VerticalAlignment enums
+ * - Dependency Inversion: Depends on enum abstractions
  * 
  * Algorithm:
  * - Background left edge anchored at world x=0
  * - Scale applied based on ScalingMode (NONE, FIT_HEIGHT, FIT_WIDTH, FILL)
+ * - Vertical position determined by VerticalAlignment (BOTTOM, CENTER, TOP)
  * - Viewport acts as a "window" sliding across the background
  */
 public class StaticBackgroundStrategy implements IBackgroundRenderStrategy {
     private ScalingMode scalingMode;
+    private VerticalAlignment verticalAlignment;
 
     /**
-     * Constructs strategy with specified scaling mode.
+     * Constructs strategy with specified scaling mode and vertical alignment.
      * 
      * @param scalingMode Scaling strategy (NONE, FIT_HEIGHT, FIT_WIDTH, FILL)
+     * @param verticalAlignment Vertical positioning (BOTTOM, CENTER, TOP)
      */
-    public StaticBackgroundStrategy(ScalingMode scalingMode) {
+    public StaticBackgroundStrategy(ScalingMode scalingMode, VerticalAlignment verticalAlignment) {
         this.scalingMode = scalingMode;
+        this.verticalAlignment = verticalAlignment;
     }
 
     /**
-     * Constructs strategy with NO SCALING (default/legacy behavior).
-     * Background renders at native 5400×1080px resolution.
+     * Constructs strategy with FIT_HEIGHT scaling and CENTER alignment.
+     * Ensures full vertical content is visible and centered in viewport.
      */
     public StaticBackgroundStrategy() {
-        this(ScalingMode.NONE);
+        this(ScalingMode.FIT_HEIGHT, VerticalAlignment.CENTER);
     }
 
     @Override
@@ -60,14 +64,43 @@ public class StaticBackgroundStrategy implements IBackgroundRenderStrategy {
         // The leftmost part of background.png aligns with the leftmost part of level
         float bgX = 0;
         
-        // Calculate vertical position (bottom-aligned to show ground/horizon)
-        // With FIT_HEIGHT scaling, bgHeight equals viewportHeight, so this always shows full height
-        float bgY = camera.position.y - (viewportHeight / 2);
+        // Calculate vertical position based on alignment strategy
+        float bgY = calculateVerticalPosition(camera, bgHeight, viewportHeight);
 
         // Draw background with calculated dimensions
         // Camera's viewport naturally shows only the visible portion
         // As camera moves, different parts become visible (horizontal scrolling)
         batch.draw(backgroundTexture, bgX, bgY, bgWidth, bgHeight);
+    }
+
+    /**
+     * Calculates vertical position based on alignment strategy.
+     * Follows Strategy Pattern - behavior determined by VerticalAlignment enum.
+     * 
+     * @param camera Camera for position reference
+     * @param bgHeight Scaled background height
+     * @param viewportHeight Viewport height
+     * @return Y position for background rendering
+     */
+    private float calculateVerticalPosition(OrthographicCamera camera, float bgHeight, float viewportHeight) {
+        float cameraBottom = camera.position.y - (viewportHeight / 2);
+        
+        switch (verticalAlignment) {
+            case BOTTOM:
+                // Align to bottom of viewport - shows ground/horizon
+                return cameraBottom;
+                
+            case CENTER:
+                // Center background in viewport - ensures full height visible
+                return cameraBottom - (bgHeight - viewportHeight) / 2;
+                
+            case TOP:
+                // Align to top of viewport - shows sky
+                return cameraBottom - (bgHeight - viewportHeight);
+                
+            default:
+                return cameraBottom;
+        }
     }
 
     /**
@@ -118,11 +151,29 @@ public class StaticBackgroundStrategy implements IBackgroundRenderStrategy {
     }
     
     /**
+     * Updates vertical alignment at runtime.
+     * 
+     * @param verticalAlignment New vertical alignment
+     */
+    public void setVerticalAlignment(VerticalAlignment verticalAlignment) {
+        this.verticalAlignment = verticalAlignment;
+    }
+    
+    /**
      * Gets current scaling mode.
      * 
      * @return Current scaling mode
      */
     public ScalingMode getScalingMode() {
         return scalingMode;
+    }
+    
+    /**
+     * Gets current vertical alignment.
+     * 
+     * @return Current vertical alignment
+     */
+    public VerticalAlignment getVerticalAlignment() {
+        return verticalAlignment;
     }
 }

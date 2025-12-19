@@ -408,13 +408,16 @@ public class GamePlayScreen extends BaseScreen {
         context.batch.setProjectionMatrix(context.camera.combined);
         context.batch.begin();
         
-        // Draw background
-        if (context.backgroundTex != null) {
-            float bgWidth = context.backgroundTex.getWidth();
-            float bgHeight = context.backgroundTex.getHeight();
-            float bgX = 0;
-            float bgY = (GameContext.VIEWPORT_HEIGHT - bgHeight) / 2;
-            context.batch.draw(context.backgroundTex, bgX, bgY, bgWidth, bgHeight);
+        // Draw background with dynamic viewport dimensions
+        // Uses BackgroundRenderer with FIT_HEIGHT strategy for proper scaling at any resolution
+        if (context.backgroundRenderer != null) {
+            context.backgroundRenderer.render(
+                context.batch, 
+                context.camera,
+                context.viewport.getWorldWidth(),   // Dynamic: adapts to window size
+                context.viewport.getWorldHeight(),  // Dynamic: adapts to window size
+                context.currentLevelWidth
+            );
         }
         
         // Draw grounds

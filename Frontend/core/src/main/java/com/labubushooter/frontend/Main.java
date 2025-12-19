@@ -15,11 +15,15 @@ import com.labubushooter.frontend.core.GameContext;
 import com.labubushooter.frontend.objects.*;
 import com.labubushooter.frontend.patterns.CoinPattern;
 import com.labubushooter.frontend.patterns.LevelStrategy;
+import com.labubushooter.frontend.patterns.ScalingMode;
+import com.labubushooter.frontend.patterns.StaticBackgroundStrategy;
+import com.labubushooter.frontend.patterns.VerticalAlignment;
 import com.labubushooter.frontend.patterns.coins.LinePattern;
 import com.labubushooter.frontend.patterns.levels.*;
 import com.labubushooter.frontend.patterns.weapons.Mac10Strategy;
 import com.labubushooter.frontend.patterns.weapons.PistolStrategy;
 import com.labubushooter.frontend.screens.*;
+import com.labubushooter.frontend.services.BackgroundRenderer;
 import com.labubushooter.frontend.services.PlayerApiService;
 
 import java.util.HashMap;
@@ -248,6 +252,13 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
         gameContext.levelIndicatorTex = levelIndicatorTex;
         gameContext.enemyTex = enemyTex;
         gameContext.backgroundTex = backgroundTex;
+        
+        // Initialize BackgroundRenderer with FIT_HEIGHT strategy and CENTER alignment
+        // Ensures full vertical height visible at any resolution, width naturally cropped
+        gameContext.backgroundRenderer = new BackgroundRenderer(
+            backgroundTex,
+            new StaticBackgroundStrategy(ScalingMode.FIT_HEIGHT, VerticalAlignment.CENTER)
+        );
         gameContext.miniBossTex = miniBossTex;
         gameContext.bossTex = bossTex;
         gameContext.enemyBulletTex = enemyBulletTex;
