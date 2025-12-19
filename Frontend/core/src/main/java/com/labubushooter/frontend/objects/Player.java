@@ -11,6 +11,9 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
 import com.badlogic.gdx.utils.TimeUtils;
 import com.labubushooter.frontend.patterns.ShootingStrategy;
+import com.labubushooter.frontend.patterns.weapons.PistolStrategy;
+import com.labubushooter.frontend.patterns.weapons.Mac10Strategy;
+import com.labubushooter.frontend.patterns.weapons.WeaponRenderer;
 
 public class Player extends GameObject {
     public float velY = 0;
@@ -36,8 +39,8 @@ public class Player extends GameObject {
     final float SPEED = 250f;
     public static float LEVEL_WIDTH = 2400f;
 
-    public Texture pistolTex;
-    public Texture mac10Tex;
+    //public Texture pistolTex;
+    //public Texture mac10Tex;
 
     // Mouse aiming
     private Vector2 mouseWorldPos;
@@ -212,14 +215,14 @@ public class Player extends GameObject {
                 playerCenterY + dir.y * offsetDistance);
     }
 
-    public void shoot(Array<Bullet> activeBullets, Pool<Bullet> pool) {
+    public void shoot(Array<Bullet> activeBullets, Pool<Bullet> pool, Texture bulletTexture) {
         if (shootingStrategy == null)
             return;
 
         Vector2 startPos = getShootStartPosition();
         Vector2 direction = getShootDirection();
 
-        shootingStrategy.shoot(startPos.x, startPos.y, direction, activeBullets, pool);
+        shootingStrategy.shoot(startPos.x, startPos.y, direction, activeBullets, pool, bulletTexture);
     }
 
     @Override
@@ -227,56 +230,23 @@ public class Player extends GameObject {
         // 1. Draw Player Body
         batch.draw(texture, bounds.x, bounds.y, bounds.width, bounds.height);
 
-        // 2. Draw Weapon with smooth 360° rotation and Y-axis mirroring
+        // 2. Draw Weapon using WeaponRenderer (Strategy Pattern)
         if (shootingStrategy != null) {
-            Texture currentWeaponTex = null;
-            float w = 0, h = 0;
-            String strategyName = shootingStrategy.getClass().getSimpleName();
+            WeaponRenderer renderer = null;
 
-            // Pistol: 25x8 horizontal rectangle (seperti gambar 1)
-            if (strategyName.contains("Pistol")) {
-                currentWeaponTex = pistolTex;
-                w = 25;
-                h = 8;
-            }
-            // SMG/Mac10: 30x10 horizontal rectangle (seperti gambar 2)
-            else if (strategyName.contains("Mac10")) {
-                currentWeaponTex = mac10Tex;
-                w = 30;
-                h = 10;
+            // Get renderer from strategy (Dependency Inversion Principle)
+            if (shootingStrategy instanceof PistolStrategy) {
+                renderer = ((PistolStrategy) shootingStrategy).getRenderer();
+            } else if (shootingStrategy instanceof Mac10Strategy) {
+                renderer = ((Mac10Strategy) shootingStrategy).getRenderer();
             }
 
-            if (currentWeaponTex != null) {
+            if (renderer != null) {
                 float playerCenterX = bounds.x + bounds.width / 2;
                 float playerCenterY = bounds.y + bounds.height / 2;
 
-                // Origin point di grip (ujung belakang senjata - pojok kiri tengah)
-                float originX = 5f; // Grip position dari kiri weapon
-                float originY = h / 2; // Center vertikal
-
-                // Weapon position di player center
-                float weaponX = playerCenterX;
-                float weaponY = playerCenterY;
-
-                // Y-axis flip jika mouse di kiri player (mirror terhadap Y-axis)
-                float scaleY = facingRight ? 1 : -1;
-
-                // Draw weapon - rotation smooth 360° dengan Y-axis mirroring
-                batch.draw(
-                        currentWeaponTex,
-                        weaponX - originX, // x position (offset by grip origin)
-                        weaponY - originY, // y position (offset by grip origin)
-                        originX, // origin x (grip point - rotation pivot)
-                        originY, // origin y (center vertikal)
-                        w, // width
-                        h, // height
-                        1, // scale x
-                        scaleY, // scale y (flip Y-axis saat facing left)
-                        weaponAngle, // rotation angle (smooth 360°)
-                        0, 0, // source x, y
-                        (int) w, (int) h, // source width, height
-                        false, false // flip x, y
-                );
+                // Delegate rendering to strategy (Strategy Pattern)
+                renderer.render(batch, playerCenterX, playerCenterY, weaponAngle, facingRight);
             }
         }
     }
