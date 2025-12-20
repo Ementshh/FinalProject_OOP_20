@@ -25,6 +25,7 @@ import com.labubushooter.frontend.patterns.weapons.PistolStrategy;
 import com.labubushooter.frontend.screens.*;
 import com.labubushooter.frontend.services.AssetManager;
 import com.labubushooter.frontend.services.BackgroundRenderer;
+import com.labubushooter.frontend.services.BackgroundTextureResolver;
 import com.labubushooter.frontend.services.PlayerApiService;
 import com.labubushooter.frontend.systems.GameWorld;
 
@@ -143,7 +144,8 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
         groundTex = assetManager.getTexture(AssetManager.GROUND_BASE);
         exitTex = assetManager.getTexture(AssetManager.EXIT_DOOR);
         enemyTex = assetManager.getTexture(AssetManager.ENEMY);
-        backgroundTex = assetManager.getTexture(AssetManager.BACKGROUND);
+        // Initialize with level 1 background as default
+        backgroundTex = assetManager.getTexture(AssetManager.BACKGROUND_LEVEL1);
         
         // Boss textures from AssetManager
         miniBossTex = assetManager.getTexture(AssetManager.MINI_BOSS);
@@ -361,6 +363,13 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
         }
         
         gameContext.currentLevel = level;
+        
+        // Get appropriate background texture for this level
+        Texture levelBackgroundTex = BackgroundTextureResolver.getTexture(level, assetManager);
+        if (levelBackgroundTex != null) {
+            gameContext.backgroundRenderer.setBackgroundTexture(levelBackgroundTex);
+            gameContext.backgroundTex = levelBackgroundTex;
+        }
         
         // Clear existing objects
         platforms.clear();
