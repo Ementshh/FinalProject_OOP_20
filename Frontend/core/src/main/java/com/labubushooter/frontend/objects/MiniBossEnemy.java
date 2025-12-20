@@ -18,7 +18,7 @@ public class MiniBossEnemy extends BossEnemy {
     private static final float FLASH_INTERVAL = 0.1f;
     private static final float SUPER_JUMP_FLASH_INTERVAL = 0.15f;
     private static final float SUPER_JUMP_WARNING_DURATION = 0.5f;
-    private static final float JUMP_POWER = 500f;
+    private static final float JUMP_POWER = 450f;
     private static final float SUPER_JUMP_POWER = 750f;
     private static final float SUPER_JUMP_COOLDOWN_DURATION = 3.0f;
     

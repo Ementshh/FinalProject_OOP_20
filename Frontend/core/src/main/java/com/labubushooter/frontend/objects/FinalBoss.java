@@ -9,7 +9,7 @@ import com.badlogic.gdx.utils.TimeUtils;
 
 public class FinalBoss extends BossEnemy {
     private static final float LEVEL_WIDTH = 2400f; // Level 4 width
-    private static final float JUMP_POWER = 500f;
+    private static final float JUMP_POWER = 450f;
 
     // Phase system
     private int currentPhase = 1;

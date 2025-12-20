@@ -52,11 +52,11 @@ public class CommonEnemy implements Pool.Poolable {
     private static final long DAMAGE_COOLDOWN = 1000000000L; // 1 second in nanoseconds
 
     // Jump System
-    private static final float JUMP_POWER = 500f;
-    private static final float JUMP_THRESHOLD = 10f;
-    private static final float JUMP_COOLDOWN = 0.8f; // Cooldown between jumps
+    private static final float JUMP_POWER = 450f;
+    private static final float JUMP_THRESHOLD = 30f;
+    private static final float JUMP_COOLDOWN = 1.5f; // Cooldown between jumps
     private static final float PLATFORM_DETECTION_RANGE = 150f; // Range to detect if player is on platform above
-    private float jumpCooldownTimer = 0f;
+    private float jumpCooldownTimer = 0.3f;
 
     private static final float GRAVITY = -900f;
     private static final float WIDTH = 60f;
