@@ -129,8 +129,14 @@ public class GameWorld {
     /**
      * Handles enemy spawning using current level's spawner strategy.
      * Delegates to IEnemySpawner implementation.
+     * Note: Level 3 and 5 spawners return false for isActive(), so no enemies spawn.
      */
     private void handleEnemySpawning() {
+        // Explicitly skip spawning for boss levels
+        if (context.currentLevel == 3 || context.currentLevel == 5) {
+            return;
+        }
+        
         if (currentSpawner == null) {
             updateSpawner();
         }
@@ -150,8 +156,15 @@ public class GameWorld {
     /**
      * Spawn initial enemies for current level.
      * Called when loading a new level.
+     * Note: Level 3 and 5 (boss levels) do not spawn common enemies.
      */
     public void spawnInitialEnemies() {
+        // Explicitly skip spawning for boss levels
+        if (context.currentLevel == 3 || context.currentLevel == 5) {
+            Gdx.app.log("GameWorld", "Level " + context.currentLevel + " is boss level - no common enemies");
+            return;
+        }
+        
         if (currentSpawner == null) {
             updateSpawner();
         }

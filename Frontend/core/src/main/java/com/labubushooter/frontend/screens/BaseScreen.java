@@ -130,7 +130,8 @@ public abstract class BaseScreen implements Screen {
     }
     
     /**
-     * Draw a semi-transparent overlay.
+     * Draw a semi-transparent overlay covering the visible viewport area.
+     * This version is camera-aware and covers the current view.
      */
     protected void drawOverlay(float alpha) {
         Gdx.gl.glEnable(GL20.GL_BLEND);
@@ -139,10 +140,34 @@ public abstract class BaseScreen implements Screen {
         context.shapeRenderer.setProjectionMatrix(context.camera.combined);
         context.shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         context.shapeRenderer.setColor(0, 0, 0, alpha);
-        context.shapeRenderer.rect(0, 0, GameContext.VIEWPORT_WIDTH, GameContext.VIEWPORT_HEIGHT);
+        
+        // Cover the visible area based on camera position
+        float left = context.camera.position.x - context.viewport.getWorldWidth() / 2;
+        float bottom = context.camera.position.y - context.viewport.getWorldHeight() / 2;
+        context.shapeRenderer.rect(left, bottom, 
+            context.viewport.getWorldWidth(), 
+            context.viewport.getWorldHeight());
+        
         context.shapeRenderer.end();
         
         Gdx.gl.glDisable(GL20.GL_BLEND);
+    }
+    
+    /**
+     * Draw centered text relative to camera position.
+     */
+    protected void drawCenteredTextAtCamera(String text, float y, boolean useLargeFont) {
+        float centerX = context.camera.position.x;
+        
+        if (useLargeFont) {
+            context.layout.setText(context.font, text);
+            float x = centerX - context.layout.width / 2;
+            context.font.draw(context.batch, text, x, y);
+        } else {
+            context.layout.setText(context.smallFont, text);
+            float x = centerX - context.layout.width / 2;
+            context.smallFont.draw(context.batch, text, x, y);
+        }
     }
     
     /**
