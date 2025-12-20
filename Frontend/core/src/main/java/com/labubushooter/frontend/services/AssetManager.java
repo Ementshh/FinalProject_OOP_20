@@ -47,7 +47,6 @@ public class AssetManager implements Disposable {
     public static final String BOSS = "boss";
     public static final String PISTOL = "pistol";
     public static final String MAC10 = "mac10";
-    public static final String BACKGROUND = "background";
     public static final String BACKGROUND_LEVEL1 = "background_level1";
     public static final String BACKGROUND_LEVEL2_TO_4 = "background_level2to4";
     public static final String BACKGROUND_LEVEL5 = "background_level5";
@@ -134,7 +133,6 @@ public class AssetManager implements Disposable {
         loadTexture(BOSS, "boss.png");
         loadTexture(PISTOL, "pistol.png");
         loadTexture(MAC10, "mac10.png");
-        loadTexture(BACKGROUND, "background.png");
         loadTexture(BACKGROUND_LEVEL1, "bglevel1.png");
         loadTexture(BACKGROUND_LEVEL2_TO_4, "bglevel2to4.png");
         loadTexture(BACKGROUND_LEVEL5, "bglevel5.png");
