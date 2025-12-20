@@ -43,6 +43,8 @@ public class AssetManager implements Disposable {
     public static final String EXIT_DOOR = "door";
     public static final String BULLET = "bullet";
     public static final String ENEMY = "enemy";
+    public static final String ENEMY_FRAME1 = "enemy_frame1";
+    public static final String ENEMY_FRAME2 = "enemy_frame2";
     public static final String MINI_BOSS = "miniboss";
     public static final String BOSS = "boss";
     public static final String PISTOL = "pistol";
@@ -129,6 +131,8 @@ public class AssetManager implements Disposable {
         loadTexture(EXIT_DOOR, "door.png");
         loadTexture(BULLET, "bullet.png");
         loadTexture(ENEMY, "enemy.png");
+        loadTexture(ENEMY_FRAME1, "enemyframe1.png");
+        loadTexture(ENEMY_FRAME2, "enemyframe2.png");
         loadTexture(MINI_BOSS, "miniboss.png");
         loadTexture(BOSS, "boss.png");
         loadTexture(PISTOL, "pistol.png");

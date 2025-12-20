@@ -7,15 +7,18 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
 import com.badlogic.gdx.utils.TimeUtils;
+import com.labubushooter.frontend.animation.WalkingAnimation;
 
 /**
- * Common enemy entity with simple homing behavior.
+ * Common enemy entity with simple homing behavior and walking animation.
  * 
  * Design Patterns:
  * - Object Pool: Implements Pool.Poolable for efficient memory management
+ * - Composition: Uses WalkingAnimation for animation behavior
  * 
  * SOLID Principles:
  * - Single Responsibility: Handles enemy entity logic
+ * - Dependency Inversion: Depends on AnimationStrategy abstraction
  */
 public class CommonEnemy implements Pool.Poolable {
     public Rectangle collider;
@@ -30,7 +33,7 @@ public class CommonEnemy implements Pool.Poolable {
     private float velocityX;
     private float velocityY = 0;
     private float speed;
-    private final Texture texture;
+    private final WalkingAnimation animation;
     private float damageAmount;
     
     // Factory multipliers
@@ -54,8 +57,8 @@ public class CommonEnemy implements Pool.Poolable {
     private static final float SPAWN_Y = 300f;
     private static final float BASE_SPEED = 120f;
 
-    public CommonEnemy(Texture texture) {
-        this.texture = texture;
+    public CommonEnemy(Texture frame1, Texture frame2) {
+        this.animation = new WalkingAnimation(frame1, frame2);
         this.collider = new Rectangle(0, SPAWN_Y, WIDTH, HEIGHT);
         this.bounds = this.collider;
         this.spawned = false;
@@ -111,6 +114,10 @@ public class CommonEnemy implements Pool.Poolable {
     public void update(float delta, Array<Platform> platforms, Array<Ground> grounds) {
         if (!spawned || health <= 0) return;
 
+        // Update animation
+        animation.update(delta);
+        animation.setFacingLeft(velocityX < 0);
+
         // Update jump cooldown
         if (jumpCooldownTimer > 0) {
             jumpCooldownTimer -= delta;
@@ -157,6 +164,9 @@ public class CommonEnemy implements Pool.Poolable {
                 }
             }
         }
+
+        // Update animation grounded state based on collision detection
+        animation.setGrounded(grounded);
 
         // Reset if fell below ground
         if (collider.y < 0) {
@@ -260,7 +270,19 @@ public class CommonEnemy implements Pool.Poolable {
 
     public void draw(SpriteBatch batch) {
         if (!spawned) return;
-        batch.draw(texture, collider.x, collider.y, collider.width, collider.height);
+        Texture currentFrame = animation.getCurrentFrame();
+        boolean flipX = animation.isFacingLeft();
+        
+        // Draw with mirroring based on facing direction
+        // Using originX = 0 means flip happens around left edge
+        batch.draw(currentFrame, 
+                  collider.x, collider.y, 
+                  0f, 0f,  // originX, originY (0,0 = flip around left-bottom corner)
+                  collider.width, collider.height,
+                  1f, 1f, 0f,  // scaleX, scaleY, rotation
+                  0, 0,  // srcX, srcY
+                  currentFrame.getWidth(), currentFrame.getHeight(),
+                  flipX, false);  // flipX, flipY
     }
 
     @Override
@@ -279,6 +301,7 @@ public class CommonEnemy implements Pool.Poolable {
         this.grounded = false;
         this.lastDamageTime = 0;
         this.jumpCooldownTimer = 0f;
+        this.animation.reset();
     }
 
     public boolean isActive() {
