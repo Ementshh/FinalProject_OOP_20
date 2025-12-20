@@ -46,6 +46,11 @@ public class AssetManager implements Disposable {
     public static final String ENEMY_FRAME1 = "enemy_frame1";
     public static final String ENEMY_FRAME2 = "enemy_frame2";
     public static final String MINI_BOSS = "miniboss";
+    public static final String MINI_BOSS_WALK_FRAME1 = "miniboss_walk_frame1";
+    public static final String MINI_BOSS_WALK_FRAME2 = "miniboss_walk_frame2";
+    public static final String MINI_BOSS_CROUCH = "miniboss_crouch";
+    public static final String MINI_BOSS_DASHPREP = "miniboss_dashprep";
+    public static final String MINI_BOSS_DASH = "miniboss_dash";
     public static final String BOSS = "boss";
     public static final String PISTOL = "pistol";
     public static final String MAC10 = "mac10";
@@ -134,6 +139,11 @@ public class AssetManager implements Disposable {
         loadTexture(ENEMY_FRAME1, "enemyframe1.png");
         loadTexture(ENEMY_FRAME2, "enemyframe2.png");
         loadTexture(MINI_BOSS, "miniboss.png");
+        loadTexture(MINI_BOSS_WALK_FRAME1, "miniboss_walk_frame1.png");
+        loadTexture(MINI_BOSS_WALK_FRAME2, "miniboss_walk_frame2.png");
+        loadTexture(MINI_BOSS_CROUCH, "miniboss_crouch.png");
+        loadTexture(MINI_BOSS_DASHPREP, "miniboss_dashprep.png");
+        loadTexture(MINI_BOSS_DASH, "miniboss_dash.png");
         loadTexture(BOSS, "boss.png");
         loadTexture(PISTOL, "pistol.png");
         loadTexture(MAC10, "mac10.png");

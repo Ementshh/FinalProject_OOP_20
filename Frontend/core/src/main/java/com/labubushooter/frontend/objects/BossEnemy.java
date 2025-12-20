@@ -119,11 +119,33 @@ public abstract class BossEnemy {
     }
 
     public void draw(SpriteBatch batch) {
-        // Draw sprite
-        batch.draw(getCurrentTexture(), bounds.x, bounds.y, bounds.width, bounds.height);
+        // Draw sprite with flipping support
+        Texture currentTexture = getCurrentTexture();
+        boolean flipX = isFacingLeft();
+        
+        // Draw with mirroring based on facing direction
+        // Using originX = 0 means flip happens around left-bottom corner
+        batch.draw(currentTexture, 
+                  bounds.x, bounds.y, 
+                  0f, 0f,  // originX, originY (0,0 = flip around left-bottom corner)
+                  bounds.width, bounds.height,
+                  1f, 1f, 0f,  // scaleX, scaleY, rotation
+                  0, 0,  // srcX, srcY
+                  currentTexture.getWidth(), currentTexture.getHeight(),
+                  flipX, false);  // flipX, flipY
 
         // Draw health bar above sprite
         drawHealthBar(batch);
+    }
+    
+    /**
+     * Checks if the boss is facing left.
+     * Override in subclasses to provide facing direction.
+     * 
+     * @return true if facing left, false if facing right
+     */
+    protected boolean isFacingLeft() {
+        return false; // Default: face right
     }
 
     protected Texture getCurrentTexture() {

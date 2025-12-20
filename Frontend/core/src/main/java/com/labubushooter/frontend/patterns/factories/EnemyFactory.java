@@ -100,19 +100,26 @@ public class EnemyFactory {
      * Creates a Mini Boss enemy.
      * Direct instantiation as bosses are unique, not pooled.
      * 
-     * @param texture Boss texture
+     * @param walkFrame1 First walking frame texture
+     * @param walkFrame2 Second walking frame texture
+     * @param crouchTex Crouch texture (for super jump prep)
+     * @param dashPrepTex Dash preparation texture
+     * @param dashTex Dash texture
      * @param dashFlashTex Dash flash effect texture
      * @param superJumpFlashTex Super jump flash effect texture
      * @param spawnX X position to spawn at
-     * @param levelWidth Level width for boundary
+     * @param spawnY Y position to spawn at
      * @return New MiniBossEnemy instance
      */
-    public MiniBossEnemy createMiniBoss(Texture texture, Texture dashFlashTex, 
-                                        Texture superJumpFlashTex, float spawnX, float levelWidth) {
-        MiniBossEnemy boss = new MiniBossEnemy(texture, dashFlashTex, superJumpFlashTex);
-        boss.init(spawnX, levelWidth);
+    public MiniBossEnemy createMiniBoss(Texture walkFrame1, Texture walkFrame2, 
+                                        Texture crouchTex, Texture dashPrepTex, Texture dashTex,
+                                        Texture dashFlashTex, Texture superJumpFlashTex,
+                                        float spawnX, float spawnY) {
+        MiniBossEnemy boss = new MiniBossEnemy(walkFrame1, walkFrame2, crouchTex, 
+                                               dashPrepTex, dashTex, dashFlashTex, superJumpFlashTex);
+        boss.init(spawnX, spawnY);
         
-        Gdx.app.log("EnemyFactory", "Created Mini Boss at X: " + spawnX);
+        Gdx.app.log("EnemyFactory", "Created Mini Boss at X: " + spawnX + ", Y: " + spawnY);
         return boss;
     }
     

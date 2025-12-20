@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.TimeUtils;
+import com.labubushooter.frontend.animation.MiniBossAnimationStrategy;
 
 public class MiniBossEnemy extends BossEnemy {
     private static final float LEVEL_WIDTH = 2400f; // Level 3 width
@@ -61,10 +62,22 @@ public class MiniBossEnemy extends BossEnemy {
     private static final float MAX_SUPER_JUMP_TIME = 5.0f;
     private static final float HEIGHT_THRESHOLD = 50f; // Player must be at least 50 units above boss
 
-    public MiniBossEnemy(Texture tex, Texture dashFlashTex, Texture superJumpFlashTex) {
-        super(0, 0, 60, 90, 120, 5.0f, tex, dashFlashTex);
+    // Animation system
+    private MiniBossAnimationStrategy animation;
+    private boolean facingLeft;
+
+    public MiniBossEnemy(Texture walkFrame1, Texture walkFrame2, Texture crouchTex,
+                         Texture dashPrepTex, Texture dashTex, Texture dashFlashTex,
+                         Texture superJumpFlashTex) {
+        super(0, 0, 60, 90, 120, 5.0f, walkFrame1, dashFlashTex);
         this.superJumpFlashTexture = superJumpFlashTex;
         this.dashCooldown = DASH_COOLDOWN_DURATION;
+        this.facingLeft = false;
+        
+        // Initialize animation strategy
+        this.animation = new MiniBossAnimationStrategy(
+            walkFrame1, walkFrame2, crouchTex, dashPrepTex, dashTex);
+        
         resetState();
     }
 
@@ -99,6 +112,12 @@ public class MiniBossEnemy extends BossEnemy {
         superJumpFlashTimer = 0;
         superJumpWarningTimer = 0;
         shouldSuperJumpFlash = false;
+        
+        // Reset animation
+        if (animation != null) {
+            animation.reset();
+        }
+        facingLeft = false;
     }
 
     @Override
@@ -112,6 +131,9 @@ public class MiniBossEnemy extends BossEnemy {
             active = false;
             return;
         }
+        
+        // Update animation
+        animation.update(delta);
         
         // Update smart jump cooldown
         if (smartJumpCooldown > 0) {
@@ -157,6 +179,10 @@ public class MiniBossEnemy extends BossEnemy {
                 // Calculate dash direction toward player
                 float dirX = player.bounds.x - bounds.x;
                 dashDirectionX = dirX > 0 ? 1f : -1f;
+                
+                // Update facing direction
+                facingLeft = dashDirectionX < 0;
+                animation.setFacingLeft(facingLeft);
 
                 Gdx.app.log("MiniBoss", "DASH!");
             }
@@ -262,6 +288,10 @@ public class MiniBossEnemy extends BossEnemy {
             if (Math.abs(directionX) > 10) {
                 float moveX = Math.signum(directionX) * NORMAL_SPEED * delta;
                 bounds.x += moveX;
+                
+                // Update facing direction based on movement
+                facingLeft = directionX < 0;
+                animation.setFacingLeft(facingLeft);
 
                 // Boundary check for normal movement
                 if (bounds.x < 0)
@@ -278,6 +308,10 @@ public class MiniBossEnemy extends BossEnemy {
 
         // Apply gravity and platform collision
         applyGravityAndCollision(delta, platforms, grounds);
+        
+        // Update animation state based on current game state
+        animation.setState(isSuperJumpWarning, isWarning, isDashing, grounded);
+        animation.setGrounded(grounded);
 
         // Collision with player (melee damage)
         if (collider.overlaps(player.bounds)) {
@@ -362,18 +396,12 @@ public class MiniBossEnemy extends BossEnemy {
 
     @Override
     protected Texture getCurrentTexture() {
-        // Priority: Superjump warning (yellow) > Dash warning (white) > Normal
-        if (isSuperJumpWarning && shouldSuperJumpFlash) {
-            return superJumpFlashTexture;
-        }
-        if (isWarning && shouldFlash) {
-            return flashTexture;
-        }
-        return texture;
+        // Use animation strategy to get current frame
+        return animation.getCurrentFrame();
     }
-
+    
     @Override
-    public void draw(SpriteBatch batch) {
-        super.draw(batch);
+    protected boolean isFacingLeft() {
+        return facingLeft;
     }
 }

@@ -12,5 +12,10 @@ ground_base.png
 libgdx.png
 mac10.png
 miniboss.png
+miniboss_crouch.png
+miniboss_dash.png
+miniboss_dashprep.png
+miniboss_walk_frame1.png
+miniboss_walk_frame2.png
 pistol.png
 player.png
