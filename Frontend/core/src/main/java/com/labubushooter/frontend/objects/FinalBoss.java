@@ -43,6 +43,12 @@ public class FinalBoss extends BossEnemy {
     private static final float BIG_BULLET_DAMAGE = 15.0f;
     private static final float BIG_BULLET_WIDTH = 80f;
     private static final float BIG_BULLET_HEIGHT = 80f;
+    
+    // Smart jump system
+    private static final float SMART_JUMP_COOLDOWN = 0.8f;
+    private static final float PLATFORM_REACH_RANGE = 250f;
+    private static final float AGGRESSIVE_JUMP_RANGE = 180f;
+    private float smartJumpCooldown = 0f;
 
     // Phase configurations
     private float currentSpeed;
@@ -97,6 +103,7 @@ public class FinalBoss extends BossEnemy {
         phaseTransitionTimer = 0f;
         shouldFlash = false;
         lastDamageTime = TimeUtils.nanoTime();
+        smartJumpCooldown = 0f;
 
         // Upward shot initialization
         upwardShotTimer = 0;
@@ -123,6 +130,11 @@ public class FinalBoss extends BossEnemy {
         if (isDead()) {
             active = false;
             return;
+        }
+        
+        // Update smart jump cooldown
+        if (smartJumpCooldown > 0) {
+            smartJumpCooldown -= delta;
         }
 
         // Update phase transition
@@ -259,12 +271,8 @@ public class FinalBoss extends BossEnemy {
             updateCollider();
         }
 
-        // Jump to reach elevated platforms or player (but not during upward shot
-        // tracking)
-        if (grounded && player.bounds.y > bounds.y + 100 && Math.abs(directionX) < 150 && !playerWasAbove) {
-            velY = JUMP_POWER;
-            grounded = false;
-        }
+        // Smart jump logic - enhanced pursuit
+        checkAndPerformSmartJump(player, platforms);
 
         // Apply gravity and platform collision
         applyGravityAndCollision(delta, platforms, grounds);
@@ -278,6 +286,88 @@ public class FinalBoss extends BossEnemy {
                 Gdx.app.log("Boss", "Hit player for " + damage + " damage");
             }
         }
+    }
+    
+    /**
+     * Smart jump logic for Final Boss.
+     * Most aggressive jumping behavior - adapts based on phase.
+     */
+    private void checkAndPerformSmartJump(Player player, Array<Platform> platforms) {
+        // Don't jump during upward shot sequence
+        if (!grounded || smartJumpCooldown > 0 || playerWasAbove || isUpwardShotWarning || isUpwardShotStunned) {
+            return;
+        }
+
+        float bossCenterX = bounds.x + bounds.width / 2f;
+        float playerCenterX = player.bounds.x + player.bounds.width / 2f;
+        float horizontalDistance = Math.abs(bossCenterX - playerCenterX);
+        float verticalDifference = player.bounds.y - bounds.y;
+
+        // Phase-based aggression multiplier
+        float aggressionMultiplier = 1.0f + (currentPhase - 1) * 0.3f;
+        float effectiveRange = AGGRESSIVE_JUMP_RANGE * aggressionMultiplier;
+
+        // Condition 1: Player is above boss
+        boolean playerIsAbove = verticalDifference > HEIGHT_THRESHOLD;
+        
+        // Condition 2: Horizontally within effective range
+        boolean horizontallyClose = horizontalDistance < effectiveRange;
+        
+        // Condition 3: Player is on a reachable height
+        boolean reachableHeight = verticalDifference > 30f && verticalDifference < 400f;
+        
+        // Condition 4: X-axis overlap detection
+        boolean xAxisOverlap = (bounds.x < player.bounds.x + player.bounds.width) && 
+                               (bounds.x + bounds.width > player.bounds.x);
+        boolean noDirectCollision = !collider.overlaps(player.bounds);
+        
+        // Condition 5: Player on platform above
+        boolean playerOnPlatform = isPlayerOnPlatformAbove(player, platforms);
+
+        if (grounded && playerIsAbove && reachableHeight) {
+            boolean shouldJump = false;
+            float jumpPower = JUMP_POWER;
+            
+            // Priority 1: Player directly above (X overlap, no Y collision)
+            if (xAxisOverlap && noDirectCollision) {
+                shouldJump = true;
+                jumpPower = JUMP_POWER * 1.1f;
+            }
+            // Priority 2: Player on platform above and within range
+            else if (playerOnPlatform && horizontalDistance < PLATFORM_REACH_RANGE) {
+                shouldJump = true;
+            }
+            // Priority 3: Player nearby and elevated
+            else if (horizontallyClose && verticalDifference > 100f) {
+                shouldJump = true;
+            }
+            
+            if (shouldJump) {
+                velY = jumpPower;
+                grounded = false;
+                smartJumpCooldown = SMART_JUMP_COOLDOWN / aggressionMultiplier;
+            }
+        }
+    }
+
+    /**
+     * Checks if player is standing on a platform above the boss.
+     */
+    private boolean isPlayerOnPlatformAbove(Player player, Array<Platform> platforms) {
+        float bossTop = bounds.y + bounds.height;
+        
+        for (Platform p : platforms) {
+            boolean platformAboveBoss = p.bounds.y > bossTop;
+            boolean reachable = p.bounds.y - bossTop < 300f;
+            boolean playerOnPlatform = Math.abs(player.bounds.y - (p.bounds.y + p.bounds.height)) < 25f;
+            boolean playerOverlapsPlatform = player.bounds.x < p.bounds.x + p.bounds.width &&
+                                             player.bounds.x + player.bounds.width > p.bounds.x;
+            
+            if (platformAboveBoss && reachable && playerOnPlatform && playerOverlapsPlatform) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void updatePhase() {

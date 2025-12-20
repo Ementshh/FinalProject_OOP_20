@@ -1,13 +1,12 @@
 package com.labubushooter.frontend.systems;
 
-import java.util.Random;
-
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.utils.TimeUtils;
 import com.labubushooter.frontend.core.GameContext;
 import com.labubushooter.frontend.objects.Bullet;
 import com.labubushooter.frontend.objects.Coin;
 import com.labubushooter.frontend.objects.CommonEnemy;
+import com.labubushooter.frontend.systems.spawner.EnemySpawnerFactory;
+import com.labubushooter.frontend.systems.spawner.IEnemySpawner;
 
 /**
  * GameWorld manages entity lifecycle, spawning, and world state.
@@ -15,34 +14,24 @@ import com.labubushooter.frontend.objects.CommonEnemy;
  * SOLID Principles Applied:
  * - Single Responsibility: Only handles entity management and spawning
  * - Open/Closed: New entity types can be added without modifying core logic
- * - Dependency Inversion: Depends on abstractions (pools, arrays) not concrete implementations
+ * - Dependency Inversion: Depends on abstractions (pools, arrays, IEnemySpawner)
  * 
  * Design Patterns:
  * - Factory Method: Provides entity creation through pools
  * - Object Pool: Uses LibGDX Pool for efficient memory management
  * - Facade: Provides simplified interface for entity management
+ * - Strategy Pattern: Uses IEnemySpawner for level-specific spawning
  */
 public class GameWorld {
-    
-    // ==================== SPAWN CONSTANTS ====================
-    /** Buffer distance from camera edge for enemy spawning */
-    private static final float SPAWN_BUFFER = 200f;
-    
-    /** Minimum safe distance from player for enemy spawning */
-    private static final float PLAYER_SAFETY_ZONE = 300f;
-    
-    /** Maximum spawn attempts before fallback */
-    private static final int MAX_SPAWN_ATTEMPTS = 20;
     
     // ==================== DEPENDENCIES ====================
     private final GameContext context;
     private final PhysicsSystem physicsSystem;
     private final CollisionSystem collisionSystem;
-    private final Random random;
+    private final EnemySpawnerFactory spawnerFactory;
     
-    // ==================== SPAWN TIMING ====================
-    private long lastEnemySpawnTime;
-    private long nextEnemySpawnDelay;
+    /** Current level's enemy spawner (Strategy Pattern) */
+    private IEnemySpawner currentSpawner;
     
     /**
      * Constructs a GameWorld with required dependencies.
@@ -53,9 +42,20 @@ public class GameWorld {
         this.context = context;
         this.physicsSystem = PhysicsSystem.getInstance();
         this.collisionSystem = CollisionSystem.getInstance();
-        this.random = new Random();
-        this.lastEnemySpawnTime = TimeUtils.nanoTime();
-        resetEnemySpawnTimer();
+        this.spawnerFactory = EnemySpawnerFactory.getInstance();
+        
+        // Initialize spawner for current level
+        updateSpawner();
+    }
+    
+    /**
+     * Update the enemy spawner when level changes.
+     * Called by loadLevel() or when switching levels.
+     */
+    public void updateSpawner() {
+        currentSpawner = spawnerFactory.getSpawner(context.currentLevel);
+        Gdx.app.log("GameWorld", "Spawner updated for level " + context.currentLevel + 
+                   " | Active: " + currentSpawner.isActive());
     }
     
     // ==================== MAIN UPDATE ====================
@@ -82,10 +82,8 @@ public class GameWorld {
             delta
         );
         
-        // Handle enemy spawning (only for non-boss levels)
-        if (context.currentLevel != 3 && context.currentLevel != 5) {
-            handleEnemySpawning();
-        }
+        // Handle enemy spawning via Strategy Pattern
+        handleEnemySpawning();
         
         // Update enemies
         updateEnemies(delta);
@@ -126,83 +124,46 @@ public class GameWorld {
         }
     }
     
-    // ==================== ENEMY MANAGEMENT ====================
+    // ==================== ENEMY MANAGEMENT (Strategy Pattern) ====================
     
     /**
-     * Handles enemy spawning based on timer and level limits.
+     * Handles enemy spawning using current level's spawner strategy.
+     * Delegates to IEnemySpawner implementation.
      */
     private void handleEnemySpawning() {
-        if (TimeUtils.nanoTime() - lastEnemySpawnTime > nextEnemySpawnDelay) {
-            int maxEnemies = context.getMaxEnemiesForLevel(context.currentLevel);
-            
-            if (context.activeEnemies.size < maxEnemies) {
-                spawnEnemy();
-                Gdx.app.log("EnemySpawn", "Active enemies: " + context.activeEnemies.size + "/" + maxEnemies);
-            }
-            
-            resetEnemySpawnTimer();
-            lastEnemySpawnTime = TimeUtils.nanoTime();
+        if (currentSpawner == null) {
+            updateSpawner();
         }
+        
+        // Delegate spawning to current level's spawner (Strategy Pattern)
+        currentSpawner.trySpawnEnemy(
+            context.enemyPool,
+            context.activeEnemies,
+            context.player,
+            context.currentLevel,
+            context.currentLevelWidth,
+            context.camera.position.x,
+            context.viewport.getWorldWidth()
+        );
     }
     
     /**
-     * Spawns an enemy at a valid location outside the camera view.
-     * Uses intelligent positioning to avoid spawning too close to player.
+     * Spawn initial enemies for current level.
+     * Called when loading a new level.
      */
-    public void spawnEnemy() {
-        float cameraLeft = context.camera.position.x - context.viewport.getWorldWidth() / 2;
-        float cameraRight = context.camera.position.x + context.viewport.getWorldWidth() / 2;
+    public void spawnInitialEnemies() {
+        if (currentSpawner == null) {
+            updateSpawner();
+        }
         
-        float spawnX = calculateSpawnPosition(cameraLeft, cameraRight);
+        currentSpawner.spawnInitialEnemies(
+            context.enemyPool,
+            context.activeEnemies,
+            context.player,
+            context.currentLevel
+        );
         
-        CommonEnemy enemy = context.enemyPool.obtain();
-        enemy.init(spawnX, context.player, context.currentLevel);
-        context.activeEnemies.add(enemy);
-        
-        Gdx.app.log("EnemySpawn", "Spawned at X: " + spawnX);
-    }
-    
-    /**
-     * Calculates a valid spawn position for an enemy.
-     * 
-     * @param cameraLeft Left edge of camera view
-     * @param cameraRight Right edge of camera view
-     * @return X position for enemy spawn
-     */
-    private float calculateSpawnPosition(float cameraLeft, float cameraRight) {
-        float spawnX;
-        int attempts = 0;
-        
-        do {
-            boolean spawnLeft = random.nextBoolean();
-            
-            if (spawnLeft) {
-                spawnX = cameraLeft - SPAWN_BUFFER - random.nextFloat() * 100f;
-                if (spawnX < 0) {
-                    spawnX = cameraRight + SPAWN_BUFFER + random.nextFloat() * 100f;
-                }
-            } else {
-                spawnX = cameraRight + SPAWN_BUFFER + random.nextFloat() * 100f;
-                if (spawnX > context.currentLevelWidth - 100f) {
-                    spawnX = cameraLeft - SPAWN_BUFFER - random.nextFloat() * 100f;
-                }
-            }
-            
-            attempts++;
-            
-            if (attempts >= MAX_SPAWN_ATTEMPTS) {
-                // Fallback: spawn at opposite end of level from player
-                if (context.player.bounds.x < context.currentLevelWidth / 2) {
-                    spawnX = context.currentLevelWidth - 200f;
-                } else {
-                    spawnX = 100f;
-                }
-                break;
-            }
-        } while (Math.abs(spawnX - context.player.bounds.x) < PLAYER_SAFETY_ZONE ||
-                 (spawnX >= cameraLeft && spawnX <= cameraRight));
-        
-        return spawnX;
+        Gdx.app.log("GameWorld", "Initial enemies spawned for level " + context.currentLevel);
     }
     
     /**
@@ -220,28 +181,6 @@ public class GameWorld {
                 context.enemyPool.free(enemy);
             }
         }
-    }
-    
-    /**
-     * Resets enemy spawn timer with level-appropriate delays.
-     */
-    public void resetEnemySpawnTimer() {
-        long minSpawn, maxSpawn;
-        switch (context.currentLevel) {
-            case 2:
-                minSpawn = GameContext.LEVEL2_MIN_SPAWN;
-                maxSpawn = GameContext.LEVEL2_MAX_SPAWN;
-                break;
-            case 4:
-                minSpawn = GameContext.LEVEL4_MIN_SPAWN;
-                maxSpawn = GameContext.LEVEL4_MAX_SPAWN;
-                break;
-            default:
-                minSpawn = GameContext.LEVEL1_MIN_SPAWN;
-                maxSpawn = GameContext.LEVEL1_MAX_SPAWN;
-                break;
-        }
-        nextEnemySpawnDelay = minSpawn + (long)(random.nextFloat() * (maxSpawn - minSpawn));
     }
     
     // ==================== COIN MANAGEMENT ====================
@@ -360,9 +299,11 @@ public class GameWorld {
         }
         context.activeCoins.clear();
         
-        // Reset spawn timer
-        lastEnemySpawnTime = TimeUtils.nanoTime();
-        resetEnemySpawnTimer();
+        // Update spawner for new level and reset timer
+        updateSpawner();
+        if (currentSpawner != null) {
+            currentSpawner.resetSpawnTimer();
+        }
         
         Gdx.app.log("GameWorld", "All entities cleared");
     }

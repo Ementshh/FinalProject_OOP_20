@@ -9,32 +9,22 @@ import com.labubushooter.frontend.objects.CommonEnemy;
  * 
  * State Pattern Implementation:
  * - Terminal state when health reaches 0
- * - Handles death animation/effects
- * - Marks enemy as inactive for pool return
+ * - Immediately marks enemy for removal (no animation delay)
+ * - Prevents issues with rapid fire weapons like Mac10
  */
 public class DeadState implements EnemyState {
     
-    private static final float DEATH_ANIMATION_DURATION = 0.3f;
-    
-    private float deathTimer = 0f;
-    
     @Override
     public void enter(CommonEnemy enemy) {
-        deathTimer = 0f;
-        //Gdx.app.log("EnemyState", "Enemy entered DEAD state");
+        // Immediately mark for removal when entering dead state
+        enemy.markForRemoval();
+        Gdx.app.log("EnemyState", "Enemy entered DEAD state - marked for removal");
     }
     
     @Override
     public void update(CommonEnemy enemy, float delta) {
-        deathTimer += delta;
-        
-        // Death animation/fade out effect
-        // (Can be implemented in enemy's draw method)
-        
-        if (deathTimer >= DEATH_ANIMATION_DURATION) {
-            // Mark as inactive for pool return
-            enemy.markForRemoval();
-        }
+        // No update logic needed - enemy is already marked for removal
+        // The GameWorld will handle pool return on next update cycle
     }
     
     @Override

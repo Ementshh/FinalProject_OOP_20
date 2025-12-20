@@ -21,6 +21,11 @@ public class MiniBossEnemy extends BossEnemy {
     private static final float JUMP_POWER = 500f;
     private static final float SUPER_JUMP_POWER = 750f;
     private static final float SUPER_JUMP_COOLDOWN_DURATION = 3.0f;
+    
+    // Smart jump system
+    private static final float SMART_JUMP_COOLDOWN = 1.0f;
+    private static final float PLATFORM_REACH_RANGE = 200f;
+    private float smartJumpCooldown = 0f;
 
     // Dash system timers
     private float dashCooldown;
@@ -83,6 +88,7 @@ public class MiniBossEnemy extends BossEnemy {
         dashStunTimer = 0;
         flashTimer = 0;
         dashDirectionX = 0;
+        smartJumpCooldown = 0f;
 
         // Superjump initialization
         superJumpTimer = 0;
@@ -105,6 +111,11 @@ public class MiniBossEnemy extends BossEnemy {
         if (isDead()) {
             active = false;
             return;
+        }
+        
+        // Update smart jump cooldown
+        if (smartJumpCooldown > 0) {
+            smartJumpCooldown -= delta;
         }
 
         // Update dash cooldown
@@ -261,11 +272,8 @@ public class MiniBossEnemy extends BossEnemy {
                 updateCollider();
             }
 
-            // Normal jump if player is above (but not triggering superjump)
-            if (grounded && player.bounds.y > bounds.y + 50 && Math.abs(directionX) < 100 && !playerWasAbove) {
-                velY = JUMP_POWER;
-                grounded = false;
-            }
+            // Smart jump logic - replaces the old simple jump
+            checkAndPerformSmartJump(player, platforms);
         }
 
         // Apply gravity and platform collision
@@ -280,6 +288,76 @@ public class MiniBossEnemy extends BossEnemy {
                 Gdx.app.log("MiniBoss", "Hit player for " + damage + " damage");
             }
         }
+    }
+    
+    /**
+     * Smart jump logic for MiniBoss to reach player on platforms.
+     * More aggressive than common enemy.
+     */
+    private void checkAndPerformSmartJump(Player player, Array<Platform> platforms) {
+        if (!grounded || smartJumpCooldown > 0 || playerWasAbove) {
+            return; // Don't interfere with superjump
+        }
+
+        float bossCenterX = bounds.x + bounds.width / 2f;
+        float playerCenterX = player.bounds.x + player.bounds.width / 2f;
+        float horizontalDistance = Math.abs(bossCenterX - playerCenterX);
+        float verticalDifference = player.bounds.y - bounds.y;
+
+        // Condition 1: Player is above boss
+        boolean playerIsAbove = verticalDifference > HEIGHT_THRESHOLD;
+        
+        // Condition 2: Horizontally close enough
+        boolean horizontallyClose = horizontalDistance < bounds.width * 3;
+        
+        // Condition 3: Player is on a reachable height
+        boolean reachableHeight = verticalDifference > 30f && verticalDifference < 350f;
+        
+        // Condition 4: X-axis overlap but no collision
+        boolean xAxisOverlap = (bounds.x < player.bounds.x + player.bounds.width) && 
+                               (bounds.x + bounds.width > player.bounds.x);
+        boolean noDirectCollision = !collider.overlaps(player.bounds);
+        
+        // Condition 5: Player on platform above
+        boolean playerOnPlatform = isPlayerOnPlatformAbove(player, platforms);
+
+        if (grounded && playerIsAbove && reachableHeight) {
+            boolean shouldJump = false;
+            
+            if (xAxisOverlap && noDirectCollision) {
+                shouldJump = true;
+            } else if (horizontallyClose) {
+                shouldJump = true;
+            } else if (playerOnPlatform && horizontalDistance < PLATFORM_REACH_RANGE) {
+                shouldJump = true;
+            }
+            
+            if (shouldJump) {
+                velY = JUMP_POWER;
+                grounded = false;
+                smartJumpCooldown = SMART_JUMP_COOLDOWN;
+            }
+        }
+    }
+
+    /**
+     * Checks if player is standing on a platform above the boss.
+     */
+    private boolean isPlayerOnPlatformAbove(Player player, Array<Platform> platforms) {
+        float bossTop = bounds.y + bounds.height;
+        
+        for (Platform p : platforms) {
+            boolean platformAboveBoss = p.bounds.y > bossTop;
+            boolean reachable = p.bounds.y - bossTop < 250f;
+            boolean playerOnPlatform = Math.abs(player.bounds.y - (p.bounds.y + p.bounds.height)) < 20f;
+            boolean playerOverlapsPlatform = player.bounds.x < p.bounds.x + p.bounds.width &&
+                                             player.bounds.x + player.bounds.width > p.bounds.x;
+            
+            if (platformAboveBoss && reachable && playerOnPlatform && playerOverlapsPlatform) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

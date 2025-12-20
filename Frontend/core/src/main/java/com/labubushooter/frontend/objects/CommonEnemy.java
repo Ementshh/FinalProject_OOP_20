@@ -54,6 +54,9 @@ public class CommonEnemy implements Pool.Poolable {
     // Jump System
     private static final float JUMP_POWER = 500f;
     private static final float JUMP_THRESHOLD = 10f;
+    private static final float JUMP_COOLDOWN = 0.8f; // Cooldown between jumps
+    private static final float PLATFORM_DETECTION_RANGE = 150f; // Range to detect if player is on platform above
+    private float jumpCooldownTimer = 0f;
 
     private static final float GRAVITY = -900f;
     private static final float WIDTH = 60f;
@@ -81,6 +84,7 @@ public class CommonEnemy implements Pool.Poolable {
     public void init(float x, Player target, int level) {
         this.collider.setPosition(x, SPAWN_Y);
         this.target = target;
+        this.jumpCooldownTimer = 0f; // Reset jump cooldown
 
         // Set health, damage, and speed based on level
         switch (level) {
@@ -124,10 +128,18 @@ public class CommonEnemy implements Pool.Poolable {
         if (!spawned || target == null)
             return;
         
+        // Update jump cooldown
+        if (jumpCooldownTimer > 0) {
+            jumpCooldownTimer -= delta;
+        }
+        
         // Update current state (State Pattern)
         if (currentState != null) {
             currentState.update(this, delta);
         }
+        
+        // Smart jump logic - check if should jump to reach player
+        checkAndPerformSmartJump(platforms);
 
         // Apply horizontal movement
         collider.x += velocityX * delta;
@@ -197,14 +209,92 @@ public class CommonEnemy implements Pool.Poolable {
         } else {
             velocityX = 0;
         }
+        // Note: Jump logic is now handled in checkAndPerformSmartJump()
+    }
+    
+    /**
+     * Smart jump logic to reach player on platforms or above.
+     * Checks multiple conditions:
+     * 1. Player is above enemy (Y-axis difference)
+     * 2. Player is horizontally aligned (X-axis overlap)
+     * 3. Enemy is grounded and jump is off cooldown
+     * 4. There's a platform above that player might be on
+     */
+    private void checkAndPerformSmartJump(Array<Platform> platforms) {
+        if (target == null || !grounded || jumpCooldownTimer > 0) {
+            return;
+        }
 
-        // Jump Logic
-        if (Math.abs(directionX) <= JUMP_THRESHOLD && grounded) {
-            if (target.bounds.y > collider.y + collider.height) {
-                velocityY = JUMP_POWER;
-                grounded = false;
+        float enemyCenterX = collider.x + collider.width / 2f;
+        float playerCenterX = target.bounds.x + target.bounds.width / 2f;
+        float horizontalDistance = Math.abs(enemyCenterX - playerCenterX);
+        float verticalDifference = target.bounds.y - collider.y;
+
+        // Condition 1: Player is above enemy
+        boolean playerIsAbove = verticalDifference > JUMP_THRESHOLD;
+        
+        // Condition 2: Horizontally aligned (within jump threshold range)
+        boolean horizontallyAligned = horizontalDistance < collider.width * 2;
+        
+        // Condition 3: Player is significantly above (on platform)
+        boolean playerOnPlatformAbove = verticalDifference > 50f && verticalDifference < 300f;
+        
+        // Condition 4: X-axis overlap but no Y collision (player directly above)
+        boolean xAxisOverlap = (collider.x < target.bounds.x + target.bounds.width) && 
+                               (collider.x + collider.width > target.bounds.x);
+        boolean noYCollision = !collider.overlaps(target.bounds);
+        
+        // Condition 5: Check if there's a reachable platform above
+        boolean platformAbove = isPlatformAbove(platforms);
+
+        // Jump if:
+        // - Player is above AND horizontally close (trying to reach player directly)
+        // - OR X-axis overlap but no collision (player directly above)
+        // - OR player is on a platform above and we're close enough horizontally
+        if (playerIsAbove && grounded) {
+            if (xAxisOverlap && noYCollision && playerOnPlatformAbove) {
+                // Player directly above - priority jump
+                performJump();
+            } else if (horizontallyAligned && playerOnPlatformAbove) {
+                // Player nearby and above
+                performJump();
+            } else if (platformAbove && horizontalDistance < PLATFORM_DETECTION_RANGE) {
+                // Platform above, player might be there
+                performJump();
             }
         }
+    }
+
+    /**
+     * Checks if there's a platform above the enemy that could be jumped to.
+     */
+    private boolean isPlatformAbove(Array<Platform> platforms) {
+        float enemyTop = collider.y + collider.height;
+        float enemyCenterX = collider.x + collider.width / 2f;
+        
+        for (Platform p : platforms) {
+            // Platform is above enemy
+            boolean platformAbove = p.bounds.y > enemyTop;
+            // Platform is reachable (within jump height)
+            boolean reachable = p.bounds.y - enemyTop < 200f; // Max jump height ~200 units
+            // Enemy is horizontally aligned with platform
+            boolean horizontallyAligned = enemyCenterX > p.bounds.x - 50 && 
+                                          enemyCenterX < p.bounds.x + p.bounds.width + 50;
+            
+            if (platformAbove && reachable && horizontallyAligned) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Performs a jump with cooldown reset.
+     */
+    private void performJump() {
+        velocityY = JUMP_POWER;
+        grounded = false;
+        jumpCooldownTimer = JUMP_COOLDOWN;
     }
     
     /**
@@ -216,13 +306,27 @@ public class CommonEnemy implements Pool.Poolable {
     }
 
     public void takeDamage(float damage) {
+        // Ignore damage if already dead or not spawned
+        if (!spawned || health <= 0) {
+            return;
+        }
+        
         health -= damage;
+        
         if (health <= 0) {
-            // Transition to Dead state
+            // Immediately mark for removal - don't wait for animation
+            health = 0;
+            spawned = false; // This triggers removal in GameWorld.updateEnemies()
+            
+            // Set DeadState for any cleanup logic
             setState(new DeadState());
+            
+            Gdx.app.log("Enemy", "Enemy killed! Marked for immediate removal.");
         } else {
-            // Transition to Stunned state
-            setState(new StunnedState());
+            // Only stun if not already stunned (prevent state spam from rapid fire)
+            if (!(currentState instanceof StunnedState)) {
+                setState(new StunnedState());
+            }
         }
     }
     
@@ -255,6 +359,7 @@ public class CommonEnemy implements Pool.Poolable {
         this.velocityY = 0;
         this.grounded = false;
         this.lastDamageTime = 0;
+        this.jumpCooldownTimer = 0f;
         this.currentState = new IdleState();
     }
 
