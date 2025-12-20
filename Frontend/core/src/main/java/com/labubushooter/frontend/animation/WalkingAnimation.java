@@ -4,13 +4,15 @@ import com.badlogic.gdx.graphics.Texture;
 
 /**
  * Walking animation implementation using two frames.
+ * Supports grounded state to lock animation when airborne.
  * 
- * Design Pattern: Strategy Pattern
+ * Design Pattern: Strategy Pattern + State Pattern
  * - Implements AnimationStrategy for walking behavior
+ * - Uses grounded state to control animation behavior
  * - Can be easily replaced with other animation strategies
  * 
  * SOLID Principles:
- * - Single Responsibility: Only handles walking animation logic
+ * - Single Responsibility: Only handles walking animation logic with grounded state
  * - Open/Closed: Can be extended without modifying CommonEnemy
  * - Dependency Inversion: CommonEnemy depends on AnimationStrategy interface
  */
@@ -21,6 +23,7 @@ public class WalkingAnimation implements AnimationStrategy {
     private float animationTimer;
     private boolean facingLeft;
     private boolean isFrame1;
+    private boolean isGrounded;
     
     // Animation speed: frame duration in seconds
     private static final float FRAME_DURATION = 0.2f;
@@ -40,10 +43,16 @@ public class WalkingAnimation implements AnimationStrategy {
         this.animationTimer = 0f;
         this.facingLeft = false;
         this.isFrame1 = true;
+        this.isGrounded = true;
     }
     
     @Override
     public void update(float delta) {
+        // Only update animation when grounded
+        if (!isGrounded) {
+            return;
+        }
+        
         animationTimer += delta;
         
         // Switch frame when duration exceeded
@@ -55,6 +64,11 @@ public class WalkingAnimation implements AnimationStrategy {
     
     @Override
     public Texture getCurrentFrame() {
+        // When airborne, always return frame1 (static frame)
+        if (!isGrounded) {
+            return frame1;
+        }
+        // When grounded, return current animation frame
         return isFrame1 ? frame1 : frame2;
     }
     
@@ -69,10 +83,16 @@ public class WalkingAnimation implements AnimationStrategy {
     }
     
     @Override
+    public void setGrounded(boolean grounded) {
+        this.isGrounded = grounded;
+    }
+    
+    @Override
     public void reset() {
         animationTimer = 0f;
         isFrame1 = true;
         facingLeft = false;
+        isGrounded = true;
     }
 }
 

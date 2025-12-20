@@ -165,6 +165,9 @@ public class CommonEnemy implements Pool.Poolable {
             }
         }
 
+        // Update animation grounded state based on collision detection
+        animation.setGrounded(grounded);
+
         // Reset if fell below ground
         if (collider.y < 0) {
             spawned = false;

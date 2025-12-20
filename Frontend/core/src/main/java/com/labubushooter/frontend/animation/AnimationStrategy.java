@@ -44,6 +44,14 @@ public interface AnimationStrategy {
     void setFacingLeft(boolean facingLeft);
     
     /**
+     * Sets whether the entity is grounded (on the ground).
+     * Used to control animation behavior (e.g., pause walking animation when airborne).
+     * 
+     * @param grounded true if grounded, false if airborne
+     */
+    void setGrounded(boolean grounded);
+    
+    /**
      * Resets the animation to its initial state.
      */
     void reset();
