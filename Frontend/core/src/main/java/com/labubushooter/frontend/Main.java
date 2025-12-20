@@ -68,6 +68,8 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
     private Texture pistolTex, mac10Tex, debugTex, levelIndicatorTex, enemyTex;
     private Texture enemyFrame1Tex, enemyFrame2Tex;
     private Texture miniBossTex, bossTex, enemyBulletTex;
+    private Texture miniBossWalkFrame1Tex, miniBossWalkFrame2Tex;
+    private Texture miniBossCrouchTex, miniBossDashPrepTex, miniBossDashTex;
     private Texture whiteFlashTex, redFlashTex, yellowFlashTex;
     private Texture backgroundTex, buttonTex, buttonHoverTex;
     
@@ -152,6 +154,11 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
         
         // Boss textures from AssetManager
         miniBossTex = assetManager.getTexture(AssetManager.MINI_BOSS);
+        miniBossWalkFrame1Tex = assetManager.getTexture(AssetManager.MINI_BOSS_WALK_FRAME1);
+        miniBossWalkFrame2Tex = assetManager.getTexture(AssetManager.MINI_BOSS_WALK_FRAME2);
+        miniBossCrouchTex = assetManager.getTexture(AssetManager.MINI_BOSS_CROUCH);
+        miniBossDashPrepTex = assetManager.getTexture(AssetManager.MINI_BOSS_DASHPREP);
+        miniBossDashTex = assetManager.getTexture(AssetManager.MINI_BOSS_DASH);
         bossTex = assetManager.getTexture(AssetManager.BOSS);
 
         // Weapon textures from AssetManager
@@ -396,7 +403,10 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
         
         // Spawn boss for levels 3 and 5
         if (level == 3) {
-            gameContext.miniBoss = new MiniBossEnemy(miniBossTex, whiteFlashTex, yellowFlashTex);
+            gameContext.miniBoss = new MiniBossEnemy(
+                miniBossWalkFrame1Tex, miniBossWalkFrame2Tex,
+                miniBossCrouchTex, miniBossDashPrepTex, miniBossDashTex,
+                whiteFlashTex, yellowFlashTex);
             gameContext.miniBoss.init(strategy.getBossSpawnX(), strategy.getBossSpawnY());
             gameContext.boss = null;
             Gdx.app.log("Level3", "Mini Boss spawned!");
