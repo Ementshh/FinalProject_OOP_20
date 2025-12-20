@@ -5,6 +5,8 @@ boss.png
 bullet.png
 door.png
 enemy.png
+enemyframe1.png
+enemyframe2.png
 ground.png
 ground_base.png
 libgdx.png

@@ -66,6 +66,7 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
     // Textures
     private Texture playerTex, platformTex, groundTex, bulletTex, exitTex;
     private Texture pistolTex, mac10Tex, debugTex, levelIndicatorTex, enemyTex;
+    private Texture enemyFrame1Tex, enemyFrame2Tex;
     private Texture miniBossTex, bossTex, enemyBulletTex;
     private Texture whiteFlashTex, redFlashTex, yellowFlashTex;
     private Texture backgroundTex, buttonTex, buttonHoverTex;
@@ -144,6 +145,8 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
         groundTex = assetManager.getTexture(AssetManager.GROUND_BASE);
         exitTex = assetManager.getTexture(AssetManager.EXIT_DOOR);
         enemyTex = assetManager.getTexture(AssetManager.ENEMY);
+        enemyFrame1Tex = assetManager.getTexture(AssetManager.ENEMY_FRAME1);
+        enemyFrame2Tex = assetManager.getTexture(AssetManager.ENEMY_FRAME2);
         // Initialize with level 1 background as default
         backgroundTex = assetManager.getTexture(AssetManager.BACKGROUND_LEVEL1);
         
@@ -180,7 +183,7 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
         enemyPool = new Pool<CommonEnemy>() {
             @Override
             protected CommonEnemy newObject() {
-                return new CommonEnemy(enemyTex);
+                return new CommonEnemy(enemyFrame1Tex, enemyFrame2Tex);
             }
         };
         activeEnemies = new Array<>();
