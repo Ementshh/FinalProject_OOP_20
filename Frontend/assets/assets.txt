@@ -8,6 +8,7 @@ enemy.png
 ground.png
 ground_base.png
 libgdx.png
+mac10.png
 miniboss.png
 pistol.png
 player.png
