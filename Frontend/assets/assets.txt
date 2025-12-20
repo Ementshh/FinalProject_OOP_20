@@ -1,4 +1,6 @@
-background.png
+bglevel1.png
+bglevel2to4.png
+bglevel5.png
 boss.png
 bullet.png
 door.png
