@@ -23,8 +23,10 @@ import com.labubushooter.frontend.patterns.levels.*;
 import com.labubushooter.frontend.patterns.weapons.Mac10Strategy;
 import com.labubushooter.frontend.patterns.weapons.PistolStrategy;
 import com.labubushooter.frontend.screens.*;
+import com.labubushooter.frontend.services.AssetManager;
 import com.labubushooter.frontend.services.BackgroundRenderer;
 import com.labubushooter.frontend.services.PlayerApiService;
+import com.labubushooter.frontend.systems.GameWorld;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -40,12 +42,14 @@ import java.util.Random;
  * - State Pattern: ScreenManager manages game state transitions
  * - Strategy Pattern: LevelStrategy for different level configurations
  * - Template Method: BaseScreen provides common screen behavior
+ * - Singleton: AssetManager for centralized resource management
  */
 public class Main extends ApplicationAdapter implements GameContext.GameCallback {
     
     // ==================== CORE SYSTEMS ====================
     private GameContext gameContext;
     private ScreenManager screenManager;
+    private AssetManager assetManager;
     
     // ==================== RESOURCES ====================
     private SpriteBatch batch;
@@ -97,16 +101,20 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
 
     @Override
     public void create() {
-        // 1. Create all resources
+        // 1. Initialize AssetManager first (loads all textures and fonts)
+        assetManager = AssetManager.getInstance();
+        assetManager.initialize();
+        
+        // 2. Create all resources (pools, strategies, etc.)
         createResources();
         
-        // 2. Initialize GameContext with all resources
+        // 3. Initialize GameContext with all resources
         initializeGameContext();
         
-        // 3. Set callback on context
+        // 4. Set callback on context
         gameContext.setCallback(this);
         
-        // 4. Initialize Screen Manager with all screens
+        // 5. Initialize Screen Manager with all screens
         initializeScreenManager();
         
         Gdx.app.log("Main", "Game initialized successfully");
@@ -124,55 +132,39 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
         camera.position.set(VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2, 0);
         camera.update();
         
-        // Fonts
-        font = new BitmapFont();
-        font.getData().setScale(3f);
-        smallFont = new BitmapFont();
-        smallFont.getData().setScale(1.5f);
+        // Fonts from AssetManager
+        font = assetManager.getDefaultFont();
+        smallFont = assetManager.getSmallFont();
         layout = new GlyphLayout();
         
-        // Game textures
-        playerTex = new Texture(Gdx.files.internal("player.png"));
-        playerTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
-        platformTex = new Texture(Gdx.files.internal("ground.png"));
-        platformTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
-        groundTex = new Texture(Gdx.files.internal("ground_base.png"));
-        groundTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
-        exitTex = new Texture(Gdx.files.internal("door.png"));
-        exitTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
-        enemyTex = new Texture(Gdx.files.internal("enemy.png"));
-        enemyTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
-        backgroundTex = new Texture(Gdx.files.internal("background.png"));
-        backgroundTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        // Textures from AssetManager
+        playerTex = assetManager.getTexture(AssetManager.PLAYER);
+        platformTex = assetManager.getTexture(AssetManager.PLATFORM);
+        groundTex = assetManager.getTexture(AssetManager.GROUND_BASE);
+        exitTex = assetManager.getTexture(AssetManager.EXIT_DOOR);
+        enemyTex = assetManager.getTexture(AssetManager.ENEMY);
+        backgroundTex = assetManager.getTexture(AssetManager.BACKGROUND);
         
-        // Boss textures
-        miniBossTex = new Texture(Gdx.files.internal("miniboss.png"));
-        miniBossTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
-        bossTex = new Texture(Gdx.files.internal("boss.png"));
-        bossTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        // Boss textures from AssetManager
+        miniBossTex = assetManager.getTexture(AssetManager.MINI_BOSS);
+        bossTex = assetManager.getTexture(AssetManager.BOSS);
 
-        // Weapon Textures
-        pistolTex = new Texture(Gdx.files.internal("pistol.png"));
-        pistolTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
-        //mac10Tex = new Texture(Gdx.files.internal("mac10.png")); // Jika ada
-        //mac10Tex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
-        //pistolTex = createColorTexture(20, 10, Color.GRAY);
-        mac10Tex = createColorTexture(30, 15, Color.LIME);
+        // Weapon textures from AssetManager
+        pistolTex = assetManager.getTexture(AssetManager.PISTOL);
+        mac10Tex = assetManager.getTexture(AssetManager.MAC10);
         
-        // Generated textures
-        bulletTex = createColorTexture(10, 5, Color.YELLOW);
-        bulletTex = new Texture(Gdx.files.internal("bullet.png"));
-        bulletTex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        // Bullet texture from AssetManager
+        bulletTex = assetManager.getTexture(AssetManager.BULLET);
 
-
-        debugTex = createColorTexture(10, 600, Color.RED);
-        levelIndicatorTex = createColorTexture(30, 30, Color.YELLOW);
-        enemyBulletTex = createColorTexture(8, 8, Color.ORANGE);
-        whiteFlashTex = createColorTexture(60, 90, Color.WHITE);
-        redFlashTex = createColorTexture(60, 100, Color.RED);
-        yellowFlashTex = createColorTexture(60, 90, Color.YELLOW);
-        buttonTex = createColorTexture(500, 80, new Color(0.7f, 0.7f, 0.7f, 1f));
-        buttonHoverTex = createColorTexture(500, 80, new Color(0.9f, 0.9f, 0.9f, 1f));
+        // Generated textures from AssetManager
+        debugTex = assetManager.getTexture(AssetManager.DEBUG_LINE);
+        levelIndicatorTex = assetManager.getTexture(AssetManager.LEVEL_INDICATOR);
+        enemyBulletTex = assetManager.getTexture(AssetManager.ENEMY_BULLET);
+        whiteFlashTex = assetManager.getTexture(AssetManager.FLASH_WHITE);
+        redFlashTex = assetManager.getTexture(AssetManager.FLASH_RED);
+        yellowFlashTex = assetManager.getTexture(AssetManager.FLASH_YELLOW);
+        buttonTex = assetManager.getTexture(AssetManager.BUTTON);
+        buttonHoverTex = assetManager.getTexture(AssetManager.BUTTON_HOVER);
         
         // Object pools
         bulletPool = new Pool<Bullet>() {
@@ -301,6 +293,10 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
         gameContext.playerApi = playerApi;
         gameContext.debugManager = debugManager;
         gameContext.random = random;
+        
+        // Initialize GameWorld system for entity management
+        // GameWorld handles physics, collision, and entity lifecycle
+        gameContext.gameWorld = new GameWorld(gameContext);
     }
     
     private void initializeScreenManager() {
@@ -424,11 +420,10 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
         setupCoinSpawnLocations(level);
         spawnCoinsForLevel();
         
-        // Spawn initial enemies
-        spawnInitialEnemiesForLevel(level);
-        
-        // Reset enemy spawn timer
-        gameContext.resetEnemySpawnTimer();
+        // Spawn initial enemies via GameWorld (uses Strategy Pattern)
+        if (gameContext.gameWorld != null) {
+            gameContext.gameWorld.spawnInitialEnemies();
+        }
         
         Gdx.app.log("Main", "Loaded Level " + level + " | Width: " + gameContext.currentLevelWidth);
     }
@@ -542,37 +537,6 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
         Gdx.app.log("Coins", "Spawned " + activeCoins.size + " coins");
     }
     
-    private void spawnInitialEnemiesForLevel(int level) {
-        if (level != 1 && level != 2 && level != 4) return;
-        
-        float[] spawnPositions = getInitialEnemySpawnPositions(level);
-        for (float spawnX : spawnPositions) {
-            CommonEnemy enemy = enemyPool.obtain();
-            enemy.init(spawnX, player, level);
-            activeEnemies.add(enemy);
-        }
-    }
-    
-    private float[] getInitialEnemySpawnPositions(int level) {
-        switch (level) {
-            case 1: return new float[]{1200f};
-            case 2: return new float[]{1000f};
-            case 4: return new float[]{1400f};
-            default: return new float[]{};
-        }
-    }
-    
-    // ==================== UTILITY ====================
-    
-    public static Texture createColorTexture(int width, int height, Color color) {
-        Pixmap pixmap = new Pixmap(width, height, Pixmap.Format.RGBA8888);
-        pixmap.setColor(color);
-        pixmap.fill();
-        Texture tex = new Texture(pixmap);
-        pixmap.dispose();
-        return tex;
-    }
-    
     // ==================== LIFECYCLE ====================
     
     @Override
@@ -606,36 +570,12 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
         if (batch != null) batch.dispose();
         if (shapeRenderer != null) shapeRenderer.dispose();
         
-        // Dispose fonts
-        if (font != null) font.dispose();
-        if (smallFont != null) smallFont.dispose();
-        
-        // Dispose textures
-        disposeTexture(playerTex);
-        disposeTexture(platformTex);
-        disposeTexture(groundTex);
-        disposeTexture(bulletTex);
-        disposeTexture(exitTex);
-        disposeTexture(pistolTex);
-        disposeTexture(mac10Tex);
-        disposeTexture(debugTex);
-        disposeTexture(levelIndicatorTex);
-        disposeTexture(enemyTex);
-        disposeTexture(backgroundTex);
-        disposeTexture(miniBossTex);
-        disposeTexture(bossTex);
-        disposeTexture(enemyBulletTex);
-        disposeTexture(whiteFlashTex);
-        disposeTexture(redFlashTex);
-        disposeTexture(yellowFlashTex);
-        disposeTexture(buttonTex);
-        disposeTexture(buttonHoverTex);
-        
         // Dispose screen manager
         if (screenManager != null) screenManager.dispose();
-    }
-    
-    private void disposeTexture(Texture texture) {
-        if (texture != null) texture.dispose();
+        
+        // Dispose AssetManager (handles all textures and fonts)
+        if (assetManager != null) assetManager.dispose();
+        
+        Gdx.app.log("Main", "Game disposed successfully");
     }
 }
