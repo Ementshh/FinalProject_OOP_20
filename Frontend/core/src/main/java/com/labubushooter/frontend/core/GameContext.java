@@ -21,12 +21,14 @@ import com.labubushooter.frontend.objects.EnemyBullet;
 import com.labubushooter.frontend.objects.FinalBoss;
 import com.labubushooter.frontend.objects.Ground;
 import com.labubushooter.frontend.objects.MiniBossEnemy;
+import com.labubushooter.frontend.objects.Pickup;
 import com.labubushooter.frontend.objects.Platform;
 import com.labubushooter.frontend.objects.Player;
 import com.labubushooter.frontend.patterns.CoinPattern;
 import com.labubushooter.frontend.patterns.LevelStrategy;
 import com.labubushooter.frontend.patterns.weapons.Mac10Strategy;
 import com.labubushooter.frontend.patterns.weapons.PistolStrategy;
+import com.labubushooter.frontend.patterns.weapons.UnarmedStrategy;
 import com.labubushooter.frontend.services.PlayerApiService;
 import com.labubushooter.frontend.services.PlayerApiService.PlayerData;
 
@@ -36,7 +38,7 @@ import com.labubushooter.frontend.services.PlayerApiService.PlayerData;
  * Implements Facade Pattern for resource access.
  */
 public class GameContext {
-    
+
     /**
      * Callback interface for game actions that need to be handled by Main.
      * This allows screens to trigger level loading, save, restart without
@@ -48,27 +50,27 @@ public class GameContext {
         void restartGame();
         void restartToUsernameInput();
     }
-    
+
     // Callback reference
     public GameCallback callback;
-    
+
     // Constants
     public static final float VIEWPORT_WIDTH = 1066f;
     public static final float VIEWPORT_HEIGHT = 600f;
     public static final float LEVEL_EXIT_THRESHOLD = 100f;
     public static final int MAX_USERNAME_LENGTH = 20;
-    
+
     // Rendering
     public SpriteBatch batch;
     public ShapeRenderer shapeRenderer;
     public OrthographicCamera camera;
     public Viewport viewport;
-    
+
     // Fonts
     public BitmapFont font;
     public BitmapFont smallFont;
     public GlyphLayout layout;
-    
+
     // Textures - Game Objects
     public Texture playerTex;
     public Texture platformTex;
@@ -81,7 +83,12 @@ public class GameContext {
     public Texture levelIndicatorTex;
     public Texture enemyTex;
     public Texture backgroundTex;
-    
+
+    // Textures - Pickups
+    public Texture ammo9mmTex;
+    public Texture ammo45CalTex;
+    public Texture healthPotionTex;
+
     // Textures - Boss
     public Texture miniBossTex;
     public Texture bossTex;
@@ -89,24 +96,24 @@ public class GameContext {
     public Texture whiteFlashTex;
     public Texture redFlashTex;
     public Texture yellowFlashTex;
-    
+
     // Textures - UI
     public Texture buttonTex;
     public Texture buttonHoverTex;
-    
+
     // Rendering Services
     public com.labubushooter.frontend.services.BackgroundRenderer backgroundRenderer;
-    
+
     // Game Systems
     public com.labubushooter.frontend.systems.GameWorld gameWorld;
-    
+
     // Game Objects
     public Player player;
     public Array<Platform> platforms;
     public Array<Ground> grounds;
     public MiniBossEnemy miniBoss;
     public FinalBoss boss;
-    
+
     // Object Pools
     public Pool<Bullet> bulletPool;
     public Array<Bullet> activeBullets;
@@ -116,35 +123,44 @@ public class GameContext {
     public Array<EnemyBullet> activeEnemyBullets;
     public Pool<Coin> coinPool;
     public Array<Coin> activeCoins;
-    
+    public Pool<Pickup> pickupPool;
+    public Array<Pickup> activePickups;
+
     // Patterns
     public CoinPattern coinPattern;
     public PistolStrategy pistolStrategy;
     public Mac10Strategy mac10Strategy;
+    public UnarmedStrategy unarmedStrategy;
     public Map<Integer, LevelStrategy> levelStrategies;
-    
+
     // Game State
     public int currentLevel = 1;
     public float currentLevelWidth;
     public int coinScore = 0;
     public Array<float[]> coinSpawnLocations;
-    
+
     // Enemy Spawning
     public long lastEnemySpawnTime;
     public long nextEnemySpawnDelay;
     public Random random;
-    
+
     // Player State
     public String username = "";
     public StringBuilder usernameInput;
     public PlayerData currentPlayerData;
     public int coinsCollectedThisSession = 0;
     public boolean isNewPlayer = false;
-    
+
+    // Mac10 Unlock Message State
+    public float mac10UnlockMessageTimer = -1f;
+    public boolean showMac10UnlockMessage = false;
+    public float mac10UnlockMessageDuration = 0f;
+    public boolean mac10MessageTriggered = false; // Preventing re-triggering
+
     // Services
     public PlayerApiService playerApi;
     public DebugManager debugManager;
-    
+
     // Enemy spawn delays per level (in nanoseconds)
     public static final long LEVEL1_MIN_SPAWN = 3000000000L;
     public static final long LEVEL1_MAX_SPAWN = 4000000000L;
@@ -152,24 +168,24 @@ public class GameContext {
     public static final long LEVEL2_MAX_SPAWN = 4000000000L;
     public static final long LEVEL4_MIN_SPAWN = 1000000000L;
     public static final long LEVEL4_MAX_SPAWN = 3000000000L;
-    
+
     // Max enemies per level
     public static final int MAX_ENEMIES_LEVEL1 = 6;
     public static final int MAX_ENEMIES_LEVEL2 = 7;
     public static final int MAX_ENEMIES_LEVEL4 = 8;
-    
+
     public GameContext() {
         this.usernameInput = new StringBuilder();
         this.random = new Random();
     }
-    
+
     /**
      * Set the callback for game actions.
      */
     public void setCallback(GameCallback callback) {
         this.callback = callback;
     }
-    
+
     /**
      * Get max enemies for a specific level.
      */
@@ -181,7 +197,7 @@ public class GameContext {
             default: return MAX_ENEMIES_LEVEL1;
         }
     }
-    
+
     /**
      * Reset enemy spawn timer based on current level.
      */
@@ -204,7 +220,7 @@ public class GameContext {
         }
         nextEnemySpawnDelay = minSpawn + (long)(random.nextFloat() * (maxSpawn - minSpawn));
     }
-    
+
     /**
      * Clear all game objects (for restart/cleanup).
      */
@@ -216,12 +232,12 @@ public class GameContext {
             }
             activeEnemies.clear();
         }
-        
+
         // Clear bullets
         if (activeBullets != null) {
             activeBullets.clear();
         }
-        
+
         // Clear enemy bullets
         if (activeEnemyBullets != null) {
             for (EnemyBullet eb : activeEnemyBullets) {
@@ -229,7 +245,7 @@ public class GameContext {
             }
             activeEnemyBullets.clear();
         }
-        
+
         // Clear coins
         if (activeCoins != null) {
             for (Coin coin : activeCoins) {
@@ -237,22 +253,36 @@ public class GameContext {
             }
             activeCoins.clear();
         }
-        
+
+        // Clear pickups
+        if (activePickups != null) {
+            for (Pickup p : activePickups) {
+                pickupPool.free(p);
+            }
+            activePickups.clear();
+        }
+
         coinScore = 0;
         miniBoss = null;
         boss = null;
+
+        // Reset message state
+        mac10UnlockMessageTimer = -1f;
+        showMac10UnlockMessage = false;
+        mac10UnlockMessageDuration = 0f;
+        mac10MessageTriggered = false;
     }
-    
+
     /**
      * Reset player state.
      */
     public void resetPlayer() {
         if (player != null) {
             player.reset();
-            player.setWeapon(null);
+            player.setWeapon(pistolStrategy); // Default to pistol
         }
     }
-    
+
     /**
      * Dispose all resources.
      */
@@ -261,7 +291,7 @@ public class GameContext {
         if (shapeRenderer != null) shapeRenderer.dispose();
         if (font != null) font.dispose();
         if (smallFont != null) smallFont.dispose();
-        
+
         // Dispose textures
         disposeTexture(playerTex);
         disposeTexture(platformTex);
@@ -282,8 +312,12 @@ public class GameContext {
         disposeTexture(yellowFlashTex);
         disposeTexture(buttonTex);
         disposeTexture(buttonHoverTex);
+
+        disposeTexture(ammo9mmTex);
+        disposeTexture(ammo45CalTex);
+        disposeTexture(healthPotionTex);
     }
-    
+
     private void disposeTexture(Texture texture) {
         if (texture != null) texture.dispose();
     }
