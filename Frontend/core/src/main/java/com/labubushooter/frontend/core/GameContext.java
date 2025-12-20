@@ -97,6 +97,9 @@ public class GameContext {
     // Rendering Services
     public com.labubushooter.frontend.services.BackgroundRenderer backgroundRenderer;
     
+    // Game Systems
+    public com.labubushooter.frontend.systems.GameWorld gameWorld;
+    
     // Game Objects
     public Player player;
     public Array<Platform> platforms;

@@ -1,29 +1,51 @@
 package com.labubushooter.frontend.objects;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
 import com.badlogic.gdx.utils.TimeUtils;
+import com.labubushooter.frontend.patterns.states.ChaseState;
+import com.labubushooter.frontend.patterns.states.DeadState;
+import com.labubushooter.frontend.patterns.states.EnemyState;
+import com.labubushooter.frontend.patterns.states.IdleState;
+import com.labubushooter.frontend.patterns.states.StunnedState;
 
+/**
+ * Common enemy entity with State Pattern support.
+ * 
+ * Design Patterns:
+ * - State Pattern: Behavior changes based on current EnemyState
+ * - Object Pool: Implements Pool.Poolable for efficient memory management
+ * 
+ * SOLID Principles:
+ * - Single Responsibility: Handles enemy entity logic
+ * - Open/Closed: Extensible via EnemyState implementations
+ */
 public class CommonEnemy implements Pool.Poolable {
     public Rectangle collider;
+    public Rectangle bounds; // Alias for collider for consistency
     public boolean spawned;
     public float health;
     public float maxHealth;
     public boolean grounded = false;
+    
+    // State Pattern
+    private EnemyState currentState;
 
-    private Player target;
+    // Target reference (public for state access)
+    public Player target;
     private float velocityX;
     private float velocityY = 0;
-    private float speed; // Speed akan di-set per level
+    private float speed;
     private Texture texture;
     private float damageAmount;
+    
+    // Factory multipliers
+    private float speedMultiplier = 1.0f;
+    private float healthMultiplier = 1.0f;
 
     // Damage System
     private long lastDamageTime;
@@ -31,19 +53,20 @@ public class CommonEnemy implements Pool.Poolable {
 
     // Jump System
     private static final float JUMP_POWER = 500f;
-    private static final float JUMP_THRESHOLD = 10f; // Threshold untuk X-axis alignment
+    private static final float JUMP_THRESHOLD = 10f;
 
     private static final float GRAVITY = -900f;
-    private static final float WIDTH = 60f; // 40 * 1.5
-    private static final float HEIGHT = 90f; // 60 * 1.5
-    private static final float SPAWN_Y = 300f; // Ground + 1f
+    private static final float WIDTH = 60f;
+    private static final float HEIGHT = 90f;
+    private static final float SPAWN_Y = 300f;
 
-    // Base speed untuk multiplier
+    // Base speed for multiplier
     private static final float BASE_SPEED = 120f;
 
     public CommonEnemy(Texture texture) {
         this.texture = texture;
         this.collider = new Rectangle(0, SPAWN_Y, WIDTH, HEIGHT);
+        this.bounds = this.collider; // Alias
         this.spawned = false;
         this.health = 10f;
         this.maxHealth = 10f;
@@ -52,6 +75,7 @@ public class CommonEnemy implements Pool.Poolable {
         this.velocityX = 0;
         this.velocityY = 0;
         this.lastDamageTime = 0;
+        this.currentState = new IdleState();
     }
 
     public void init(float x, Player target, int level) {
@@ -82,42 +106,27 @@ public class CommonEnemy implements Pool.Poolable {
                 break;
         }
 
-        this.health = this.maxHealth;
+        this.health = this.maxHealth * healthMultiplier;
         this.spawned = true;
         this.velocityX = 0;
         this.velocityY = 0;
         this.grounded = false;
         this.lastDamageTime = TimeUtils.nanoTime();
+        
+        // Initialize state to Chase (active pursuit)
+        setState(new ChaseState());
 
-        Gdx.app.log("Enemy", "Spawned at level " + level + " - HP: " + maxHealth +
+        Gdx.app.log("Enemy", "Spawned at level " + level + " - HP: " + health +
                 ", Damage: " + damageAmount + ", Speed: " + speed);
     }
 
     public void update(float delta, Array<Platform> platforms, Array<Ground> grounds) {
         if (!spawned || target == null)
             return;
-
-        // Homing movement (X-axis only)
-        float targetCenterX = target.bounds.x + target.bounds.width / 2f;
-        float enemyCenterX = collider.x + collider.width / 2f;
-
-        float directionX = targetCenterX - enemyCenterX;
-
-        if (Math.abs(directionX) > 5f) {
-            float normalizedDirX = Math.signum(directionX);
-            velocityX = normalizedDirX * speed; // Menggunakan speed yang sudah di-set per level
-        } else {
-            velocityX = 0;
-        }
-
-        // Jump Logic: Jump jika X-axis sudah sejajar tapi belum overlap dengan player
-        if (Math.abs(directionX) <= JUMP_THRESHOLD && grounded) {
-            // Check jika player ada di atas enemy (Y player > Y enemy)
-            if (target.bounds.y > collider.y + collider.height) {
-                // Jump untuk mencapai player
-                velocityY = JUMP_POWER;
-                grounded = false;
-            }
+        
+        // Update current state (State Pattern)
+        if (currentState != null) {
+            currentState.update(this, delta);
         }
 
         // Apply horizontal movement
@@ -170,12 +179,58 @@ public class CommonEnemy implements Pool.Poolable {
             }
         }
     }
+    
+    /**
+     * Moves enemy towards player. Called by ChaseState.
+     * Extracted method for State Pattern usage.
+     */
+    public void moveTowardsPlayer(float delta) {
+        if (target == null) return;
+        
+        float targetCenterX = target.bounds.x + target.bounds.width / 2f;
+        float enemyCenterX = collider.x + collider.width / 2f;
+        float directionX = targetCenterX - enemyCenterX;
+
+        if (Math.abs(directionX) > 5f) {
+            float normalizedDirX = Math.signum(directionX);
+            velocityX = normalizedDirX * speed * speedMultiplier;
+        } else {
+            velocityX = 0;
+        }
+
+        // Jump Logic
+        if (Math.abs(directionX) <= JUMP_THRESHOLD && grounded) {
+            if (target.bounds.y > collider.y + collider.height) {
+                velocityY = JUMP_POWER;
+                grounded = false;
+            }
+        }
+    }
+    
+    /**
+     * Performs attack action. Called by AttackState.
+     */
+    public void performAttack() {
+        // Attack handled by collision in update()
+        Gdx.app.log("EnemyAttack", "Enemy performing attack");
+    }
 
     public void takeDamage(float damage) {
         health -= damage;
         if (health <= 0) {
-            spawned = false;
+            // Transition to Dead state
+            setState(new DeadState());
+        } else {
+            // Transition to Stunned state
+            setState(new StunnedState());
         }
+    }
+    
+    /**
+     * Marks enemy for removal. Called by DeadState.
+     */
+    public void markForRemoval() {
+        spawned = false;
     }
 
     public void draw(SpriteBatch batch) {
@@ -193,11 +248,14 @@ public class CommonEnemy implements Pool.Poolable {
         this.maxHealth = 10f;
         this.damageAmount = 1f;
         this.speed = BASE_SPEED;
+        this.speedMultiplier = 1.0f;
+        this.healthMultiplier = 1.0f;
         this.target = null;
         this.velocityX = 0;
         this.velocityY = 0;
         this.grounded = false;
         this.lastDamageTime = 0;
+        this.currentState = new IdleState();
     }
 
     public boolean isActive() {
@@ -206,5 +264,70 @@ public class CommonEnemy implements Pool.Poolable {
 
     public void setActive(boolean spawned) {
         this.spawned = spawned;
+    }
+    
+    // ==================== STATE PATTERN METHODS ====================
+    
+    /**
+     * Changes the current state.
+     * State Pattern: Allows dynamic behavior changes.
+     * 
+     * @param newState The new state to transition to
+     */
+    public void setState(EnemyState newState) {
+        if (currentState != null) {
+            currentState.exit(this);
+        }
+        currentState = newState;
+        if (currentState != null) {
+            currentState.enter(this);
+        }
+    }
+    
+    /**
+     * Gets the current state.
+     * 
+     * @return Current EnemyState
+     */
+    public EnemyState getState() {
+        return currentState;
+    }
+    
+    /**
+     * Gets the current state name for debugging.
+     * 
+     * @return State name string
+     */
+    public String getStateName() {
+        return currentState != null ? currentState.getName() : "NULL";
+    }
+    
+    // ==================== FACTORY MULTIPLIER METHODS ====================
+    
+    /**
+     * Sets speed multiplier. Used by EnemyFactory for enemy variants.
+     * 
+     * @param multiplier Speed multiplier (1.0 = normal)
+     */
+    public void setSpeedMultiplier(float multiplier) {
+        this.speedMultiplier = multiplier;
+    }
+    
+    /**
+     * Sets health multiplier. Used by EnemyFactory for enemy variants.
+     * 
+     * @param multiplier Health multiplier (1.0 = normal)
+     */
+    public void setHealthMultiplier(float multiplier) {
+        this.healthMultiplier = multiplier;
+        this.health = this.maxHealth * multiplier;
+    }
+    
+    public float getSpeedMultiplier() {
+        return speedMultiplier;
+    }
+    
+    public float getHealthMultiplier() {
+        return healthMultiplier;
     }
 }

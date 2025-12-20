@@ -25,6 +25,7 @@ import com.labubushooter.frontend.patterns.weapons.PistolStrategy;
 import com.labubushooter.frontend.screens.*;
 import com.labubushooter.frontend.services.BackgroundRenderer;
 import com.labubushooter.frontend.services.PlayerApiService;
+import com.labubushooter.frontend.systems.GameWorld;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -301,6 +302,10 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
         gameContext.playerApi = playerApi;
         gameContext.debugManager = debugManager;
         gameContext.random = random;
+        
+        // Initialize GameWorld system for entity management
+        // GameWorld handles physics, collision, and entity lifecycle
+        gameContext.gameWorld = new GameWorld(gameContext);
     }
     
     private void initializeScreenManager() {
