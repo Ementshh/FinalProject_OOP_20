@@ -176,39 +176,55 @@ public class UsernameInputScreen extends BaseScreen {
     }
     
     private void startLogin() {
-        context.username = context.usernameInput.toString();
-        waitingForResponse = true;
-        transitionTo(GameState.LOADING_PLAYER_DATA);
+        if (waitingForResponse) return; // Prevent double-click
         
-        context.playerApi.login(context.username, new PlayerApiService.LoginCallback() {
+        final String username = context.usernameInput.toString().trim();
+        if (username.isEmpty()) {
+            Gdx.app.log("Login", "Username is empty");
+            return;
+        }
+        
+        context.username = username;
+        waitingForResponse = true;
+        
+        Gdx.app.log("UsernameInputScreen", "Starting login for: " + username);
+        
+        // DON'T transition to loading screen - stay here and show loading indicator
+        // The callback will handle the transition after response
+        
+        context.playerApi.login(username, new PlayerApiService.LoginCallback() {
             @Override
             public void onSuccess(PlayerApiService.PlayerData playerData, boolean isNew) {
-                Gdx.app.postRunnable(() -> {
-                    context.currentPlayerData = playerData;
-                    context.isNewPlayer = isNew;
-                    context.coinsCollectedThisSession = 0;
-                    waitingForResponse = false;
-                    
-                    if (isNew || playerData.lastStage == 1) {
-                        context.currentLevel = 1;
-                        if (gamePlayScreen != null) {
-                            gamePlayScreen.setNeedsLevelLoad(true);
-                        }
-                        transitionTo(GameState.PLAYING);
-                    } else {
-                        transitionTo(GameState.CONTINUE_OR_NEW);
+                // This is already wrapped in postRunnable by PlayerApiService
+                Gdx.app.log("UsernameInputScreen", "Login success! isNew=" + isNew + ", lastStage=" + playerData.lastStage);
+                
+                context.currentPlayerData = playerData;
+                context.isNewPlayer = isNew;
+                context.coinsCollectedThisSession = 0;
+                waitingForResponse = false;
+                
+                // Determine next screen based on player status
+                if (isNew || playerData.lastStage <= 1) {
+                    // New player or player at stage 1 - start game directly at level 1
+                    Gdx.app.log("UsernameInputScreen", "New player or stage 1 - starting game at level 1");
+                    context.currentLevel = 1;
+                    if (gamePlayScreen != null) {
+                        gamePlayScreen.setNeedsLevelLoad(true);
                     }
-                });
+                    transitionTo(GameState.PLAYING);
+                } else {
+                    // Returning player with progress - show continue/new menu
+                    Gdx.app.log("UsernameInputScreen", "Returning player at stage " + playerData.lastStage + " - showing continue/new menu");
+                    transitionTo(GameState.CONTINUE_OR_NEW);
+                }
             }
             
             @Override
             public void onFailure(String error) {
-                Gdx.app.postRunnable(() -> {
-                    Gdx.app.error("Login", "Failed: " + error);
-                    waitingForResponse = false;
-                    // Stay on username input screen
-                    nextState = null;
-                });
+                Gdx.app.error("UsernameInputScreen", "Login failed: " + error);
+                waitingForResponse = false;
+                // Stay on username input screen - nextState remains null
+                // Error will be shown to user
             }
         });
     }
@@ -265,10 +281,23 @@ public class UsernameInputScreen extends BaseScreen {
         drawCenteredText("Press Right Ctrl + D for Debug Mode", centerY - 200, false);
         context.smallFont.setColor(1, 1, 1, 1);
         
-        // Draw waiting indicator
+        // Draw waiting indicator with more visibility
         if (waitingForResponse) {
-            context.smallFont.setColor(1f, 1f, 0f, 1f);
-            drawCenteredText("Connecting...", centerY - 160, false);
+            // Draw semi-transparent overlay
+            context.batch.setColor(0f, 0f, 0f, 0.5f);
+            float overlayX = context.camera.position.x - context.viewport.getWorldWidth() / 2;
+            float overlayY = context.camera.position.y - context.viewport.getWorldHeight() / 2;
+            context.batch.draw(context.buttonTex, overlayX, overlayY, 
+                context.viewport.getWorldWidth(), context.viewport.getWorldHeight());
+            context.batch.setColor(1, 1, 1, 1);
+            
+            // Draw loading text prominently
+            context.font.setColor(1f, 1f, 0f, 1f);
+            drawCenteredText("Connecting...", centerY, true);
+            context.font.setColor(1, 1, 1, 1);
+            
+            context.smallFont.setColor(0.8f, 0.8f, 0.8f, 1f);
+            drawCenteredText("Please wait", centerY - 60, false);
             context.smallFont.setColor(1, 1, 1, 1);
         }
         

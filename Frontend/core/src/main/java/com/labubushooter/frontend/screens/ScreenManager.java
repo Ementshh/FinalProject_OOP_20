@@ -101,9 +101,10 @@ public class ScreenManager {
         // Render
         currentScreen.render(delta);
         
-        // Check for state transition
+        // Check for state transition AFTER all screen processing
         GameState nextState = currentScreen.getNextState();
-        if (nextState != null) {
+        if (nextState != null && nextState != currentState) {
+            Gdx.app.log("ScreenManager", "Transition requested: " + currentState + " -> " + nextState);
             currentScreen.clearNextState();
             setScreen(nextState);
         }
