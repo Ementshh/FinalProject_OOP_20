@@ -9,16 +9,29 @@ import com.labubushooter.frontend.services.PlayerApiService;
 
 /**
  * Screen for username input at game start.
+ * UI elements are positioned relative to camera center for proper centering.
  */
 public class UsernameInputScreen extends BaseScreen {
     
+    // UI Constants
+    private static final float BUTTON_WIDTH = 500f;
+    private static final float BUTTON_HEIGHT = 80f;
+    private static final float INPUT_BOX_WIDTH = 500f;
+    private static final float INPUT_BOX_HEIGHT = 60f;
+    
+    // UI Elements - positioned dynamically
     private Rectangle startGameButton;
+    private Rectangle inputBox;
+    
+    // State
     private boolean waitingForResponse = false;
     private GamePlayScreen gamePlayScreen;
+    private InputAdapter inputProcessor;
     
     public UsernameInputScreen(GameContext context) {
         super(context);
         initializeUI();
+        createInputProcessor();
     }
     
     /**
@@ -29,20 +42,16 @@ public class UsernameInputScreen extends BaseScreen {
     }
     
     private void initializeUI() {
-        float buttonWidth = 500f;
-        float buttonHeight = 80f;
-        float centerX = GameContext.VIEWPORT_WIDTH / 2 - buttonWidth / 2;
-        startGameButton = new Rectangle(centerX, 200, buttonWidth, buttonHeight);
+        // Initialize rectangles - actual positions set in updateUIPositions()
+        startGameButton = new Rectangle(0, 0, BUTTON_WIDTH, BUTTON_HEIGHT);
+        inputBox = new Rectangle(0, 0, INPUT_BOX_WIDTH, INPUT_BOX_HEIGHT);
     }
     
-    @Override
-    public void show() {
-        super.show();
-        setupInputProcessor();
-    }
-    
-    private void setupInputProcessor() {
-        Gdx.input.setInputProcessor(new InputAdapter() {
+    /**
+     * Create the input processor once, reuse it.
+     */
+    private void createInputProcessor() {
+        inputProcessor = new InputAdapter() {
             @Override
             public boolean keyTyped(char character) {
                 if (waitingForResponse) return false;
@@ -62,7 +71,60 @@ public class UsernameInputScreen extends BaseScreen {
                 }
                 return true;
             }
-        });
+        };
+    }
+    
+    /**
+     * Update UI element positions based on camera center.
+     * Call this every frame to ensure proper positioning.
+     */
+    private void updateUIPositions() {
+        float centerX = getCenterX();
+        float centerY = getCenterY();
+        
+        // Input box - centered horizontally, above center vertically
+        inputBox.set(
+            centerX - INPUT_BOX_WIDTH / 2,
+            centerY - 20,
+            INPUT_BOX_WIDTH,
+            INPUT_BOX_HEIGHT
+        );
+        
+        // Start button - centered horizontally, below input box
+        startGameButton.set(
+            centerX - BUTTON_WIDTH / 2,
+            centerY - 120,
+            BUTTON_WIDTH,
+            BUTTON_HEIGHT
+        );
+    }
+    
+    @Override
+    public void show() {
+        super.show(); // This resets camera to center
+        
+        // CRITICAL: Reset all state when screen is shown
+        resetScreenState();
+        
+        // Set input processor
+        Gdx.input.setInputProcessor(inputProcessor);
+        
+        Gdx.app.log("UsernameInputScreen", "Screen shown, state reset complete");
+    }
+    
+    /**
+     * Reset all screen state for fresh start.
+     */
+    private void resetScreenState() {
+        waitingForResponse = false;
+        
+        // Reset debug manager state
+        if (context.debugManager != null) {
+            context.debugManager.reset();
+        }
+        
+        // Update UI positions for centered camera
+        updateUIPositions();
     }
     
     @Override
@@ -72,8 +134,18 @@ public class UsernameInputScreen extends BaseScreen {
     }
     
     @Override
+    public void resize(int width, int height) {
+        super.resize(width, height);
+        // Update UI positions after resize
+        updateUIPositions();
+    }
+    
+    @Override
     public void handleInput(float delta) {
         if (waitingForResponse) return;
+        
+        // Update UI positions every frame (camera might have moved)
+        updateUIPositions();
         
         // Check for debug mode activation
         if (context.debugManager != null && context.debugManager.checkDebugActivation()) {
@@ -88,14 +160,18 @@ public class UsernameInputScreen extends BaseScreen {
     }
     
     private void activateDebugMode() {
+        Gdx.app.log("UsernameInputScreen", "Activating debug mode...");
+        
         context.username = context.debugManager.getDebugUsername();
         context.currentPlayerData = context.debugManager.createDebugPlayerData();
         context.coinsCollectedThisSession = 0;
         context.isNewPlayer = true;
         context.currentLevel = 1;
+        
         if (gamePlayScreen != null) {
             gamePlayScreen.setNeedsLevelLoad(true);
         }
+        
         transitionTo(GameState.PLAYING);
     }
     
@@ -146,27 +222,32 @@ public class UsernameInputScreen extends BaseScreen {
     public void render(float delta) {
         clearScreenDark();
         
+        // Ensure UI positions are updated
+        updateUIPositions();
+        
         context.batch.setProjectionMatrix(context.camera.combined);
         context.batch.begin();
         
-        // Draw title
-        drawCenteredText("LABUBOOM", 500, true);
+        float centerY = getCenterY();
+        
+        // Draw title - relative to camera center
+        drawCenteredText("LABUBOOM", centerY + 200, true);
         
         // Draw prompt
-        drawCenteredText("Enter Your Name:", 380, false);
+        drawCenteredText("Enter Your Name:", centerY + 80, false);
         
         // Draw input box background
         context.batch.setColor(0.3f, 0.3f, 0.3f, 1f);
-        context.batch.draw(context.buttonTex, 
-            GameContext.VIEWPORT_WIDTH / 2 - 250, 300, 500, 60);
+        context.batch.draw(context.buttonTex, inputBox.x, inputBox.y, inputBox.width, inputBox.height);
         context.batch.setColor(1, 1, 1, 1);
         
         // Draw username text
         String displayText = context.usernameInput.length() > 0 ? 
             context.usernameInput.toString() : "Username...";
+        
         context.layout.setText(context.smallFont, displayText);
-        float textX = GameContext.VIEWPORT_WIDTH / 2 - context.layout.width / 2;
-        float textY = 340;
+        float textX = inputBox.x + inputBox.width / 2 - context.layout.width / 2;
+        float textY = inputBox.y + inputBox.height / 2 + context.layout.height / 2;
         
         if (context.usernameInput.length() > 0) {
             context.smallFont.draw(context.batch, displayText, textX, textY);
@@ -181,8 +262,15 @@ public class UsernameInputScreen extends BaseScreen {
         
         // Draw debug hint
         context.smallFont.setColor(0.5f, 0.5f, 0.5f, 1f);
-        drawCenteredText("Press Right Ctrl + D for Debug Mode", 100, false);
+        drawCenteredText("Press Right Ctrl + D for Debug Mode", centerY - 200, false);
         context.smallFont.setColor(1, 1, 1, 1);
+        
+        // Draw waiting indicator
+        if (waitingForResponse) {
+            context.smallFont.setColor(1f, 1f, 0f, 1f);
+            drawCenteredText("Connecting...", centerY - 160, false);
+            context.smallFont.setColor(1, 1, 1, 1);
+        }
         
         context.batch.end();
     }

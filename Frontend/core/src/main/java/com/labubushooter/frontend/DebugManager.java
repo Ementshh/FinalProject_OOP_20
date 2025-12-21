@@ -17,6 +17,9 @@ public class DebugManager {
     private boolean debugModeActive = false;
     private boolean debugKeyWasPressed = false;
     
+    // Track if debug was used this session (for re-activation after restart)
+    private boolean debugUsedThisSession = false;
+    
     /**
      * Check if debug mode should be activated (Right Ctrl + D)
      * @return true if debug mode was just activated
@@ -25,14 +28,25 @@ public class DebugManager {
         boolean rightCtrlHeld = Gdx.input.isKeyPressed(Input.Keys.CONTROL_RIGHT);
         boolean dPressed = Gdx.input.isKeyPressed(Input.Keys.D);
         
+        // Debug: Log key states occasionally
+        if (rightCtrlHeld || dPressed) {
+            Gdx.app.debug("DebugManager", "Keys: RCtrl=" + rightCtrlHeld + 
+                         ", D=" + dPressed + 
+                         ", wasPressed=" + debugKeyWasPressed +
+                         ", active=" + debugModeActive);
+        }
+        
         if (rightCtrlHeld && dPressed && !debugKeyWasPressed) {
             debugKeyWasPressed = true;
+            
+            // Allow re-activation if not currently active
             if (!debugModeActive) {
                 activateDebugMode();
                 return true;
             }
         }
         
+        // Reset the key press flag when D is released
         if (!dPressed) {
             debugKeyWasPressed = false;
         }
@@ -45,6 +59,7 @@ public class DebugManager {
      */
     private void activateDebugMode() {
         debugModeActive = true;
+        debugUsedThisSession = true;
         printDebugInfo();
     }
     
@@ -111,10 +126,28 @@ public class DebugManager {
     }
     
     /**
-     * Reset debug mode (for game restart)
+     * Reset debug mode state (for game restart).
+     * IMPORTANT: This allows debug mode to be re-activated after restart.
      */
     public void reset() {
-        // Don't reset debugModeActive - keep it active once enabled
+        // Reset key tracking so debug can be activated again
         debugKeyWasPressed = false;
+        
+        // Reset debugModeActive to allow re-activation
+        if (debugModeActive) {
+            debugModeActive = false;
+            Gdx.app.log("DebugManager", "Debug state reset - can be re-activated");
+        }
+    }
+    
+    /**
+     * Full reset - completely disable debug mode.
+     * Use this for complete game restart to title screen.
+     */
+    public void fullReset() {
+        debugModeActive = false;
+        debugKeyWasPressed = false;
+        debugUsedThisSession = false;
+        Gdx.app.log("DebugManager", "Full debug reset");
     }
 }

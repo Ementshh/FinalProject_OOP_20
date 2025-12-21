@@ -15,6 +15,12 @@ public class GameOverScreen extends BaseScreen {
     }
     
     @Override
+    public void show() {
+        super.show(); // This resets camera to center
+        Gdx.app.log("GameOverScreen", "Game Over screen shown");
+    }
+    
+    @Override
     public void handleInput(float delta) {
         if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
             restartToUsername();
@@ -22,6 +28,11 @@ public class GameOverScreen extends BaseScreen {
     }
     
     private void restartToUsername() {
+        // Reset debug manager to allow re-activation
+        if (context.debugManager != null) {
+            context.debugManager.reset();
+        }
+        
         if (context.callback != null) {
             context.callback.restartToUsernameInput();
         } else {
