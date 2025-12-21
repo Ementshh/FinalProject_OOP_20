@@ -28,7 +28,8 @@ public abstract class BaseScreen implements Screen {
     
     @Override
     public void show() {
-        // Default implementation - can be overridden
+        // Reset camera to center for menu screens
+        resetCameraToCenter();
         Gdx.app.log(getClass().getSimpleName(), "Screen shown");
     }
     
@@ -41,6 +42,8 @@ public abstract class BaseScreen implements Screen {
     @Override
     public void resize(int width, int height) {
         context.viewport.update(width, height, true);
+        // Re-center camera after resize
+        resetCameraToCenter();
     }
     
     @Override
@@ -59,6 +62,61 @@ public abstract class BaseScreen implements Screen {
     }
     
     // ==================== HELPER METHODS ====================
+    
+    /**
+     * Reset camera position to viewport center.
+     * IMPORTANT: Call this in show() for all menu/UI screens.
+     */
+    protected void resetCameraToCenter() {
+        context.camera.position.set(
+            GameContext.VIEWPORT_WIDTH / 2f,
+            GameContext.VIEWPORT_HEIGHT / 2f,
+            0
+        );
+        context.camera.update();
+    }
+    
+    /**
+     * Get the center X coordinate relative to camera.
+     */
+    protected float getCenterX() {
+        return context.camera.position.x;
+    }
+    
+    /**
+     * Get the center Y coordinate relative to camera.
+     */
+    protected float getCenterY() {
+        return context.camera.position.y;
+    }
+    
+    /**
+     * Get the left edge of visible area.
+     */
+    protected float getLeftEdge() {
+        return context.camera.position.x - context.viewport.getWorldWidth() / 2f;
+    }
+    
+    /**
+     * Get the right edge of visible area.
+     */
+    protected float getRightEdge() {
+        return context.camera.position.x + context.viewport.getWorldWidth() / 2f;
+    }
+    
+    /**
+     * Get the top edge of visible area.
+     */
+    protected float getTopEdge() {
+        return context.camera.position.y + context.viewport.getWorldHeight() / 2f;
+    }
+    
+    /**
+     * Get the bottom edge of visible area.
+     */
+    protected float getBottomEdge() {
+        return context.camera.position.y - context.viewport.getWorldHeight() / 2f;
+    }
     
     /**
      * Clear the screen with a specific color.
@@ -115,16 +173,17 @@ public abstract class BaseScreen implements Screen {
     }
     
     /**
-     * Draw centered text.
+     * Draw centered text - uses camera center for proper positioning.
      */
     protected void drawCenteredText(String text, float y, boolean useLargeFont) {
+        float centerX = getCenterX();
         if (useLargeFont) {
             context.layout.setText(context.font, text);
-            float x = GameContext.VIEWPORT_WIDTH / 2 - context.layout.width / 2;
+            float x = centerX - context.layout.width / 2;
             context.font.draw(context.batch, text, x, y);
         } else {
             context.layout.setText(context.smallFont, text);
-            float x = GameContext.VIEWPORT_WIDTH / 2 - context.layout.width / 2;
+            float x = centerX - context.layout.width / 2;
             context.smallFont.draw(context.batch, text, x, y);
         }
     }

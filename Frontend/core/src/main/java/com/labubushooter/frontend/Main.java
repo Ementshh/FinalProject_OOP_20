@@ -539,6 +539,11 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
 
     @Override
     public void restartGame() {
+        // Reset debug manager for restart
+        if (debugManager != null) {
+            debugManager.reset();
+        }
+        
         gameContext.clearGameObjects();
         gameContext.resetPlayer();
         gameContext.currentLevel = 1;
@@ -550,6 +555,11 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
 
     @Override
     public void restartToUsernameInput() {
+        // Reset debug manager FIRST to allow re-activation
+        if (debugManager != null) {
+            debugManager.reset();
+        }
+        
         gameContext.clearGameObjects();
         gameContext.resetPlayer();
         gameContext.usernameInput.setLength(0);
@@ -557,8 +567,13 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
         gameContext.currentLevel = 1;
         gameContext.coinScore = 0;
         gameContext.currentPlayerData = null;
+        
+        // Reset camera position before switching screens
+        camera.position.set(VIEWPORT_WIDTH / 2f, VIEWPORT_HEIGHT / 2f, 0);
+        camera.update();
+        
         screenManager.setScreen(GameState.USERNAME_INPUT);
-        Gdx.app.log("Main", "Returned to username input");
+        Gdx.app.log("Main", "Returned to username input, debug reset complete");
     }
 
     // ==================== LEVEL HELPER METHODS ====================
