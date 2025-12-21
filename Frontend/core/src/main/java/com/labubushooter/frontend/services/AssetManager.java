@@ -101,11 +101,13 @@ public class AssetManager implements Disposable {
     public static final String BUTTON_HOVER = "button_hover";
     public static final String TRANSPARENT = "transparent";
 
-    // Pickups (File-based)
+    // ==================== PICKUP TEXTURE KEYS (File-based) ====================
+    // Weapon-specific ammo pickups - each ammo type has its own distinct visual
+    // AMMO_9MM: Pistol ammo pickup (ammopack_pistol.png) - spawns in all levels
+    // AMMO_45CAL: Mac10 SMG ammo pickup (ammopack_mac10.png) - spawns in levels 4-5
     public static final String AMMO_9MM = "ammo_9mm";
     public static final String AMMO_45CAL = "ammo_45cal";
     public static final String HEALTH_POTION = "health_potion";
-    public static final String AMMO_PACK = "ammo_pack";
 
     // ==================== FONT KEYS ====================
     public static final String FONT_DEFAULT = "font_default";
@@ -215,15 +217,14 @@ public class AssetManager implements Disposable {
         loadTexture(BACKGROUND_LEVEL2_TO_4, "bglevel2to4.png");
         loadTexture(BACKGROUND_LEVEL5, "bglevel5.png");
 
-        // Load pickup textures
+        // Load pickup textures - weapon-specific ammo visuals
+        // Each ammo type has a distinct texture for visual clarity:
+        // - AMMO_9MM uses ammopack_pistol.png (pistol ammo)
+        // - AMMO_45CAL uses ammopack_mac10.png (Mac10 SMG ammo)
+        // - HEALTH_POTION uses healthpotion.png (unchanged)
         loadTexture(HEALTH_POTION, "healthpotion.png");
-        loadTexture(AMMO_PACK, "ammopack.png");
-        // Use ammopack.png for both ammo types (share the same texture instance)
-        Texture ammoPackTex = textureCache.get(AMMO_PACK);
-        if (ammoPackTex != null) {
-            textureCache.put(AMMO_9MM, ammoPackTex);
-            textureCache.put(AMMO_45CAL, ammoPackTex);
-        }
+        loadTexture(AMMO_9MM, "ammopack_pistol.png");
+        loadTexture(AMMO_45CAL, "ammopack_mac10.png");
     }
 
     /**

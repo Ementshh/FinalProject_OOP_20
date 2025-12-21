@@ -1,4 +1,5 @@
-ammopack.png
+ammopack_mac10.png
+ammopack_pistol.png
 bglevel1.png
 bglevel2to4.png
 bglevel5.png
