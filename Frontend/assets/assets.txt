@@ -23,6 +23,7 @@ door.png
 enemy.png
 enemyframe1.png
 enemyframe2.png
+game_default_font.otf
 ground.png
 ground_base.png
 healthpotion.png
