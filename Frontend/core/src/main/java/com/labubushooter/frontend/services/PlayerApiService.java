@@ -8,6 +8,10 @@ import com.badlogic.gdx.utils.JsonReader;
 import com.badlogic.gdx.utils.JsonValue;
 import com.badlogic.gdx.utils.ObjectMap;
 import com.badlogic.gdx.utils.PropertiesUtils;
+import com.badlogic.gdx.utils.PropertiesUtils;
+
+import java.io.IOException;
+import java.util.HashMap;
 
 public class PlayerApiService {
     private static String BASE_URL = "http://localhost:8080/api/players";
@@ -103,7 +107,7 @@ public class PlayerApiService {
             public void handleHttpResponse(Net.HttpResponse httpResponse) {
                 final int statusCode = httpResponse.getStatus().getStatusCode();
                 final String responseStr = httpResponse.getResultAsString();
-                
+
                 Gdx.app.postRunnable(() -> {
                     Gdx.app.log("PlayerAPI", "Response status: " + statusCode);
                     Gdx.app.log("PlayerAPI", "Response body: " + responseStr);
@@ -131,18 +135,18 @@ public class PlayerApiService {
 
                     try {
                         JsonValue jsonResponse = jsonReader.parse(responseStr);
-                        
+
                         if (jsonResponse == null) {
                             callback.onFailure("Failed to parse JSON response");
                             return;
                         }
-                        
+
                         JsonValue playerJson = jsonResponse.get("player");
                         if (playerJson == null) {
                             callback.onFailure("Invalid response: missing player data");
                             return;
                         }
-                        
+
                         PlayerData playerData = new PlayerData();
                         playerData.playerId = playerJson.getString("playerId");
                         playerData.username = playerJson.getString("username");
@@ -156,7 +160,7 @@ public class PlayerApiService {
                         Gdx.app.log("PlayerAPI", "Player ID: " + playerData.playerId);
                         Gdx.app.log("PlayerAPI", "Last Stage: " + playerData.lastStage);
                         Gdx.app.log("PlayerAPI", "Total Coins: " + playerData.totalCoins);
-                        
+
                         callback.onSuccess(playerData, isNewPlayer);
                     } catch (Exception e) {
                         Gdx.app.error("PlayerAPI", "JSON Parse error: " + e.getMessage());
@@ -170,7 +174,7 @@ public class PlayerApiService {
             public void failed(Throwable t) {
                 Gdx.app.postRunnable(() -> {
                     Gdx.app.error("PlayerAPI", "Login failed: " + t.getMessage());
-                    Gdx.app.error("PlayerAPI", "Make sure backend is running on http://localhost:8080");
+                    Gdx.app.error("PlayerAPI", "Make sure backend is running on " + BASE_URL);
                     callback.onFailure("Gagal koneksi ke server. Pastikan backend running!");
                 });
             }
