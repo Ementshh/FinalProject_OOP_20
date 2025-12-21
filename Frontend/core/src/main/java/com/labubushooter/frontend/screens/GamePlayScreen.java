@@ -3,6 +3,7 @@ package com.labubushooter.frontend.screens;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.math.MathUtils;
 import com.labubushooter.frontend.GameState;
@@ -305,17 +306,16 @@ public class GamePlayScreen extends BaseScreen {
             context.batch.draw(context.debugTex, context.currentLevelWidth - 10, 0);
         }
 
-        // Level indicator
-        float levelIndicatorStartX = context.camera.position.x - context.viewport.getWorldWidth() / 2 + 20;
-        float levelIndicatorY = context.camera.position.y + context.viewport.getWorldHeight() / 2 - 50;
-        for (int i = 0; i < context.currentLevel; i++) {
-            context.batch.draw(context.levelIndicatorTex, levelIndicatorStartX + (i * 35), levelIndicatorY);
-        }
+        // Level indicator - Single icon with level number and colored background
+        float levelIndicatorX = context.camera.position.x - context.viewport.getWorldWidth() / 2 + 20;
+        float levelIndicatorY = context.camera.position.y + context.viewport.getWorldHeight() / 2 - 60;
+        Texture levelIndicatorTex = context.getLevelIndicatorTexture(context.currentLevel);
+        context.batch.draw(levelIndicatorTex, levelIndicatorX, levelIndicatorY, 50, 50);
 
         // Draw Health Bar
         String healthText = "HP: " + (int) context.player.health + "/" + (int) Player.MAX_HEALTH;
         float healthX = context.camera.position.x - context.viewport.getWorldWidth() / 2 + 20;
-        float healthY = context.camera.position.y + context.viewport.getWorldHeight() / 2 - 80;
+        float healthY = context.camera.position.y + context.viewport.getWorldHeight() / 2 - 90;
         context.smallFont.draw(context.batch, healthText, healthX, healthY);
 
         // Draw Coin Score

@@ -68,6 +68,8 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
     // Textures
     private Texture playerTex, platformTex, groundTex, bulletTex, exitTex;
     private Texture pistolTex, mac10Tex, debugTex, levelIndicatorTex, enemyTex;
+    private Texture levelIndicator1Tex, levelIndicator2Tex, levelIndicator3Tex;
+    private Texture levelIndicator4Tex, levelIndicator5Tex;
     private Texture enemyFrame1Tex, enemyFrame2Tex;
     private Texture miniBossTex, bossTex, enemyBulletTex;
     private Texture miniBossWalkFrame1Tex, miniBossWalkFrame2Tex;
@@ -184,6 +186,11 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
         // Generated textures from AssetManager
         debugTex = assetManager.getTexture(AssetManager.DEBUG_LINE);
         levelIndicatorTex = assetManager.getTexture(AssetManager.LEVEL_INDICATOR);
+        levelIndicator1Tex = assetManager.getTexture(AssetManager.LEVEL_INDICATOR_1);
+        levelIndicator2Tex = assetManager.getTexture(AssetManager.LEVEL_INDICATOR_2);
+        levelIndicator3Tex = assetManager.getTexture(AssetManager.LEVEL_INDICATOR_3);
+        levelIndicator4Tex = assetManager.getTexture(AssetManager.LEVEL_INDICATOR_4);
+        levelIndicator5Tex = assetManager.getTexture(AssetManager.LEVEL_INDICATOR_5);
         enemyBulletTex = assetManager.getTexture(AssetManager.ENEMY_BULLET);
         whiteFlashTex = assetManager.getTexture(AssetManager.FLASH_WHITE);
         redFlashTex = assetManager.getTexture(AssetManager.FLASH_RED);
@@ -292,6 +299,11 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
         gameContext.mac10Tex = mac10Tex;
         gameContext.debugTex = debugTex;
         gameContext.levelIndicatorTex = levelIndicatorTex;
+        gameContext.levelIndicator1Tex = levelIndicator1Tex;
+        gameContext.levelIndicator2Tex = levelIndicator2Tex;
+        gameContext.levelIndicator3Tex = levelIndicator3Tex;
+        gameContext.levelIndicator4Tex = levelIndicator4Tex;
+        gameContext.levelIndicator5Tex = levelIndicator5Tex;
         gameContext.enemyTex = enemyTex;
         gameContext.backgroundTex = backgroundTex;
 
