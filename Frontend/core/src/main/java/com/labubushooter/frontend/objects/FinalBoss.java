@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
 import com.badlogic.gdx.utils.TimeUtils;
+import com.labubushooter.frontend.patterns.bullets.BulletRenderStrategyFactory.BulletType;
 
 public class FinalBoss extends BossEnemy {
     private static final float LEVEL_WIDTH = 2400f; // Level 4 width
@@ -400,26 +401,48 @@ public class FinalBoss extends BossEnemy {
         float baseAngle = (float) Math.toDegrees(Math.atan2(dy, dx));
 
         if (currentPhase == 1) {
-            // Phase 1: Single bullet aimed at player
-            spawnBullet(bullets, bulletPool, baseAngle);
+            // Phase 1: Single directional bullet aimed at player (32x32)
+            spawnBulletWithType(bullets, bulletPool, baseAngle, BulletType.PHASE1_SINGLE, 32, 32);
             Gdx.app.log("Boss", "Single shot!");
         } else if (currentPhase == 2) {
-            // Phase 2: 3-bullet spread (-20°, 0°, +20°)
+            // Phase 2: 3-bullet spread with slow spin (20x20) (-20°, 0°, +20°)
             for (int i = 0; i < PHASE2_BULLET_COUNT; i++) {
                 float angleOffset = (i - 1) * PHASE2_SPREAD_ANGLE; // -20, 0, 20
-                spawnBullet(bullets, bulletPool, baseAngle + angleOffset);
+                spawnBulletWithType(bullets, bulletPool, baseAngle + angleOffset, BulletType.PHASE23_MULTI, 20, 20);
             }
             Gdx.app.log("Boss", "Spread attack!");
         } else if (currentPhase == 3) {
-            // Phase 3: 5-bullet fan (-30°, -15°, 0°, +15°, +30°)
+            // Phase 3: 5-bullet fan with slow spin (20x20) (-30°, -15°, 0°, +15°, +30°)
             for (int i = 0; i < PHASE3_BULLET_COUNT; i++) {
                 float angleOffset = (i - 2) * 15f; // -30, -15, 0, 15, 30
-                spawnBullet(bullets, bulletPool, baseAngle + angleOffset);
+                spawnBulletWithType(bullets, bulletPool, baseAngle + angleOffset, BulletType.PHASE23_MULTI, 20, 20);
             }
             Gdx.app.log("Boss", "Fan barrage!");
         }
     }
 
+    /**
+     * Spawns a bullet with a specific rendering strategy type.
+     * 
+     * @param bullets Active bullets array
+     * @param bulletPool Bullet pool for object reuse
+     * @param angle Firing angle in degrees
+     * @param type Bullet type (determines visual rendering)
+     * @param width Bullet width
+     * @param height Bullet height
+     */
+    private void spawnBulletWithType(Array<EnemyBullet> bullets, Pool<EnemyBullet> bulletPool, 
+                                     float angle, BulletType type, float width, float height) {
+        EnemyBullet bullet = bulletPool.obtain();
+        float spawnX = bounds.x + bounds.width / 2 - width / 2; // Center of boss
+        float spawnY = bounds.y + bounds.height / 2 - height / 2;
+        bullet.init(spawnX, spawnY, angle, BULLET_SPEED, BULLET_DAMAGE, type, width, height);
+        bullets.add(bullet);
+    }
+
+    /**
+     * Legacy spawn method for backward compatibility (not used by FinalBoss anymore).
+     */
     private void spawnBullet(Array<EnemyBullet> bullets, Pool<EnemyBullet> bulletPool, float angle) {
         EnemyBullet bullet = bulletPool.obtain();
         float spawnX = bounds.x + bounds.width / 2 - 4; // Center of boss
@@ -429,12 +452,12 @@ public class FinalBoss extends BossEnemy {
     }
 
     private void shootBigUpwardBullet(Array<EnemyBullet> bullets, Pool<EnemyBullet> bulletPool) {
-        // Fire ONE massive bullet straight up
+        // Fire ONE massive bullet straight up with fast spin
         EnemyBullet bullet = bulletPool.obtain();
         float spawnX = bounds.x + bounds.width / 2 - BIG_BULLET_WIDTH / 2; // Center of boss
         float spawnY = bounds.y + bounds.height / 2 - BIG_BULLET_HEIGHT / 2;
-        bullet.init(spawnX, spawnY, UPWARD_SHOT_BASE_ANGLE, BIG_BULLET_SPEED, BIG_BULLET_DAMAGE, enemyBulletTex,
-                BIG_BULLET_WIDTH, BIG_BULLET_HEIGHT);
+        bullet.init(spawnX, spawnY, UPWARD_SHOT_BASE_ANGLE, BIG_BULLET_SPEED, BIG_BULLET_DAMAGE, 
+                    BulletType.BIG_ATTACK, BIG_BULLET_WIDTH, BIG_BULLET_HEIGHT);
         bullets.add(bullet);
         Gdx.app.log("Boss", "Fired BIG bullet upward with " + BIG_BULLET_DAMAGE + " damage!");
     }
