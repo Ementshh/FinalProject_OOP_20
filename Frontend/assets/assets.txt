@@ -29,7 +29,6 @@ ground_base.png
 healthpotion.png
 libgdx.png
 mac10.png
-miniboss.png
 miniboss_crouch.png
 miniboss_dash.png
 miniboss_dashprep.png
