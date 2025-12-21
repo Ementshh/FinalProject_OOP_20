@@ -29,7 +29,15 @@ allprojects {
 
 configure(subprojects) {
   apply plugin: 'java-library'
-  sourceCompatibility = 17
+
+  // Use Java Toolchain to ensure correct Java version is used/downloaded
+  java {
+    toolchain {
+      languageVersion = JavaLanguageVersion.of(17)
+      // Force a specific vendor to bypass local broken JDK detection
+      vendor = JvmVendorSpec.ADOPTIUM
+    }
+  }
 
   // From https://lyze.dev/2021/04/29/libGDX-Internal-Assets-List/
   // The article can be helpful when using assets.txt in your project.

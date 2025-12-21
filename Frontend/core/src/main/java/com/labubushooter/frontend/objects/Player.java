@@ -11,8 +11,6 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
 import com.badlogic.gdx.utils.TimeUtils;
 import com.labubushooter.frontend.patterns.ShootingStrategy;
-import com.labubushooter.frontend.patterns.weapons.PistolStrategy;
-import com.labubushooter.frontend.patterns.weapons.Mac10Strategy;
 import com.labubushooter.frontend.patterns.weapons.WeaponRenderer;
 
 public class Player extends GameObject {
@@ -38,9 +36,6 @@ public class Player extends GameObject {
     final float JUMP_POWER = 500f;
     final float SPEED = 250f;
     public static float LEVEL_WIDTH = 2400f;
-
-    //public Texture pistolTex;
-    //public Texture mac10Tex;
 
     // Mouse aiming
     private Vector2 mouseWorldPos;
@@ -73,6 +68,13 @@ public class Player extends GameObject {
         Gdx.app.log("Player", "Health: " + health);
     }
 
+    public void addHealth(float amount) {
+        health += amount;
+        if (health > MAX_HEALTH)
+            health = MAX_HEALTH;
+        Gdx.app.log("Player", "Health added: " + amount + ". Current: " + health);
+    }
+
     public boolean isDead() {
         return health <= 0;
     }
@@ -89,6 +91,11 @@ public class Player extends GameObject {
     }
 
     public void update(float delta, Array<Platform> platforms, Array<Ground> grounds) {
+        // Update Weapon Strategy (Reload timers, etc.)
+        if (shootingStrategy != null) {
+            shootingStrategy.update(delta);
+        }
+
         // Health Regeneration Logic
         long currentTime = TimeUtils.nanoTime();
         if (health < MAX_HEALTH && currentTime - lastDamageTime > REGEN_DELAY) {
@@ -232,14 +239,7 @@ public class Player extends GameObject {
 
         // 2. Draw Weapon using WeaponRenderer (Strategy Pattern)
         if (shootingStrategy != null) {
-            WeaponRenderer renderer = null;
-
-            // Get renderer from strategy (Dependency Inversion Principle)
-            if (shootingStrategy instanceof PistolStrategy) {
-                renderer = ((PistolStrategy) shootingStrategy).getRenderer();
-            } else if (shootingStrategy instanceof Mac10Strategy) {
-                renderer = ((Mac10Strategy) shootingStrategy).getRenderer();
-            }
+            WeaponRenderer renderer = shootingStrategy.getRenderer();
 
             if (renderer != null) {
                 float playerCenterX = bounds.x + bounds.width / 2;
