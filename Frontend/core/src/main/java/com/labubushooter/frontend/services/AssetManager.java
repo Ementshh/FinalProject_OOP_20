@@ -12,29 +12,29 @@ import com.badlogic.gdx.utils.Disposable;
 
 /**
  * Centralized asset management with lazy loading and automatic disposal.
- * 
+ *
  * Design Patterns:
  * - Singleton: Single point of asset access across the application
  * - Lazy Loading: Assets loaded on first request or explicit initialization
  * - Object Pool/Flyweight: Reuses loaded assets instead of creating duplicates
- * 
+ *
  * SOLID Principles:
  * - Single Responsibility: Only handles asset lifecycle (load, cache, dispose)
  * - Dependency Inversion: Clients depend on AssetManager abstraction
  * - Open/Closed: New asset types can be added without modifying existing code
  */
 public class AssetManager implements Disposable {
-    
+
     private static AssetManager instance;
-    
+
     // ==================== ASSET CACHES ====================
     private final Map<String, Texture> textureCache;
     private final Map<String, Texture> generatedTextureCache;
     private final Map<String, BitmapFont> fontCache;
-    
+
     // Loading state
     private boolean initialized = false;
-    
+
     // ==================== TEXTURE KEYS (File-based) ====================
     public static final String PLAYER = "player";
     public static final String PLAYER_WALK_FRAME1 = "player_walk_frame1";
@@ -60,7 +60,7 @@ public class AssetManager implements Disposable {
     public static final String BACKGROUND_LEVEL1 = "background_level1";
     public static final String BACKGROUND_LEVEL2_TO_4 = "background_level2to4";
     public static final String BACKGROUND_LEVEL5 = "background_level5";
-    
+
     // ==================== TEXTURE KEYS (Generated) ====================
     public static final String DEBUG_LINE = "debug_line";
     public static final String LEVEL_INDICATOR = "level_indicator";
@@ -70,23 +70,29 @@ public class AssetManager implements Disposable {
     public static final String FLASH_YELLOW = "flash_yellow";
     public static final String BUTTON = "button";
     public static final String BUTTON_HOVER = "button_hover";
-    
+    public static final String TRANSPARENT = "transparent";
+
+    // Pickups (Dump Textures)
+    public static final String AMMO_9MM = "ammo_9mm";
+    public static final String AMMO_45CAL = "ammo_45cal";
+    public static final String HEALTH_POTION = "health_potion";
+
     // ==================== FONT KEYS ====================
     public static final String FONT_DEFAULT = "font_default";
     public static final String FONT_SMALL = "font_small";
-    
+
     // ==================== CONSTRUCTOR ====================
-    
+
     private AssetManager() {
         textureCache = new HashMap<>();
         generatedTextureCache = new HashMap<>();
         fontCache = new HashMap<>();
     }
-    
+
     /**
      * Get singleton instance.
      * Thread-safe lazy initialization.
-     * 
+     *
      * @return The singleton AssetManager instance
      */
     public static synchronized AssetManager getInstance() {
@@ -95,9 +101,9 @@ public class AssetManager implements Disposable {
         }
         return instance;
     }
-    
+
     // ==================== INITIALIZATION ====================
-    
+
     /**
      * Initialize all game assets.
      * Call once at game start in Main.create().
@@ -108,26 +114,26 @@ public class AssetManager implements Disposable {
             Gdx.app.log("AssetManager", "Already initialized, skipping");
             return;
         }
-        
+
         Gdx.app.log("AssetManager", "Initializing assets...");
-        
+
         // Load file-based textures
         loadFileTextures();
-        
+
         // Generate procedural color textures
         generateColorTextures();
-        
+
         // Load fonts
         loadFonts();
-        
+
         initialized = true;
         Gdx.app.log("AssetManager", "Assets initialized successfully. " +
-                   "Textures: " + (textureCache.size() + generatedTextureCache.size()) + 
+                   "Textures: " + (textureCache.size() + generatedTextureCache.size()) +
                    ", Fonts: " + fontCache.size());
     }
-    
+
     // ==================== TEXTURE LOADING ====================
-    
+
     /**
      * Load all file-based textures.
      * Uses Nearest filtering for pixel art style.
@@ -157,10 +163,10 @@ public class AssetManager implements Disposable {
         loadTexture(BACKGROUND_LEVEL2_TO_4, "bglevel2to4.png");
         loadTexture(BACKGROUND_LEVEL5, "bglevel5.png");
     }
-    
+
     /**
      * Load a texture from file with nearest filtering.
-     * 
+     *
      * @param key Asset key for retrieval
      * @param filename File path relative to assets folder
      */
@@ -174,7 +180,7 @@ public class AssetManager implements Disposable {
             Gdx.app.error("AssetManager", "Failed to load texture: " + filename, e);
         }
     }
-    
+
     /**
      * Generate all procedural color textures.
      */
@@ -187,13 +193,19 @@ public class AssetManager implements Disposable {
         generatedTextureCache.put(FLASH_YELLOW, createColorTexture(60, 90, Color.YELLOW));
         generatedTextureCache.put(BUTTON, createColorTexture(500, 80, new Color(0.7f, 0.7f, 0.7f, 1f)));
         generatedTextureCache.put(BUTTON_HOVER, createColorTexture(500, 80, new Color(0.9f, 0.9f, 0.9f, 1f)));
-        
+        generatedTextureCache.put(TRANSPARENT, createColorTexture(1, 1, new Color(0, 0, 0, 0)));
+
+        // Dump textures for pickups
+        generatedTextureCache.put(AMMO_9MM, createColorTexture(20, 20, Color.GREEN));
+        generatedTextureCache.put(AMMO_45CAL, createColorTexture(20, 20, Color.BLUE));
+        generatedTextureCache.put(HEALTH_POTION, createColorTexture(20, 20, Color.RED));
+
         Gdx.app.log("AssetManager", "Generated " + generatedTextureCache.size() + " color textures");
     }
-    
+
     /**
      * Create a solid color texture.
-     * 
+     *
      * @param width Texture width in pixels
      * @param height Texture height in pixels
      * @param color Fill color
@@ -207,9 +219,9 @@ public class AssetManager implements Disposable {
         pixmap.dispose();
         return texture;
     }
-    
+
     // ==================== FONT LOADING ====================
-    
+
     /**
      * Load and configure fonts.
      */
@@ -218,21 +230,21 @@ public class AssetManager implements Disposable {
         BitmapFont defaultFont = new BitmapFont();
         defaultFont.getData().setScale(3f);
         fontCache.put(FONT_DEFAULT, defaultFont);
-        
+
         // Small font
         BitmapFont smallFont = new BitmapFont();
         smallFont.getData().setScale(1.5f);
         fontCache.put(FONT_SMALL, smallFont);
-        
+
         Gdx.app.log("AssetManager", "Loaded " + fontCache.size() + " fonts");
     }
-    
+
     // ==================== GETTERS ====================
-    
+
     /**
      * Get a texture by key.
      * Checks both file-loaded and generated textures.
-     * 
+     *
      * @param key Texture key constant (e.g., AssetManager.PLAYER)
      * @return Texture or null if not found
      */
@@ -241,26 +253,26 @@ public class AssetManager implements Disposable {
             Gdx.app.error("AssetManager", "Assets not initialized! Call initialize() first.");
             return null;
         }
-        
+
         // Check file textures first
         Texture texture = textureCache.get(key);
         if (texture != null) {
             return texture;
         }
-        
+
         // Check generated textures
         texture = generatedTextureCache.get(key);
         if (texture != null) {
             return texture;
         }
-        
+
         Gdx.app.error("AssetManager", "Texture not found: " + key);
         return null;
     }
-    
+
     /**
      * Get a font by key.
-     * 
+     *
      * @param key Font key constant (e.g., AssetManager.FONT_DEFAULT)
      * @return BitmapFont or null if not found
      */
@@ -269,63 +281,63 @@ public class AssetManager implements Disposable {
             Gdx.app.error("AssetManager", "Assets not initialized! Call initialize() first.");
             return null;
         }
-        
+
         BitmapFont font = fontCache.get(key);
         if (font == null) {
             Gdx.app.error("AssetManager", "Font not found: " + key);
         }
         return font;
     }
-    
+
     /**
      * Convenience method for default font.
-     * 
+     *
      * @return Default (large) font
      */
     public BitmapFont getDefaultFont() {
         return getFont(FONT_DEFAULT);
     }
-    
+
     /**
      * Convenience method for small font.
-     * 
+     *
      * @return Small font
      */
     public BitmapFont getSmallFont() {
         return getFont(FONT_SMALL);
     }
-    
+
     // ==================== STATE QUERIES ====================
-    
+
     /**
      * Check if assets have been initialized.
-     * 
+     *
      * @return true if initialize() has been called
      */
     public boolean isInitialized() {
         return initialized;
     }
-    
+
     /**
      * Get total number of cached textures.
-     * 
+     *
      * @return Total texture count
      */
     public int getTextureCount() {
         return textureCache.size() + generatedTextureCache.size();
     }
-    
+
     /**
      * Get total number of cached fonts.
-     * 
+     *
      * @return Total font count
      */
     public int getFontCount() {
         return fontCache.size();
     }
-    
+
     // ==================== LIFECYCLE ====================
-    
+
     /**
      * Dispose all loaded assets.
      * Call on game exit in Main.dispose().
@@ -333,7 +345,7 @@ public class AssetManager implements Disposable {
     @Override
     public void dispose() {
         Gdx.app.log("AssetManager", "Disposing assets...");
-        
+
         // Dispose file textures
         for (Texture texture : textureCache.values()) {
             if (texture != null) {
@@ -341,7 +353,7 @@ public class AssetManager implements Disposable {
             }
         }
         textureCache.clear();
-        
+
         // Dispose generated textures
         for (Texture texture : generatedTextureCache.values()) {
             if (texture != null) {
@@ -349,7 +361,7 @@ public class AssetManager implements Disposable {
             }
         }
         generatedTextureCache.clear();
-        
+
         // Dispose fonts
         for (BitmapFont font : fontCache.values()) {
             if (font != null) {
@@ -357,11 +369,11 @@ public class AssetManager implements Disposable {
             }
         }
         fontCache.clear();
-        
+
         initialized = false;
         Gdx.app.log("AssetManager", "Assets disposed successfully");
     }
-    
+
     /**
      * Reset singleton instance (for testing or full restart).
      */
