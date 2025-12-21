@@ -18,8 +18,8 @@ public class PistolRenderer implements WeaponRenderer{
         this.height = texture != null ? texture.getHeight() : 8f;
 
         // Grip point di belakang pistol (ujung kiri tengah)
-        this.gripX = 5f;
-        this.gripY = height / 2f;
+        this.gripX = 2.5f;
+        this.gripY = (height / 2f) + 1;
     }
 
     @Override

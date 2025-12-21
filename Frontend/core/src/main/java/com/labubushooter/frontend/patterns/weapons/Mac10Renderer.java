@@ -14,8 +14,8 @@ public class Mac10Renderer implements WeaponRenderer{
         this.texture = texture;
         this.width = texture != null ? texture.getWidth() : 30f;
         this.height = texture != null ? texture.getHeight() : 10f;
-        this.gripX = 5f;
-        this.gripY = height / 2f;
+        this.gripX = 2.3f;
+        this.gripY = (height / 2f)-2;
     }
 
     @Override
