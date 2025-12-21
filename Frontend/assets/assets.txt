@@ -1,3 +1,4 @@
+ammopack.png
 bglevel1.png
 bglevel2to4.png
 bglevel5.png
@@ -9,6 +10,7 @@ enemyframe1.png
 enemyframe2.png
 ground.png
 ground_base.png
+healthpotion.png
 libgdx.png
 mac10.png
 miniboss.png

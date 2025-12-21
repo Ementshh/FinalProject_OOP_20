@@ -126,6 +126,8 @@ public class GameWorld {
         // Handle pickup spawning
         handlePickupSpawning();
 
+        updatePickups(delta);
+
         // Update enemies
         updateEnemies(delta);
 
@@ -379,6 +381,22 @@ public class GameWorld {
             context.coinScore += collected;
             context.coinsCollectedThisSession += collected;
             Gdx.app.log("Coin", "Total: " + context.coinScore);
+        }
+    }
+
+    // ==================== PICKUP MANAGEMENT ====================
+
+    /**
+     * Updates all active pickups with animation.
+     *
+     * @param delta Time since last frame
+     */
+    private void updatePickups(float delta) {
+        if (context.activePickups != null) {
+            for (int i = context.activePickups.size - 1; i >= 0; i--) {
+                Pickup pickup = context.activePickups.get(i);
+                pickup.update(delta);
+            }
         }
     }
 

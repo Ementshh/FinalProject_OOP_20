@@ -69,10 +69,11 @@ public class AssetManager implements Disposable {
     public static final String BUTTON_HOVER = "button_hover";
     public static final String TRANSPARENT = "transparent";
 
-    // Pickups (Dump Textures)
+    // Pickups (File-based)
     public static final String AMMO_9MM = "ammo_9mm";
     public static final String AMMO_45CAL = "ammo_45cal";
     public static final String HEALTH_POTION = "health_potion";
+    public static final String AMMO_PACK = "ammo_pack";
 
     // ==================== FONT KEYS ====================
     public static final String FONT_DEFAULT = "font_default";
@@ -156,6 +157,16 @@ public class AssetManager implements Disposable {
         loadTexture(BACKGROUND_LEVEL1, "bglevel1.png");
         loadTexture(BACKGROUND_LEVEL2_TO_4, "bglevel2to4.png");
         loadTexture(BACKGROUND_LEVEL5, "bglevel5.png");
+        
+        // Load pickup textures
+        loadTexture(HEALTH_POTION, "healthpotion.png");
+        loadTexture(AMMO_PACK, "ammopack.png");
+        // Use ammopack.png for both ammo types (share the same texture instance)
+        Texture ammoPackTex = textureCache.get(AMMO_PACK);
+        if (ammoPackTex != null) {
+            textureCache.put(AMMO_9MM, ammoPackTex);
+            textureCache.put(AMMO_45CAL, ammoPackTex);
+        }
     }
 
     /**
@@ -188,11 +199,6 @@ public class AssetManager implements Disposable {
         generatedTextureCache.put(BUTTON, createColorTexture(500, 80, new Color(0.7f, 0.7f, 0.7f, 1f)));
         generatedTextureCache.put(BUTTON_HOVER, createColorTexture(500, 80, new Color(0.9f, 0.9f, 0.9f, 1f)));
         generatedTextureCache.put(TRANSPARENT, createColorTexture(1, 1, new Color(0, 0, 0, 0)));
-
-        // Dump textures for pickups
-        generatedTextureCache.put(AMMO_9MM, createColorTexture(20, 20, Color.GREEN));
-        generatedTextureCache.put(AMMO_45CAL, createColorTexture(20, 20, Color.BLUE));
-        generatedTextureCache.put(HEALTH_POTION, createColorTexture(20, 20, Color.RED));
 
         Gdx.app.log("AssetManager", "Generated " + generatedTextureCache.size() + " color textures");
     }
