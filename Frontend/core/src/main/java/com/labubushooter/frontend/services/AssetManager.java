@@ -55,6 +55,26 @@ public class AssetManager implements Disposable {
     public static final String MINI_BOSS_DASHPREP = "miniboss_dashprep";
     public static final String MINI_BOSS_DASH = "miniboss_dash";
     public static final String BOSS = "boss";
+    
+    // Boss animation textures - Phase 1
+    public static final String BOSS_PHASE1_WALK1 = "boss_phase1_walk1";
+    public static final String BOSS_PHASE1_WALK2 = "boss_phase1_walk2";
+    public static final String BOSS_PHASE1_JUMP = "boss_phase1_jump";
+    public static final String BOSS_PHASE1_BIGATTACK = "boss_phase1_bigattack";
+    
+    // Boss animation textures - Phase 2
+    public static final String BOSS_PHASE2_WALK1 = "boss_phase2_walk1";
+    public static final String BOSS_PHASE2_WALK2 = "boss_phase2_walk2";
+    public static final String BOSS_PHASE2_JUMP = "boss_phase2_jump";
+    public static final String BOSS_PHASE2_BIGATTACK = "boss_phase2_bigattack";
+    
+    // Boss animation textures - Phase 3
+    public static final String BOSS_PHASE3_WALK1 = "boss_phase3_walk1";
+    public static final String BOSS_PHASE3_WALK2 = "boss_phase3_walk2";
+    public static final String BOSS_PHASE3_JUMP = "boss_phase3_jump";
+    public static final String BOSS_PHASE3_BIGATTACK = "boss_phase3_bigattack";
+    
+    // Boss bullet textures
     public static final String BOSS_PHASE1_BULLET = "boss_phase1_bullet";
     public static final String BOSS_PHASE23_BULLET = "boss_phase23_bullet";
     public static final String BOSS_BIG_BULLET = "boss_big_bullet";
@@ -166,6 +186,26 @@ public class AssetManager implements Disposable {
         loadTexture(MINI_BOSS_DASHPREP, "miniboss_dashprep.png");
         loadTexture(MINI_BOSS_DASH, "miniboss_dash.png");
         loadTexture(BOSS, "boss.png");
+        
+        // Load boss animation textures - Phase 1
+        loadTexture(BOSS_PHASE1_WALK1, "boss_phase1_walk1.png");
+        loadTexture(BOSS_PHASE1_WALK2, "boss_phase1_walk2.png");
+        loadTexture(BOSS_PHASE1_JUMP, "boss_phase1_jump.png");
+        loadTexture(BOSS_PHASE1_BIGATTACK, "boss_phase1_bigattack.png");
+        
+        // Load boss animation textures - Phase 2
+        loadTexture(BOSS_PHASE2_WALK1, "boss_phase2_walk1.png");
+        loadTexture(BOSS_PHASE2_WALK2, "boss_phase2_walk2.png");
+        loadTexture(BOSS_PHASE2_JUMP, "boss_phase2_jump.png");
+        loadTexture(BOSS_PHASE2_BIGATTACK, "boss_phase2_bigattack.png");
+        
+        // Load boss animation textures - Phase 3
+        loadTexture(BOSS_PHASE3_WALK1, "boss_phase3_walk1.png");
+        loadTexture(BOSS_PHASE3_WALK2, "boss_phase3_walk2.png");
+        loadTexture(BOSS_PHASE3_JUMP, "boss_phase3_jump.png");
+        loadTexture(BOSS_PHASE3_BIGATTACK, "boss_phase3_bigattack.png");
+        
+        // Load boss bullet textures
         loadTexture(BOSS_PHASE1_BULLET, "boss_phase1_bullet.png");
         loadTexture(BOSS_PHASE23_BULLET, "boss_phase23_bullet.png");
         loadTexture(BOSS_BIG_BULLET, "boss_big_bullet.png");
