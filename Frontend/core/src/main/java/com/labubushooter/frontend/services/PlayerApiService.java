@@ -6,6 +6,8 @@ import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.net.HttpRequestBuilder;
 import com.badlogic.gdx.utils.JsonReader;
 import com.badlogic.gdx.utils.JsonValue;
+import com.badlogic.gdx.utils.ObjectMap;
+import com.badlogic.gdx.utils.PropertiesUtils;
 import com.badlogic.gdx.utils.PropertiesUtils;
 
 import java.io.IOException;
@@ -25,7 +27,7 @@ public class PlayerApiService {
             // Try to load from a local config.properties file next to the jar
             FileHandle handle = Gdx.files.local("config.properties");
             if (handle.exists()) {
-                HashMap<String, String> properties = new HashMap<>();
+                ObjectMap<String, String> properties = new ObjectMap<>();
                 PropertiesUtils.load(properties, handle.reader());
                 String url = properties.get("api.url");
                 if (url != null && !url.trim().isEmpty()) {
