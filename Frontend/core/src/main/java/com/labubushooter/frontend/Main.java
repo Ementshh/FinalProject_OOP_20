@@ -11,6 +11,7 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
+import com.labubushooter.frontend.animation.PlayerAnimationStrategy;
 import com.labubushooter.frontend.core.GameContext;
 import com.labubushooter.frontend.objects.*;
 import com.labubushooter.frontend.patterns.CoinPattern;
@@ -72,6 +73,9 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
     private Texture miniBossCrouchTex, miniBossDashPrepTex, miniBossDashTex;
     private Texture whiteFlashTex, redFlashTex, yellowFlashTex;
     private Texture backgroundTex, buttonTex, buttonHoverTex;
+    
+    // Player animation textures
+    private Texture playerWalkFrame1Tex, playerWalkFrame2Tex, playerCrouchTex;
     
     // Game Objects
     private Player player;
@@ -143,6 +147,9 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
         
         // Textures from AssetManager
         playerTex = assetManager.getTexture(AssetManager.PLAYER);
+        playerWalkFrame1Tex = assetManager.getTexture(AssetManager.PLAYER_WALK_FRAME1);
+        playerWalkFrame2Tex = assetManager.getTexture(AssetManager.PLAYER_WALK_FRAME2);
+        playerCrouchTex = assetManager.getTexture(AssetManager.PLAYER_CROUCH);
         platformTex = assetManager.getTexture(AssetManager.PLATFORM);
         groundTex = assetManager.getTexture(AssetManager.GROUND_BASE);
         exitTex = assetManager.getTexture(AssetManager.EXIT_DOOR);
@@ -227,6 +234,15 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
         player = new Player(playerTex);
         player.camera = camera;
         player.setWeapon(null);
+        
+        // Setup player animation strategy
+        PlayerAnimationStrategy playerAnimation = new PlayerAnimationStrategy(
+            playerTex,           // idle texture
+            playerWalkFrame1Tex, // walk frame 1
+            playerWalkFrame2Tex, // walk frame 2
+            playerCrouchTex      // crouch/jump anticipation texture
+        );
+        player.setAnimationStrategy(playerAnimation);
         
         // Services
         playerApi = new PlayerApiService();

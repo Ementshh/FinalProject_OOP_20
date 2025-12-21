@@ -37,6 +37,9 @@ public class AssetManager implements Disposable {
     
     // ==================== TEXTURE KEYS (File-based) ====================
     public static final String PLAYER = "player";
+    public static final String PLAYER_WALK_FRAME1 = "player_walk_frame1";
+    public static final String PLAYER_WALK_FRAME2 = "player_walk_frame2";
+    public static final String PLAYER_CROUCH = "player_crouch";
     public static final String PLATFORM = "platform";
     public static final String GROUND = "ground";
     public static final String GROUND_BASE = "ground_base";
@@ -131,6 +134,9 @@ public class AssetManager implements Disposable {
      */
     private void loadFileTextures() {
         loadTexture(PLAYER, "player.png");
+        loadTexture(PLAYER_WALK_FRAME1, "player_walk_frame1.png");
+        loadTexture(PLAYER_WALK_FRAME2, "player_walk_frame2.png");
+        loadTexture(PLAYER_CROUCH, "player_crouch.png");
         loadTexture(PLATFORM, "ground.png");
         loadTexture(GROUND_BASE, "ground_base.png");
         loadTexture(EXIT_DOOR, "door.png");

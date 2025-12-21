@@ -19,3 +19,6 @@ miniboss_walk_frame1.png
 miniboss_walk_frame2.png
 pistol.png
 player.png
+player_crouch.png
+player_walk_frame1.png
+player_walk_frame2.png

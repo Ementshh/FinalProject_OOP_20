@@ -10,15 +10,32 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
 import com.badlogic.gdx.utils.TimeUtils;
+import com.labubushooter.frontend.animation.PlayerAnimationStrategy;
+import com.labubushooter.frontend.animation.SpriteAligner;
 import com.labubushooter.frontend.patterns.ShootingStrategy;
-import com.labubushooter.frontend.patterns.weapons.PistolStrategy;
 import com.labubushooter.frontend.patterns.weapons.Mac10Strategy;
+import com.labubushooter.frontend.patterns.weapons.PistolStrategy;
 import com.labubushooter.frontend.patterns.weapons.WeaponRenderer;
 
+/**
+ * Player entity with animation controller and proper sprite alignment.
+ * 
+ * Design Patterns:
+ * - Strategy Pattern: Uses PlayerAnimationStrategy for animations
+ * - Strategy Pattern: Uses ShootingStrategy for weapons
+ * 
+ * SOLID Principles:
+ * - Single Responsibility: Handles player entity logic
+ * - Open/Closed: Animation behavior can be extended via strategy
+ * - Dependency Inversion: Depends on strategy abstractions
+ */
 public class Player extends GameObject {
     public float velY = 0;
     public boolean grounded = false;
     public boolean facingRight = true;
+    
+    // Current horizontal velocity for animation
+    private float currentVelocityX = 0f;
 
     // Health System
     public float health;
@@ -33,6 +50,9 @@ public class Player extends GameObject {
 
     // Strategy Pattern: The behavior of shooting is encapsulated in this interface
     private ShootingStrategy shootingStrategy;
+    
+    // Animation Strategy
+    private PlayerAnimationStrategy animationStrategy;
 
     final float GRAVITY = -900f;
     final float JUMP_POWER = 500f;
@@ -50,11 +70,31 @@ public class Player extends GameObject {
     public Player(Texture tex) {
         super(100, 300, 50, 75, tex); // Increased from 40x60 to 50x75 (1.25x larger)
         this.shootingStrategy = null;
+        this.animationStrategy = null;
         this.health = MAX_HEALTH;
         this.lastDamageTime = TimeUtils.nanoTime();
         this.lastRegenTime = TimeUtils.nanoTime();
         this.mouseWorldPos = new Vector2();
         this.weaponAngle = 0f;
+    }
+    
+    /**
+     * Sets the animation strategy for the player.
+     * Enables full animation with idle, walking, and jump anticipation.
+     * 
+     * @param strategy The animation strategy to use
+     */
+    public void setAnimationStrategy(PlayerAnimationStrategy strategy) {
+        this.animationStrategy = strategy;
+    }
+    
+    /**
+     * Gets the current animation strategy.
+     * 
+     * @return The animation strategy or null if not set
+     */
+    public PlayerAnimationStrategy getAnimationStrategy() {
+        return animationStrategy;
     }
 
     public void setWeapon(ShootingStrategy strategy) {
@@ -86,6 +126,12 @@ public class Player extends GameObject {
         this.lastDamageTime = TimeUtils.nanoTime();
         this.lastRegenTime = TimeUtils.nanoTime();
         this.weaponAngle = 0f;
+        this.currentVelocityX = 0f;
+        
+        // Reset animation strategy
+        if (animationStrategy != null) {
+            animationStrategy.reset();
+        }
     }
 
     public void update(float delta, Array<Platform> platforms, Array<Ground> grounds) {
@@ -101,12 +147,17 @@ public class Player extends GameObject {
             }
         }
 
+        // Calculate horizontal velocity for animation
+        currentVelocityX = 0f;
+        
         // WASD Movement Input
         if (Gdx.input.isKeyPressed(Input.Keys.A)) {
             bounds.x -= SPEED * delta;
+            currentVelocityX = -SPEED;
         }
         if (Gdx.input.isKeyPressed(Input.Keys.D)) {
             bounds.x += SPEED * delta;
+            currentVelocityX = SPEED;
         }
 
         // Boundary check untuk level yang lebih lebar
@@ -148,6 +199,17 @@ public class Player extends GameObject {
             velY = 0;
         }
 
+        // Update animation state
+        if (animationStrategy != null) {
+            animationStrategy.updateMovementState(currentVelocityX, velY, grounded);
+            animationStrategy.update(delta);
+            
+            // Sync facing direction with animation (unless mouse aiming overrides)
+            if (camera == null) {
+                facingRight = !animationStrategy.isFacingLeft();
+            }
+        }
+
         // Update mouse world position and weapon angle
         if (camera != null) {
             updateMouseAiming();
@@ -177,8 +239,17 @@ public class Player extends GameObject {
         } else {
             facingRight = false;
         }
+        
+        // Sync animation strategy facing direction with mouse aiming
+        if (animationStrategy != null) {
+            animationStrategy.setFacingLeft(!facingRight);
+        }
     }
 
+    /**
+     * Performs a jump if grounded.
+     * Jump is immediate - no anticipation delay.
+     */
     public void jump() {
         if (grounded) {
             velY = JUMP_POWER;
@@ -227,8 +298,42 @@ public class Player extends GameObject {
 
     @Override
     public void draw(SpriteBatch batch) {
-        // 1. Draw Player Body
-        batch.draw(texture, bounds.x, bounds.y, bounds.width, bounds.height);
+        // 1. Draw Player Body with animation and proper alignment
+        Texture currentTexture;
+        float drawWidth, drawHeight;
+        float drawX, drawY;
+        
+        if (animationStrategy != null) {
+            currentTexture = animationStrategy.getCurrentFrame();
+            
+            // Calculate scaled dimensions maintaining aspect ratio
+            float[] scaledDims = SpriteAligner.getScaledDimensions(
+                bounds, 
+                currentTexture.getWidth(), 
+                currentTexture.getHeight(), 
+                1.0f
+            );
+            drawWidth = scaledDims[0];
+            drawHeight = scaledDims[1];
+            
+            // Get foot-aligned position (feet at bottom, centered horizontally)
+            float[] alignedPos = SpriteAligner.getFootAlignedPosition(bounds, drawWidth, drawHeight);
+            drawX = alignedPos[0];
+            drawY = alignedPos[1];
+            
+            // Determine if we need to flip for facing direction
+            boolean flipX = !facingRight;
+            
+            // Draw with proper alignment and flipping
+            batch.draw(currentTexture,
+                       flipX ? drawX + drawWidth : drawX,  // Adjust X for flip
+                       drawY,
+                       flipX ? -drawWidth : drawWidth,     // Negative width for flip
+                       drawHeight);
+        } else {
+            // Fallback: draw texture directly without animation
+            batch.draw(texture, bounds.x, bounds.y, bounds.width, bounds.height);
+        }
 
         // 2. Draw Weapon using WeaponRenderer (Strategy Pattern)
         if (shootingStrategy != null) {
