@@ -516,17 +516,30 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
             return;
         }
 
+        // Capture current values before async call
+        final int stageToSave = gameContext.currentLevel;
+        final int coinsToSave = gameContext.coinsCollectedThisSession;
+        
         playerApi.saveProgress(
             gameContext.currentPlayerData.playerId,
-            gameContext.currentLevel,
-            gameContext.coinsCollectedThisSession,
+            stageToSave,
+            coinsToSave,
             new PlayerApiService.SaveCallback() {
                 @Override
                 public void onSuccess() {
-                    Gdx.app.log("Main", "Progress saved successfully");
-                    gameContext.currentPlayerData.lastStage = gameContext.currentLevel;
-                    gameContext.currentPlayerData.totalCoins += gameContext.coinsCollectedThisSession;
-                    gameContext.coinsCollectedThisSession = 0;
+                    Gdx.app.postRunnable(() -> {
+                        Gdx.app.log("Main", "Progress saved successfully");
+                        
+                        // Update local player data
+                        gameContext.currentPlayerData.lastStage = stageToSave;
+                        gameContext.currentPlayerData.totalCoins += coinsToSave;
+                        
+                        // Reset session counter (coinScore already includes these coins)
+                        gameContext.coinsCollectedThisSession = 0;
+                        
+                        Gdx.app.log("Main", "Updated totalCoins in playerData: " + gameContext.currentPlayerData.totalCoins);
+                        Gdx.app.log("Main", "Current coinScore on screen: " + gameContext.coinScore);
+                    });
                 }
 
                 @Override
@@ -547,9 +560,10 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
         gameContext.resetPlayer();
         gameContext.currentLevel = 1;
         gameContext.coinScore = 0;
+        gameContext.coinsCollectedThisSession = 0;
         loadLevel(1);
         screenManager.setScreen(GameState.PLAYING);
-        Gdx.app.log("Main", "Game restarted");
+        Gdx.app.log("Main", "Game restarted - coinScore reset to 0");
     }
 
     @Override
