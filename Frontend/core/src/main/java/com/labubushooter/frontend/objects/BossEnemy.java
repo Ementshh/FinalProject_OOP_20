@@ -180,6 +180,36 @@ public abstract class BossEnemy {
         // Reset color
         batch.setColor(1f, 1f, 1f, 1f);
     }
+    
+    /**
+     * Gets the health bar background texture.
+     * Protected access for subclasses that need custom health bar rendering.
+     * 
+     * @return The health bar background texture
+     */
+    protected static Texture getHealthBarBg() {
+        return healthBarBg;
+    }
+    
+    /**
+     * Gets the health bar border texture.
+     * Protected access for subclasses that need custom health bar rendering.
+     * 
+     * @return The health bar border texture
+     */
+    protected static Texture getHealthBarBorder() {
+        return healthBarBorder;
+    }
+    
+    /**
+     * Gets the health bar fill texture.
+     * Protected access for subclasses that need custom health bar rendering.
+     * 
+     * @return The health bar fill texture
+     */
+    protected static Texture getHealthBarFill() {
+        return healthBarFill;
+    }
 
     public abstract void update(float delta, Array<Platform> platforms, Array<Ground> grounds);
 }

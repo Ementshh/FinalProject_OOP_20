@@ -130,16 +130,15 @@ public class EnemyFactory {
      * @param texture Boss texture
      * @param flashTex Flash effect texture
      * @param bulletTexture Texture for boss projectiles
-     * @param upwardShotFlashTex Upward shot flash texture
      * @param spawnX X position to spawn at
-     * @param levelWidth Level width for boundary
+     * @param spawnY Y position to spawn at
      * @return New FinalBoss instance
      */
     public FinalBoss createFinalBoss(Texture texture, Texture flashTex, 
-                                     Texture bulletTexture, Texture upwardShotFlashTex,
-                                     float spawnX, float levelWidth) {
-        FinalBoss boss = new FinalBoss(texture, flashTex, bulletTexture, upwardShotFlashTex);
-        boss.init(spawnX, levelWidth);
+                                     Texture bulletTexture,
+                                     float spawnX, float spawnY) {
+        FinalBoss boss = new FinalBoss(texture, flashTex, bulletTexture);
+        boss.init(spawnX, spawnY);
         
         Gdx.app.log("EnemyFactory", "Created Final Boss at X: " + spawnX);
         return boss;

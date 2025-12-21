@@ -6,11 +6,22 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
 import com.badlogic.gdx.utils.TimeUtils;
+import com.labubushooter.frontend.animation.FinalBossAnimationStrategy;
 import com.labubushooter.frontend.patterns.bullets.BulletRenderStrategyFactory.BulletType;
+import com.labubushooter.frontend.services.AssetManager;
 
 public class FinalBoss extends BossEnemy {
     private static final float LEVEL_WIDTH = 2400f; // Level 4 width
     private static final float JUMP_POWER = 450f;
+    
+    // Visual scaling - boss appears 1.5x larger but collider remains original size
+    private static final float VISUAL_SCALE_FACTOR = 1.5f;
+    private final float originalBoundsWidth;
+    private final float originalBoundsHeight;
+
+    // Animation system
+    private FinalBossAnimationStrategy animation;
+    private boolean facingLeft;
 
     // Phase system
     private int currentPhase = 1;
@@ -26,16 +37,14 @@ public class FinalBoss extends BossEnemy {
     private float upwardShotCooldown;
     private boolean playerWasAbove;
     private boolean isUpwardShotWarning;
-    private boolean shouldUpwardShotFlash;
-    private float upwardShotFlashTimer;
+    // Removed: shouldUpwardShotFlash, upwardShotFlashTimer, upwardShotFlashTexture (replaced by animation system)
     private float upwardShotWarningTimer;
     private float upwardShotStunTimer;
     private boolean isUpwardShotStunned;
-    private Texture upwardShotFlashTexture;
     private static final float MIN_UPWARD_SHOT_TIME = 2.0f;
     private static final float MAX_UPWARD_SHOT_TIME = 5.0f;
     private static final float HEIGHT_THRESHOLD = 50f;
-    private static final float UPWARD_SHOT_FLASH_INTERVAL = 0.15f;
+    // Removed: UPWARD_SHOT_FLASH_INTERVAL (no longer needed, animation system handles visuals)
     private static final float UPWARD_SHOT_WARNING_DURATION = 0.5f;
     private static final float UPWARD_SHOT_STUN_DURATION = 0.3f;
     private static final float UPWARD_SHOT_COOLDOWN_DURATION = 4.0f;
@@ -82,13 +91,104 @@ public class FinalBoss extends BossEnemy {
 
     private Texture enemyBulletTex;
 
-    public FinalBoss(Texture tex, Texture flashTex, Texture bulletTex, Texture upwardShotFlashTex) {
+    public FinalBoss(Texture tex, Texture flashTex, Texture bulletTex) {
         super(0, 0, 60, 100, 400, 8.0f, tex, flashTex);
+        // Store original bounds dimensions for collider/physics (keep at original size)
+        this.originalBoundsWidth = 60f;
+        this.originalBoundsHeight = 100f;
         this.enemyBulletTex = bulletTex;
-        this.upwardShotFlashTexture = upwardShotFlashTex;
+        // Removed: upwardShotFlashTexture parameter (animation system handles big attack visuals)
         this.currentSpeed = PHASE1_SPEED;
         this.shootCooldown = PHASE1_COOLDOWN;
         this.shootTimer = shootCooldown;
+        
+        // Initialize animation system with textures from AssetManager
+        AssetManager assetManager = AssetManager.getInstance();
+        
+        // Load Phase 1 textures with fallback to boss.png
+        Texture phase1Walk1 = assetManager.getTexture(AssetManager.BOSS_PHASE1_WALK1);
+        if (phase1Walk1 == null) {
+            Gdx.app.error("FinalBoss", "Failed to load BOSS_PHASE1_WALK1, using fallback");
+            phase1Walk1 = tex;
+        }
+        
+        Texture phase1Walk2 = assetManager.getTexture(AssetManager.BOSS_PHASE1_WALK2);
+        if (phase1Walk2 == null) {
+            Gdx.app.error("FinalBoss", "Failed to load BOSS_PHASE1_WALK2, using fallback");
+            phase1Walk2 = tex;
+        }
+        
+        Texture phase1Jump = assetManager.getTexture(AssetManager.BOSS_PHASE1_JUMP);
+        if (phase1Jump == null) {
+            Gdx.app.error("FinalBoss", "Failed to load BOSS_PHASE1_JUMP, using fallback");
+            phase1Jump = tex;
+        }
+        
+        Texture phase1BigAttack = assetManager.getTexture(AssetManager.BOSS_PHASE1_BIGATTACK);
+        if (phase1BigAttack == null) {
+            Gdx.app.error("FinalBoss", "Failed to load BOSS_PHASE1_BIGATTACK, using fallback");
+            phase1BigAttack = tex;
+        }
+        
+        // Load Phase 2 textures with fallback to boss.png
+        Texture phase2Walk1 = assetManager.getTexture(AssetManager.BOSS_PHASE2_WALK1);
+        if (phase2Walk1 == null) {
+            Gdx.app.error("FinalBoss", "Failed to load BOSS_PHASE2_WALK1, using fallback");
+            phase2Walk1 = tex;
+        }
+        
+        Texture phase2Walk2 = assetManager.getTexture(AssetManager.BOSS_PHASE2_WALK2);
+        if (phase2Walk2 == null) {
+            Gdx.app.error("FinalBoss", "Failed to load BOSS_PHASE2_WALK2, using fallback");
+            phase2Walk2 = tex;
+        }
+        
+        Texture phase2Jump = assetManager.getTexture(AssetManager.BOSS_PHASE2_JUMP);
+        if (phase2Jump == null) {
+            Gdx.app.error("FinalBoss", "Failed to load BOSS_PHASE2_JUMP, using fallback");
+            phase2Jump = tex;
+        }
+        
+        Texture phase2BigAttack = assetManager.getTexture(AssetManager.BOSS_PHASE2_BIGATTACK);
+        if (phase2BigAttack == null) {
+            Gdx.app.error("FinalBoss", "Failed to load BOSS_PHASE2_BIGATTACK, using fallback");
+            phase2BigAttack = tex;
+        }
+        
+        // Load Phase 3 textures with fallback to boss.png
+        Texture phase3Walk1 = assetManager.getTexture(AssetManager.BOSS_PHASE3_WALK1);
+        if (phase3Walk1 == null) {
+            Gdx.app.error("FinalBoss", "Failed to load BOSS_PHASE3_WALK1, using fallback");
+            phase3Walk1 = tex;
+        }
+        
+        Texture phase3Walk2 = assetManager.getTexture(AssetManager.BOSS_PHASE3_WALK2);
+        if (phase3Walk2 == null) {
+            Gdx.app.error("FinalBoss", "Failed to load BOSS_PHASE3_WALK2, using fallback");
+            phase3Walk2 = tex;
+        }
+        
+        Texture phase3Jump = assetManager.getTexture(AssetManager.BOSS_PHASE3_JUMP);
+        if (phase3Jump == null) {
+            Gdx.app.error("FinalBoss", "Failed to load BOSS_PHASE3_JUMP, using fallback");
+            phase3Jump = tex;
+        }
+        
+        Texture phase3BigAttack = assetManager.getTexture(AssetManager.BOSS_PHASE3_BIGATTACK);
+        if (phase3BigAttack == null) {
+            Gdx.app.error("FinalBoss", "Failed to load BOSS_PHASE3_BIGATTACK, using fallback");
+            phase3BigAttack = tex;
+        }
+        
+        // Initialize animation strategy with all textures
+        this.animation = new FinalBossAnimationStrategy(
+            phase1Walk1, phase1Walk2, phase1Jump, phase1BigAttack,
+            phase2Walk1, phase2Walk2, phase2Jump, phase2BigAttack,
+            phase3Walk1, phase3Walk2, phase3Jump, phase3BigAttack,
+            tex // fallback texture
+        );
+        
+        this.facingLeft = false;
     }
 
     public void init(float x, float y) {
@@ -113,8 +213,7 @@ public class FinalBoss extends BossEnemy {
         upwardShotCooldown = 0;
         playerWasAbove = false;
         isUpwardShotWarning = false;
-        shouldUpwardShotFlash = false;
-        upwardShotFlashTimer = 0;
+        // Removed: shouldUpwardShotFlash, upwardShotFlashTimer initialization (animation system handles visuals)
         upwardShotWarningTimer = 0;
         upwardShotStunTimer = 0;
         isUpwardShotStunned = false;
@@ -130,8 +229,16 @@ public class FinalBoss extends BossEnemy {
             Array<EnemyBullet> bullets, Pool<EnemyBullet> bulletPool) {
         if (isDead()) {
             active = false;
+            // Update animation state even when dead
+            animation.setState(currentPhase, isUpwardShotWarning, grounded);
+            animation.update(delta);
             return;
         }
+        
+        // Update animation state early to ensure it's set before any early returns
+        // This fixes the bug where big attack frame wasn't visible during warning phase
+        animation.setState(currentPhase, isUpwardShotWarning, grounded);
+        animation.update(delta);
         
         // Update smart jump cooldown
         if (smartJumpCooldown > 0) {
@@ -185,7 +292,6 @@ public class FinalBoss extends BossEnemy {
                 if (upwardShotTimer >= upwardShotThreshold) {
                     isUpwardShotWarning = true;
                     upwardShotWarningTimer = UPWARD_SHOT_WARNING_DURATION;
-                    upwardShotFlashTimer = 0;
                     Gdx.app.log("Boss", "Upward Shot Warning! Charging...");
                 }
             } else {
@@ -197,21 +303,16 @@ public class FinalBoss extends BossEnemy {
             }
         }
 
-        // 2. Warning Phase (Boss stops jumping and flashes)
+        // 2. Warning Phase (Boss stops jumping, animation system shows big attack texture)
         if (isUpwardShotWarning) {
             upwardShotWarningTimer -= delta;
 
-            // Flash effect during warning
-            upwardShotFlashTimer -= delta;
-            if (upwardShotFlashTimer <= 0) {
-                shouldUpwardShotFlash = !shouldUpwardShotFlash;
-                upwardShotFlashTimer = UPWARD_SHOT_FLASH_INTERVAL;
-            }
+            // Removed: Flash effect logic (animation system now handles big attack visual via bigattack texture)
 
             // End warning, execute upward shot
             if (upwardShotWarningTimer <= 0) {
                 isUpwardShotWarning = false;
-                shouldUpwardShotFlash = false;
+                // Removed: shouldUpwardShotFlash = false (no longer needed)
                 playerWasAbove = false;
                 upwardShotTimer = 0;
                 upwardShotCooldown = UPWARD_SHOT_COOLDOWN_DURATION;
@@ -270,6 +371,13 @@ public class FinalBoss extends BossEnemy {
                 bounds.x = LEVEL_WIDTH - bounds.width;
 
             updateCollider();
+            
+            // Update facing direction based on movement
+            boolean newFacingLeft = directionX < 0;
+            if (newFacingLeft != facingLeft) {
+                facingLeft = newFacingLeft;
+                animation.setFacingLeft(facingLeft);
+            }
         }
 
         // Smart jump logic - enhanced pursuit
@@ -277,6 +385,9 @@ public class FinalBoss extends BossEnemy {
 
         // Apply gravity and platform collision
         applyGravityAndCollision(delta, platforms, grounds);
+
+        // Animation state already updated at the beginning of this method
+        // This ensures it's set even when early returns occur (e.g., during warning phase)
 
         // Collision with player (melee damage)
         if (collider.overlaps(player.bounds)) {
@@ -381,6 +492,7 @@ public class FinalBoss extends BossEnemy {
             shootCooldown = PHASE2_COOLDOWN;
             shootTimer = shootCooldown;
             phaseTransitionTimer = PHASE_TRANSITION_DURATION;
+            animation.setPhase(currentPhase);
             Gdx.app.log("Boss", "PHASE 2 - Spread Attack!");
         }
         // Transition to Phase 3 at 25% health
@@ -390,6 +502,7 @@ public class FinalBoss extends BossEnemy {
             shootCooldown = PHASE3_COOLDOWN;
             shootTimer = shootCooldown;
             phaseTransitionTimer = PHASE_TRANSITION_DURATION;
+            animation.setPhase(currentPhase);
             Gdx.app.log("Boss", "PHASE 3 - Fan Barrage!");
         }
     }
@@ -464,18 +577,78 @@ public class FinalBoss extends BossEnemy {
 
     @Override
     protected Texture getCurrentTexture() {
-        // Priority: Upward shot warning > Phase transition flash > Normal
-        if (isUpwardShotWarning && shouldUpwardShotFlash) {
-            return upwardShotFlashTexture;
-        }
-        if (phaseTransitionTimer > 0 && shouldFlash) {
-            return flashTexture;
-        }
-        return texture;
+        return animation.getCurrentFrame();
+    }
+
+    @Override
+    protected boolean isFacingLeft() {
+        return facingLeft;
     }
 
     @Override
     public void draw(SpriteBatch batch) {
-        super.draw(batch);
+        // Draw sprite with visual scaling (1.3x larger)
+        // Collider remains at original size for gameplay balance
+        Texture currentTexture = getCurrentTexture();
+        boolean flipX = isFacingLeft();
+        
+        // Calculate scaled dimensions for visual rendering
+        float scaledWidth = originalBoundsWidth * VISUAL_SCALE_FACTOR;
+        float scaledHeight = originalBoundsHeight * VISUAL_SCALE_FACTOR;
+        
+        // Calculate offset to center the scaled sprite on the original bounds position
+        // This keeps the visual centered on the collider
+        float offsetX = (originalBoundsWidth - scaledWidth) / 2f;
+        float offsetY = (originalBoundsHeight - scaledHeight) / 2f;
+        
+        // Draw with mirroring based on facing direction and visual scaling
+        batch.draw(currentTexture, 
+                  bounds.x + offsetX, bounds.y + offsetY,  // Position adjusted for centering
+                  0f, 0f,  // originX, originY (0,0 = flip around left-bottom corner)
+                  scaledWidth, scaledHeight,  // Use scaled dimensions for visual
+                  1f, 1f, 0f,  // scaleX, scaleY, rotation
+                  0, 0,  // srcX, srcY
+                  currentTexture.getWidth(), currentTexture.getHeight(),
+                  flipX, false);  // flipX, flipY
+
+        // Draw health bar above scaled sprite
+        drawScaledHealthBar(batch, scaledWidth);
+    }
+    
+    /**
+     * Draws the health bar scaled appropriately for the visual boss size.
+     * Health bar width matches the scaled visual width.
+     * 
+     * @param batch Sprite batch for drawing
+     * @param scaledWidth The scaled width of the boss visual
+     */
+    private void drawScaledHealthBar(SpriteBatch batch, float scaledWidth) {
+        float barWidth = scaledWidth;
+        float barHeight = 5f;
+        // Position health bar above the scaled visual sprite
+        float barX = bounds.x + (originalBoundsWidth - scaledWidth) / 2f;
+        float barY = bounds.y + originalBoundsHeight + 10f;
+
+        float healthPercent = health / maxHealth;
+
+        // Draw background (black with transparency)
+        batch.setColor(0f, 0f, 0f, 0.7f);
+        batch.draw(BossEnemy.getHealthBarBg(), barX - 1, barY - 1, barWidth + 2, barHeight + 2);
+
+        // Draw border (white)
+        batch.setColor(1f, 1f, 1f, 1f);
+        batch.draw(BossEnemy.getHealthBarBorder(), barX - 1, barY - 1, barWidth + 2, 1); // Bottom
+        batch.draw(BossEnemy.getHealthBarBorder(), barX - 1, barY + barHeight, barWidth + 2, 1); // Top
+        batch.draw(BossEnemy.getHealthBarBorder(), barX - 1, barY, 1, barHeight); // Left
+        batch.draw(BossEnemy.getHealthBarBorder(), barX + barWidth, barY, 1, barHeight); // Right
+
+        // Draw health bar (green to red gradient based on health)
+        float red = 1f - healthPercent;
+        float green = healthPercent;
+        batch.setColor(red, green, 0f, 1f);
+        batch.draw(BossEnemy.getHealthBarFill(), barX, barY, barWidth * healthPercent, barHeight);
+
+        // Reset color
+        batch.setColor(1f, 1f, 1f, 1f);
     }
 }

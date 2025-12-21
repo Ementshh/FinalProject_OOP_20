@@ -465,7 +465,7 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
             gameContext.boss = null;
             Gdx.app.log("Level3", "Mini Boss spawned!");
         } else if (level == 5) {
-            gameContext.boss = new FinalBoss(bossTex, redFlashTex, enemyBulletTex, yellowFlashTex);
+            gameContext.boss = new FinalBoss(bossTex, redFlashTex, enemyBulletTex);
             gameContext.boss.init(strategy.getBossSpawnX(), strategy.getBossSpawnY());
             gameContext.miniBoss = null;
             Gdx.app.log("Level5", "Final Boss spawned!");
