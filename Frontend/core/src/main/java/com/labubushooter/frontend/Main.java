@@ -14,6 +14,7 @@ import com.badlogic.gdx.utils.viewport.Viewport;
 import com.labubushooter.frontend.core.GameContext;
 import com.labubushooter.frontend.objects.*;
 import com.labubushooter.frontend.patterns.CoinPattern;
+import com.labubushooter.frontend.patterns.IBackgroundRenderStrategy;
 import com.labubushooter.frontend.patterns.LevelStrategy;
 import com.labubushooter.frontend.patterns.ScalingMode;
 import com.labubushooter.frontend.patterns.StaticBackgroundStrategy;
@@ -26,6 +27,7 @@ import com.labubushooter.frontend.patterns.weapons.UnarmedStrategy;
 import com.labubushooter.frontend.screens.*;
 import com.labubushooter.frontend.services.AssetManager;
 import com.labubushooter.frontend.services.BackgroundRenderer;
+import com.labubushooter.frontend.services.BackgroundStrategyResolver;
 import com.labubushooter.frontend.services.BackgroundTextureResolver;
 import com.labubushooter.frontend.services.PlayerApiService;
 import com.labubushooter.frontend.systems.GameWorld;
@@ -397,6 +399,10 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
             gameContext.backgroundRenderer.setBackgroundTexture(levelBackgroundTex);
             gameContext.backgroundTex = levelBackgroundTex;
         }
+
+        // Get and set appropriate background rendering strategy for this level
+        IBackgroundRenderStrategy backgroundStrategy = BackgroundStrategyResolver.getStrategy(level);
+        gameContext.backgroundRenderer.setRenderStrategy(backgroundStrategy);
 
         // Clear existing objects
         platforms.clear();
