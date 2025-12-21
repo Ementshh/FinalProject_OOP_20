@@ -64,6 +64,11 @@ public class AssetManager implements Disposable {
     // ==================== TEXTURE KEYS (Generated) ====================
     public static final String DEBUG_LINE = "debug_line";
     public static final String LEVEL_INDICATOR = "level_indicator";
+    public static final String LEVEL_INDICATOR_1 = "level_indicator_1";
+    public static final String LEVEL_INDICATOR_2 = "level_indicator_2";
+    public static final String LEVEL_INDICATOR_3 = "level_indicator_3";
+    public static final String LEVEL_INDICATOR_4 = "level_indicator_4";
+    public static final String LEVEL_INDICATOR_5 = "level_indicator_5";
     public static final String ENEMY_BULLET = "enemy_bullet";
     public static final String FLASH_WHITE = "flash_white";
     public static final String FLASH_RED = "flash_red";
@@ -187,6 +192,14 @@ public class AssetManager implements Disposable {
     private void generateColorTextures() {
         generatedTextureCache.put(DEBUG_LINE, createColorTexture(10, 600, Color.RED));
         generatedTextureCache.put(LEVEL_INDICATOR, createColorTexture(30, 30, Color.YELLOW));
+        
+        // Level indicator textures with colored background and number
+        generatedTextureCache.put(LEVEL_INDICATOR_1, createLevelIndicatorTexture(1));
+        generatedTextureCache.put(LEVEL_INDICATOR_2, createLevelIndicatorTexture(2));
+        generatedTextureCache.put(LEVEL_INDICATOR_3, createLevelIndicatorTexture(3));
+        generatedTextureCache.put(LEVEL_INDICATOR_4, createLevelIndicatorTexture(4));
+        generatedTextureCache.put(LEVEL_INDICATOR_5, createLevelIndicatorTexture(5));
+        
         generatedTextureCache.put(ENEMY_BULLET, createColorTexture(8, 8, Color.ORANGE));
         generatedTextureCache.put(FLASH_WHITE, createColorTexture(60, 90, Color.WHITE));
         generatedTextureCache.put(FLASH_RED, createColorTexture(60, 100, Color.RED));
@@ -218,6 +231,160 @@ public class AssetManager implements Disposable {
         Texture texture = new Texture(pixmap);
         pixmap.dispose();
         return texture;
+    }
+
+    /**
+     * Creates a level indicator texture with colored circle background and level number.
+     * Colors: Level 1,2,4 = Yellow (#fce803), Level 3 = Green (#379624), Level 5 = Purple (#882dc7)
+     *
+     * @param level The level number (1-5)
+     * @return Texture with circle and number
+     */
+    private Texture createLevelIndicatorTexture(int level) {
+        int size = 50; // Circle diameter
+        Pixmap pixmap = new Pixmap(size, size, Pixmap.Format.RGBA8888);
+        
+        // Determine background color based on level
+        Color bgColor;
+        switch (level) {
+            case 3:
+                // Green for mini boss level: #379624
+                bgColor = new Color(0x379624FF);
+                break;
+            case 5:
+                // Purple for final boss level: #882dc7
+                bgColor = new Color(0x882dc7FF);
+                break;
+            default:
+                // Yellow for normal levels (1, 2, 4): #fce803
+                bgColor = new Color(0xfce803FF);
+                break;
+        }
+        
+        // Draw filled circle
+        int centerX = size / 2;
+        int centerY = size / 2;
+        int radius = size / 2 - 2;
+        
+        // Fill circle
+        for (int y = 0; y < size; y++) {
+            for (int x = 0; x < size; x++) {
+                int dx = x - centerX;
+                int dy = y - centerY;
+                if (dx * dx + dy * dy <= radius * radius) {
+                    pixmap.drawPixel(x, y, Color.rgba8888(bgColor));
+                }
+            }
+        }
+        
+        // Draw number in black
+        pixmap.setColor(Color.BLACK);
+        drawDigit(pixmap, level, centerX, centerY);
+        
+        Texture texture = new Texture(pixmap);
+        pixmap.dispose();
+        return texture;
+    }
+    
+    /**
+     * Draws a simple digit on the pixmap.
+     *
+     * @param pixmap The pixmap to draw on
+     * @param digit The digit to draw (1-5)
+     * @param centerX Center X position
+     * @param centerY Center Y position
+     */
+    private void drawDigit(Pixmap pixmap, int digit, int centerX, int centerY) {
+        int thickness = 3;
+        
+        switch (digit) {
+            case 1:
+                // Vertical line with small top hook and bottom base
+                for (int t = 0; t < thickness; t++) {
+                    for (int y = centerY - 12; y <= centerY + 12; y++) {
+                        pixmap.drawPixel(centerX + t, y);
+                    }
+                    for (int x = centerX - 5; x <= centerX; x++) {
+                        pixmap.drawPixel(x + t, centerY - 12);
+                        pixmap.drawPixel(x + t, centerY - 11);
+                    }
+                    for (int x = centerX - 6; x <= centerX + 6; x++) {
+                        pixmap.drawPixel(x, centerY + 12 + t);
+                    }
+                }
+                break;
+                
+            case 2:
+                for (int t = 0; t < thickness; t++) {
+                    for (int x = centerX - 6; x <= centerX + 6; x++) {
+                        pixmap.drawPixel(x, centerY - 12 + t);
+                    }
+                    for (int y = centerY - 12; y <= centerY; y++) {
+                        pixmap.drawPixel(centerX + 6 + t, y);
+                    }
+                    for (int x = centerX - 6; x <= centerX + 6; x++) {
+                        pixmap.drawPixel(x, centerY + t);
+                    }
+                    for (int y = centerY; y <= centerY + 12; y++) {
+                        pixmap.drawPixel(centerX - 6 + t, y);
+                    }
+                    for (int x = centerX - 6; x <= centerX + 6; x++) {
+                        pixmap.drawPixel(x, centerY + 12 + t);
+                    }
+                }
+                break;
+                
+            case 3:
+                for (int t = 0; t < thickness; t++) {
+                    for (int x = centerX - 6; x <= centerX + 6; x++) {
+                        pixmap.drawPixel(x, centerY - 12 + t);
+                    }
+                    for (int x = centerX - 4; x <= centerX + 6; x++) {
+                        pixmap.drawPixel(x, centerY + t);
+                    }
+                    for (int x = centerX - 6; x <= centerX + 6; x++) {
+                        pixmap.drawPixel(x, centerY + 12 + t);
+                    }
+                    for (int y = centerY - 12; y <= centerY + 12; y++) {
+                        pixmap.drawPixel(centerX + 6 + t, y);
+                    }
+                }
+                break;
+                
+            case 4:
+                for (int t = 0; t < thickness; t++) {
+                    for (int y = centerY - 12; y <= centerY; y++) {
+                        pixmap.drawPixel(centerX - 6 + t, y);
+                    }
+                    for (int x = centerX - 6; x <= centerX + 6; x++) {
+                        pixmap.drawPixel(x, centerY + t);
+                    }
+                    for (int y = centerY - 12; y <= centerY + 12; y++) {
+                        pixmap.drawPixel(centerX + 6 + t, y);
+                    }
+                }
+                break;
+                
+            case 5:
+                for (int t = 0; t < thickness; t++) {
+                    for (int x = centerX - 6; x <= centerX + 6; x++) {
+                        pixmap.drawPixel(x, centerY - 12 + t);
+                    }
+                    for (int y = centerY - 12; y <= centerY; y++) {
+                        pixmap.drawPixel(centerX - 6 + t, y);
+                    }
+                    for (int x = centerX - 6; x <= centerX + 6; x++) {
+                        pixmap.drawPixel(x, centerY + t);
+                    }
+                    for (int y = centerY; y <= centerY + 12; y++) {
+                        pixmap.drawPixel(centerX + 6 + t, y);
+                    }
+                    for (int x = centerX - 6; x <= centerX + 6; x++) {
+                        pixmap.drawPixel(x, centerY + 12 + t);
+                    }
+                }
+                break;
+        }
     }
 
     // ==================== FONT LOADING ====================

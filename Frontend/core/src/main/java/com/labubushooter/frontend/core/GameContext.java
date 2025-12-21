@@ -83,6 +83,13 @@ public class GameContext {
     public Texture levelIndicatorTex;
     public Texture enemyTex;
     public Texture backgroundTex;
+    
+    // Level indicator textures (per level with colored background and number)
+    public Texture levelIndicator1Tex;
+    public Texture levelIndicator2Tex;
+    public Texture levelIndicator3Tex;
+    public Texture levelIndicator4Tex;
+    public Texture levelIndicator5Tex;
 
     // Textures - Pickups
     public Texture ammo9mmTex;
@@ -272,6 +279,24 @@ public class GameContext {
         mac10UnlockMessageDuration = 0f;
         mac10MessageTriggered = false;
     }
+    
+    /**
+     * Gets the appropriate level indicator texture for the specified level.
+     * Each level has a unique colored circle with the level number inside.
+     *
+     * @param level The level number (1-5)
+     * @return The corresponding level indicator texture
+     */
+    public Texture getLevelIndicatorTexture(int level) {
+        switch (level) {
+            case 1: return levelIndicator1Tex;
+            case 2: return levelIndicator2Tex;
+            case 3: return levelIndicator3Tex;
+            case 4: return levelIndicator4Tex;
+            case 5: return levelIndicator5Tex;
+            default: return levelIndicator1Tex;
+        }
+    }
 
     /**
      * Reset player state.
@@ -302,6 +327,11 @@ public class GameContext {
         disposeTexture(mac10Tex);
         disposeTexture(debugTex);
         disposeTexture(levelIndicatorTex);
+        disposeTexture(levelIndicator1Tex);
+        disposeTexture(levelIndicator2Tex);
+        disposeTexture(levelIndicator3Tex);
+        disposeTexture(levelIndicator4Tex);
+        disposeTexture(levelIndicator5Tex);
         disposeTexture(enemyTex);
         disposeTexture(backgroundTex);
         disposeTexture(miniBossTex);
