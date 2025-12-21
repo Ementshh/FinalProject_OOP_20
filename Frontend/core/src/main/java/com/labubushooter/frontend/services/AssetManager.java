@@ -8,6 +8,8 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator.FreeTypeFontParameter;
 import com.badlogic.gdx.utils.Disposable;
 
 /**
@@ -174,7 +176,7 @@ public class AssetManager implements Disposable {
         loadTexture(BACKGROUND_LEVEL1, "bglevel1.png");
         loadTexture(BACKGROUND_LEVEL2_TO_4, "bglevel2to4.png");
         loadTexture(BACKGROUND_LEVEL5, "bglevel5.png");
-        
+
         // Load pickup textures
         loadTexture(HEALTH_POTION, "healthpotion.png");
         loadTexture(AMMO_PACK, "ammopack.png");
@@ -209,14 +211,14 @@ public class AssetManager implements Disposable {
     private void generateColorTextures() {
         generatedTextureCache.put(DEBUG_LINE, createColorTexture(10, 600, Color.RED));
         generatedTextureCache.put(LEVEL_INDICATOR, createColorTexture(30, 30, Color.YELLOW));
-        
+
         // Level indicator textures with colored background and number
         generatedTextureCache.put(LEVEL_INDICATOR_1, createLevelIndicatorTexture(1));
         generatedTextureCache.put(LEVEL_INDICATOR_2, createLevelIndicatorTexture(2));
         generatedTextureCache.put(LEVEL_INDICATOR_3, createLevelIndicatorTexture(3));
         generatedTextureCache.put(LEVEL_INDICATOR_4, createLevelIndicatorTexture(4));
         generatedTextureCache.put(LEVEL_INDICATOR_5, createLevelIndicatorTexture(5));
-        
+
         generatedTextureCache.put(ENEMY_BULLET, createColorTexture(8, 8, Color.ORANGE));
         generatedTextureCache.put(FLASH_WHITE, createColorTexture(60, 90, Color.WHITE));
         generatedTextureCache.put(FLASH_RED, createColorTexture(60, 100, Color.RED));
@@ -255,7 +257,7 @@ public class AssetManager implements Disposable {
     private Texture createLevelIndicatorTexture(int level) {
         int size = 50; // Circle diameter
         Pixmap pixmap = new Pixmap(size, size, Pixmap.Format.RGBA8888);
-        
+
         // Determine background color based on level
         Color bgColor;
         switch (level) {
@@ -272,12 +274,12 @@ public class AssetManager implements Disposable {
                 bgColor = new Color(0xfce803FF);
                 break;
         }
-        
+
         // Draw filled circle
         int centerX = size / 2;
         int centerY = size / 2;
         int radius = size / 2 - 2;
-        
+
         // Fill circle
         for (int y = 0; y < size; y++) {
             for (int x = 0; x < size; x++) {
@@ -288,16 +290,16 @@ public class AssetManager implements Disposable {
                 }
             }
         }
-        
+
         // Draw number in black
         pixmap.setColor(Color.BLACK);
         drawDigit(pixmap, level, centerX, centerY);
-        
+
         Texture texture = new Texture(pixmap);
         pixmap.dispose();
         return texture;
     }
-    
+
     /**
      * Draws a simple digit on the pixmap.
      *
@@ -308,7 +310,7 @@ public class AssetManager implements Disposable {
      */
     private void drawDigit(Pixmap pixmap, int digit, int centerX, int centerY) {
         int thickness = 3;
-        
+
         switch (digit) {
             case 1:
                 // Vertical line with small top hook and bottom base
@@ -325,7 +327,7 @@ public class AssetManager implements Disposable {
                     }
                 }
                 break;
-                
+
             case 2:
                 for (int t = 0; t < thickness; t++) {
                     for (int x = centerX - 6; x <= centerX + 6; x++) {
@@ -345,7 +347,7 @@ public class AssetManager implements Disposable {
                     }
                 }
                 break;
-                
+
             case 3:
                 for (int t = 0; t < thickness; t++) {
                     for (int x = centerX - 6; x <= centerX + 6; x++) {
@@ -362,7 +364,7 @@ public class AssetManager implements Disposable {
                     }
                 }
                 break;
-                
+
             case 4:
                 for (int t = 0; t < thickness; t++) {
                     for (int y = centerY - 12; y <= centerY; y++) {
@@ -376,7 +378,7 @@ public class AssetManager implements Disposable {
                     }
                 }
                 break;
-                
+
             case 5:
                 for (int t = 0; t < thickness; t++) {
                     for (int x = centerX - 6; x <= centerX + 6; x++) {
@@ -403,17 +405,60 @@ public class AssetManager implements Disposable {
 
     /**
      * Load and configure fonts.
+     * Uses FreeTypeFontGenerator to create high-resolution bitmap fonts.
      */
     private void loadFonts() {
-        // Default font (large)
-        BitmapFont defaultFont = new BitmapFont();
-        defaultFont.getData().setScale(3f);
-        fontCache.put(FONT_DEFAULT, defaultFont);
+        FreeTypeFontGenerator generator = null;
+        try {
+            // Try to load the custom font
+            generator = new FreeTypeFontGenerator(Gdx.files.internal("game_default_font.otf"));
+            FreeTypeFontParameter parameter = new FreeTypeFontParameter();
 
-        // Small font
-        BitmapFont smallFont = new BitmapFont();
-        smallFont.getData().setScale(1.5f);
-        fontCache.put(FONT_SMALL, smallFont);
+            // Configure default font (Large)
+            parameter.size = 48; // High resolution size
+            parameter.minFilter = Texture.TextureFilter.Linear;
+            parameter.magFilter = Texture.TextureFilter.Linear;
+            parameter.color = Color.WHITE;
+            parameter.borderWidth = 2;
+            parameter.borderColor = Color.BLACK;
+            parameter.shadowOffsetX = 3;
+            parameter.shadowOffsetY = 3;
+            parameter.shadowColor = new Color(0, 0, 0, 0.5f);
+
+            BitmapFont defaultFont = generator.generateFont(parameter);
+            // Scale down for display if needed, but keep high res texture
+            defaultFont.getData().setScale(0.5f);
+            fontCache.put(FONT_DEFAULT, defaultFont);
+
+            // Configure small font
+            parameter.size = 24; // Smaller size
+            parameter.borderWidth = 1;
+            parameter.shadowOffsetX = 1;
+            parameter.shadowOffsetY = 1;
+
+            BitmapFont smallFont = generator.generateFont(parameter);
+            // Scale down for display
+            smallFont.getData().setScale(0.8f);
+            fontCache.put(FONT_SMALL, smallFont);
+
+            Gdx.app.log("AssetManager", "Loaded high-resolution fonts from game_default_font.otf");
+
+        } catch (Exception e) {
+            Gdx.app.error("AssetManager", "Failed to load custom font, falling back to default", e);
+
+            // Fallback to default LibGDX font
+            BitmapFont defaultFont = new BitmapFont();
+            defaultFont.getData().setScale(2f);
+            fontCache.put(FONT_DEFAULT, defaultFont);
+
+            BitmapFont smallFont = new BitmapFont();
+            smallFont.getData().setScale(1.2f);
+            fontCache.put(FONT_SMALL, smallFont);
+        } finally {
+            if (generator != null) {
+                generator.dispose();
+            }
+        }
 
         Gdx.app.log("AssetManager", "Loaded " + fontCache.size() + " fonts");
     }

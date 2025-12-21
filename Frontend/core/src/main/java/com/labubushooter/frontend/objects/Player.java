@@ -19,11 +19,11 @@ import com.labubushooter.frontend.patterns.weapons.WeaponRenderer;
 
 /**
  * Player entity with animation controller and proper sprite alignment.
- * 
+ *
  * Design Patterns:
  * - Strategy Pattern: Uses PlayerAnimationStrategy for animations
  * - Strategy Pattern: Uses ShootingStrategy for weapons
- * 
+ *
  * SOLID Principles:
  * - Single Responsibility: Handles player entity logic
  * - Open/Closed: Animation behavior can be extended via strategy
@@ -33,7 +33,7 @@ public class Player extends GameObject {
     public float velY = 0;
     public boolean grounded = false;
     public boolean facingRight = true;
-    
+
     // Current horizontal velocity for animation
     private float currentVelocityX = 0f;
 
@@ -50,7 +50,7 @@ public class Player extends GameObject {
 
     // Strategy Pattern: The behavior of shooting is encapsulated in this interface
     private ShootingStrategy shootingStrategy;
-    
+
     // Animation Strategy
     private PlayerAnimationStrategy animationStrategy;
 
@@ -64,6 +64,9 @@ public class Player extends GameObject {
     private float weaponAngle;
     public OrthographicCamera camera;
 
+    // Weapon positioning
+    private static final float WEAPON_Y_OFFSET = 15f; // Lower weapon by 15 pixels
+
     public Player(Texture tex) {
         super(100, 300, 50, 75, tex); // Increased from 40x60 to 50x75 (1.25x larger)
         this.shootingStrategy = null;
@@ -74,20 +77,20 @@ public class Player extends GameObject {
         this.mouseWorldPos = new Vector2();
         this.weaponAngle = 0f;
     }
-    
+
     /**
      * Sets the animation strategy for the player.
      * Enables full animation with idle, walking, and jump anticipation.
-     * 
+     *
      * @param strategy The animation strategy to use
      */
     public void setAnimationStrategy(PlayerAnimationStrategy strategy) {
         this.animationStrategy = strategy;
     }
-    
+
     /**
      * Gets the current animation strategy.
-     * 
+     *
      * @return The animation strategy or null if not set
      */
     public PlayerAnimationStrategy getAnimationStrategy() {
@@ -131,7 +134,7 @@ public class Player extends GameObject {
         this.lastRegenTime = TimeUtils.nanoTime();
         this.weaponAngle = 0f;
         this.currentVelocityX = 0f;
-        
+
         // Reset animation strategy
         if (animationStrategy != null) {
             animationStrategy.reset();
@@ -158,7 +161,7 @@ public class Player extends GameObject {
 
         // Calculate horizontal velocity for animation
         currentVelocityX = 0f;
-        
+
         // WASD Movement Input
         if (Gdx.input.isKeyPressed(Input.Keys.A)) {
             bounds.x -= SPEED * delta;
@@ -212,7 +215,7 @@ public class Player extends GameObject {
         if (animationStrategy != null) {
             animationStrategy.updateMovementState(currentVelocityX, velY, grounded);
             animationStrategy.update(delta);
-            
+
             // Sync facing direction with animation (unless mouse aiming overrides)
             if (camera == null) {
                 facingRight = !animationStrategy.isFacingLeft();
@@ -231,9 +234,9 @@ public class Player extends GameObject {
         camera.unproject(mousePos3D);
         mouseWorldPos.set(mousePos3D.x, mousePos3D.y);
 
-        // Calculate player center
+        // Calculate player center with weapon offset
         float playerCenterX = bounds.x + bounds.width / 2;
-        float playerCenterY = bounds.y + bounds.height / 2;
+        float playerCenterY = (bounds.y + bounds.height / 2) - WEAPON_Y_OFFSET;
 
         // Calculate direction to mouse
         float dx = mouseWorldPos.x - playerCenterX;
@@ -248,7 +251,7 @@ public class Player extends GameObject {
         } else {
             facingRight = false;
         }
-        
+
         // Sync animation strategy facing direction with mouse aiming
         if (animationStrategy != null) {
             animationStrategy.setFacingLeft(!facingRight);
@@ -268,7 +271,7 @@ public class Player extends GameObject {
 
     public Vector2 getShootDirection() {
         float playerCenterX = bounds.x + bounds.width / 2;
-        float playerCenterY = bounds.y + bounds.height / 2;
+        float playerCenterY = (bounds.y + bounds.height / 2) - WEAPON_Y_OFFSET;
 
         float dx = mouseWorldPos.x - playerCenterX;
         float dy = mouseWorldPos.y - playerCenterY;
@@ -285,7 +288,7 @@ public class Player extends GameObject {
 
     public Vector2 getShootStartPosition() {
         float playerCenterX = bounds.x + bounds.width / 2;
-        float playerCenterY = bounds.y + bounds.height / 2;
+        float playerCenterY = (bounds.y + bounds.height / 2) - WEAPON_Y_OFFSET;
 
         Vector2 dir = getShootDirection();
         float offsetDistance = 25f;
@@ -311,28 +314,28 @@ public class Player extends GameObject {
         Texture currentTexture;
         float drawWidth, drawHeight;
         float drawX, drawY;
-        
+
         if (animationStrategy != null) {
             currentTexture = animationStrategy.getCurrentFrame();
-            
+
             // Calculate scaled dimensions maintaining aspect ratio
             float[] scaledDims = SpriteAligner.getScaledDimensions(
-                bounds, 
-                currentTexture.getWidth(), 
-                currentTexture.getHeight(), 
+                bounds,
+                currentTexture.getWidth(),
+                currentTexture.getHeight(),
                 1.0f
             );
             drawWidth = scaledDims[0];
             drawHeight = scaledDims[1];
-            
+
             // Get foot-aligned position (feet at bottom, centered horizontally)
             float[] alignedPos = SpriteAligner.getFootAlignedPosition(bounds, drawWidth, drawHeight);
             drawX = alignedPos[0];
             drawY = alignedPos[1];
-            
+
             // Determine if we need to flip for facing direction
             boolean flipX = !facingRight;
-            
+
             // Draw with proper alignment and flipping
             batch.draw(currentTexture,
                        flipX ? drawX + drawWidth : drawX,  // Adjust X for flip
@@ -350,7 +353,7 @@ public class Player extends GameObject {
 
             if (renderer != null) {
                 float playerCenterX = bounds.x + bounds.width / 2;
-                float playerCenterY = bounds.y + bounds.height / 2;
+                float playerCenterY = (bounds.y + bounds.height / 2) - WEAPON_Y_OFFSET;
 
                 // Delegate rendering to strategy (Strategy Pattern)
                 renderer.render(batch, playerCenterX, playerCenterY, weaponAngle, facingRight);

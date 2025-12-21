@@ -3,11 +3,15 @@ bglevel1.png
 bglevel2to4.png
 bglevel5.png
 boss.png
+boss_big_bullet.png
+boss_phase1_bullet.png
+boss_phase23_bullet.png
 bullet.png
 door.png
 enemy.png
 enemyframe1.png
 enemyframe2.png
+game_default_font.otf
 ground.png
 ground_base.png
 healthpotion.png
