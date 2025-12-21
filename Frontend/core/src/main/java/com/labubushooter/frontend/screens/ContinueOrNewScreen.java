@@ -15,6 +15,10 @@ public class ContinueOrNewScreen extends BaseScreen {
     private Rectangle newGameButton;
     private GamePlayScreen gamePlayScreen;
     
+    // UI Constants
+    private static final float BUTTON_WIDTH = 500f;
+    private static final float BUTTON_HEIGHT = 80f;
+    
     public ContinueOrNewScreen(GameContext context) {
         super(context);
         initializeUI();
@@ -28,16 +32,34 @@ public class ContinueOrNewScreen extends BaseScreen {
     }
     
     private void initializeUI() {
-        float buttonWidth = 500f;
-        float buttonHeight = 80f;
-        float centerX = GameContext.VIEWPORT_WIDTH / 2 - buttonWidth / 2;
+        // Initialize rectangles - actual positions set in updateUIPositions()
+        continueButton = new Rectangle(0, 0, BUTTON_WIDTH, BUTTON_HEIGHT);
+        newGameButton = new Rectangle(0, 0, BUTTON_WIDTH, BUTTON_HEIGHT);
+    }
+    
+    /**
+     * Update UI element positions based on camera center.
+     */
+    private void updateUIPositions() {
+        float centerX = getCenterX();
+        float centerY = getCenterY();
         
-        continueButton = new Rectangle(centerX, 270, buttonWidth, buttonHeight);
-        newGameButton = new Rectangle(centerX, 170, buttonWidth, buttonHeight);
+        continueButton.set(centerX - BUTTON_WIDTH / 2, centerY - 50, BUTTON_WIDTH, BUTTON_HEIGHT);
+        newGameButton.set(centerX - BUTTON_WIDTH / 2, centerY - 150, BUTTON_WIDTH, BUTTON_HEIGHT);
+    }
+    
+    @Override
+    public void show() {
+        super.show();
+        updateUIPositions();
+        Gdx.app.log("ContinueOrNewScreen", "Screen shown for player: " + context.username);
     }
     
     @Override
     public void handleInput(float delta) {
+        // Update UI positions every frame
+        updateUIPositions();
+        
         if (isButtonClicked(continueButton)) {
             continueGame();
         } else if (isButtonClicked(newGameButton)) {
@@ -101,20 +123,25 @@ public class ContinueOrNewScreen extends BaseScreen {
     public void render(float delta) {
         clearScreenDark();
         
+        // Ensure UI positions are updated
+        updateUIPositions();
+        
         context.batch.setProjectionMatrix(context.camera.combined);
         context.batch.begin();
         
+        float centerY = getCenterY();
+        
         // Draw welcome message
         String welcomeText = "Welcome back, " + context.username + "!";
-        drawCenteredText(welcomeText, 450, true);
+        drawCenteredText(welcomeText, centerY + 150, true);
         
         // Draw last stage info
         String stageText = "Last Stage: " + context.currentPlayerData.lastStage;
-        drawCenteredText(stageText, 380, false);
+        drawCenteredText(stageText, centerY + 80, false);
         
         // Draw total coins
         String coinsText = "Total Coins: " + context.currentPlayerData.totalCoins;
-        drawCenteredText(coinsText, 350, false);
+        drawCenteredText(coinsText, centerY + 50, false);
         
         // Draw buttons
         drawButton("Continue", continueButton);
