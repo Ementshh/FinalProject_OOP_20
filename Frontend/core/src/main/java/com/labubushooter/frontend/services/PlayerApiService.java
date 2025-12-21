@@ -2,18 +2,65 @@ package com.labubushooter.frontend.services;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Net;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.net.HttpRequestBuilder;
 import com.badlogic.gdx.utils.JsonReader;
 import com.badlogic.gdx.utils.JsonValue;
+import com.badlogic.gdx.utils.PropertiesUtils;
+
+import java.io.IOException;
+import java.util.HashMap;
 
 public class PlayerApiService {
-    private static final String BASE_URL = "http://localhost:8080/api/players";
+    private static String BASE_URL = "http://localhost:8080/api/players";
     private final JsonReader jsonReader;
 
     public PlayerApiService() {
         this.jsonReader = new JsonReader();
+        loadConfig();
     }
-    
+
+    private void loadConfig() {
+        try {
+            // Try to load from a local config.properties file next to the jar
+            FileHandle handle = Gdx.files.local("config.properties");
+            if (handle.exists()) {
+                HashMap<String, String> properties = new HashMap<>();
+                PropertiesUtils.load(properties, handle.reader());
+                String url = properties.get("api.url");
+                if (url != null && !url.trim().isEmpty()) {
+                    // Remove trailing slash if present
+                    if (url.endsWith("/")) {
+                        url = url.substring(0, url.length() - 1);
+                    }
+                    // Ensure it ends with /api/players if the user just put the domain
+                    if (!url.endsWith("/api/players")) {
+                         // If user put "https://myapp.onrender.com", append "/api/players"
+                         // If user put "https://myapp.onrender.com/api/players", it's fine (handled by endsWith check above)
+                         // But we need to be careful. Let's assume user puts the root URL.
+                         // Actually, let's just trust the user or guide them to put the full path or root.
+                         // Better strategy: If it doesn't contain "/api", append it.
+                         if (!url.contains("/api")) {
+                             url = url + "/api/players";
+                         }
+                    }
+                    BASE_URL = url;
+                    Gdx.app.log("PlayerAPI", "Loaded API URL from config: " + BASE_URL);
+                }
+            } else {
+                Gdx.app.log("PlayerAPI", "No config.properties found, using default: " + BASE_URL);
+                // Create a default config file for convenience
+                try {
+                    handle.writeString("api.url=http://localhost:8080/api/players\n# Ganti URL di atas dengan URL backend cloud Anda (contoh: https://labuboom-backend.onrender.com/api/players)", false);
+                } catch (Exception e) {
+                    Gdx.app.error("PlayerAPI", "Could not create default config file: " + e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            Gdx.app.error("PlayerAPI", "Error loading config: " + e.getMessage());
+        }
+    }
+
     // Helper method to escape special characters in JSON strings
     private String escapeJson(String str) {
         if (str == null) return "";
@@ -58,7 +105,7 @@ public class PlayerApiService {
             public void handleHttpResponse(Net.HttpResponse httpResponse) {
                 final int statusCode = httpResponse.getStatus().getStatusCode();
                 final String responseStr = httpResponse.getResultAsString();
-                
+
                 Gdx.app.postRunnable(() -> {
                     Gdx.app.log("PlayerAPI", "Response status: " + statusCode);
                     Gdx.app.log("PlayerAPI", "Response body: " + responseStr);
@@ -86,18 +133,18 @@ public class PlayerApiService {
 
                     try {
                         JsonValue jsonResponse = jsonReader.parse(responseStr);
-                        
+
                         if (jsonResponse == null) {
                             callback.onFailure("Failed to parse JSON response");
                             return;
                         }
-                        
+
                         JsonValue playerJson = jsonResponse.get("player");
                         if (playerJson == null) {
                             callback.onFailure("Invalid response: missing player data");
                             return;
                         }
-                        
+
                         PlayerData playerData = new PlayerData();
                         playerData.playerId = playerJson.getString("playerId");
                         playerData.username = playerJson.getString("username");
@@ -111,7 +158,7 @@ public class PlayerApiService {
                         Gdx.app.log("PlayerAPI", "Player ID: " + playerData.playerId);
                         Gdx.app.log("PlayerAPI", "Last Stage: " + playerData.lastStage);
                         Gdx.app.log("PlayerAPI", "Total Coins: " + playerData.totalCoins);
-                        
+
                         callback.onSuccess(playerData, isNewPlayer);
                     } catch (Exception e) {
                         Gdx.app.error("PlayerAPI", "JSON Parse error: " + e.getMessage());
@@ -125,7 +172,7 @@ public class PlayerApiService {
             public void failed(Throwable t) {
                 Gdx.app.postRunnable(() -> {
                     Gdx.app.error("PlayerAPI", "Login failed: " + t.getMessage());
-                    Gdx.app.error("PlayerAPI", "Make sure backend is running on http://localhost:8080");
+                    Gdx.app.error("PlayerAPI", "Make sure backend is running on " + BASE_URL);
                     callback.onFailure("Gagal koneksi ke server. Pastikan backend running!");
                 });
             }
