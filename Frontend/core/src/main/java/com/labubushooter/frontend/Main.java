@@ -73,7 +73,7 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
     private Texture levelIndicator1Tex, levelIndicator2Tex, levelIndicator3Tex;
     private Texture levelIndicator4Tex, levelIndicator5Tex;
     private Texture enemyFrame1Tex, enemyFrame2Tex;
-    private Texture miniBossTex, bossTex, enemyBulletTex;
+    private Texture bossTex, enemyBulletTex;
     private Texture miniBossWalkFrame1Tex, miniBossWalkFrame2Tex;
     private Texture miniBossCrouchTex, miniBossDashPrepTex, miniBossDashTex;
     private Texture whiteFlashTex, redFlashTex, yellowFlashTex;
@@ -170,7 +170,6 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
         backgroundTex = assetManager.getTexture(AssetManager.BACKGROUND_LEVEL1);
 
         // Boss textures from AssetManager
-        miniBossTex = assetManager.getTexture(AssetManager.MINI_BOSS);
         miniBossWalkFrame1Tex = assetManager.getTexture(AssetManager.MINI_BOSS_WALK_FRAME1);
         miniBossWalkFrame2Tex = assetManager.getTexture(AssetManager.MINI_BOSS_WALK_FRAME2);
         miniBossCrouchTex = assetManager.getTexture(AssetManager.MINI_BOSS_CROUCH);
@@ -315,7 +314,7 @@ public class Main extends ApplicationAdapter implements GameContext.GameCallback
             backgroundTex,
             new StaticBackgroundStrategy(ScalingMode.FIT_HEIGHT, VerticalAlignment.CENTER)
         );
-        gameContext.miniBossTex = miniBossTex;
+        
         gameContext.bossTex = bossTex;
         gameContext.enemyBulletTex = enemyBulletTex;
         gameContext.whiteFlashTex = whiteFlashTex;
