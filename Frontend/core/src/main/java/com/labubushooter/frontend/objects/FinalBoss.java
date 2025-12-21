@@ -18,6 +18,12 @@ public class FinalBoss extends BossEnemy {
     private static final float VISUAL_SCALE_FACTOR = 1.5f;
     private final float originalBoundsWidth;
     private final float originalBoundsHeight;
+    
+    // Pre-calculated render offsets (optimization: calculated once in constructor)
+    private final float renderOffsetX;
+    private final float renderOffsetY;
+    private final float scaledWidth;
+    private final float scaledHeight;
 
     // Animation system
     private FinalBossAnimationStrategy animation;
@@ -101,6 +107,13 @@ public class FinalBoss extends BossEnemy {
         this.currentSpeed = PHASE1_SPEED;
         this.shootCooldown = PHASE1_COOLDOWN;
         this.shootTimer = shootCooldown;
+        
+        // Pre-calculate render offsets and scaled dimensions (optimization)
+        // These values never change, so calculate once instead of every frame
+        this.scaledWidth = originalBoundsWidth * VISUAL_SCALE_FACTOR;   // 90
+        this.scaledHeight = originalBoundsHeight * VISUAL_SCALE_FACTOR; // 150
+        this.renderOffsetX = (originalBoundsWidth - scaledWidth) / 2f;  // -15 (centers horizontally)
+        this.renderOffsetY = 0f;  // Bottom-align (sprite bottom = bounds bottom, prevents ground sinking)
         
         // Initialize animation system with textures from AssetManager
         AssetManager assetManager = AssetManager.getInstance();
@@ -189,6 +202,11 @@ public class FinalBoss extends BossEnemy {
         );
         
         this.facingLeft = false;
+        
+        // Validate asset dimensions to ensure they match expectations
+        validateAssetDimensions(phase1Walk1, phase1Walk2, phase1Jump, phase1BigAttack,
+                               phase2Walk1, phase2Walk2, phase2Jump, phase2BigAttack,
+                               phase3Walk1, phase3Walk2, phase3Jump, phase3BigAttack);
     }
 
     public void init(float x, float y) {
@@ -587,25 +605,20 @@ public class FinalBoss extends BossEnemy {
 
     @Override
     public void draw(SpriteBatch batch) {
-        // Draw sprite with visual scaling (1.3x larger)
+        // Draw sprite with visual scaling (1.5x larger)
         // Collider remains at original size for gameplay balance
         Texture currentTexture = getCurrentTexture();
         boolean flipX = isFacingLeft();
         
-        // Calculate scaled dimensions for visual rendering
-        float scaledWidth = originalBoundsWidth * VISUAL_SCALE_FACTOR;
-        float scaledHeight = originalBoundsHeight * VISUAL_SCALE_FACTOR;
-        
-        // Calculate offset to center the scaled sprite on the original bounds position
-        // This keeps the visual centered on the collider
-        float offsetX = (originalBoundsWidth - scaledWidth) / 2f;
-        float offsetY = (originalBoundsHeight - scaledHeight) / 2f;
+        // Use pre-calculated offsets and dimensions (optimized - no per-frame calculation)
+        // renderOffsetX: -15 (centers sprite horizontally on bounds)
+        // renderOffsetY: 0 (bottom-aligns sprite with bounds to prevent ground sinking)
         
         // Draw with mirroring based on facing direction and visual scaling
         batch.draw(currentTexture, 
-                  bounds.x + offsetX, bounds.y + offsetY,  // Position adjusted for centering
+                  bounds.x + renderOffsetX, bounds.y + renderOffsetY,  // Position: centered horizontally, bottom-aligned vertically
                   0f, 0f,  // originX, originY (0,0 = flip around left-bottom corner)
-                  scaledWidth, scaledHeight,  // Use scaled dimensions for visual
+                  scaledWidth, scaledHeight,  // Use pre-calculated scaled dimensions
                   1f, 1f, 0f,  // scaleX, scaleY, rotation
                   0, 0,  // srcX, srcY
                   currentTexture.getWidth(), currentTexture.getHeight(),
@@ -650,5 +663,95 @@ public class FinalBoss extends BossEnemy {
 
         // Reset color
         batch.setColor(1f, 1f, 1f, 1f);
+    }
+    
+    /**
+     * Validates that all boss asset dimensions match expected values.
+     * Logs warnings if dimensions don't match, which could indicate:
+     * - Assets need to be resized
+     * - VISUAL_SCALE_FACTOR needs adjustment
+     * - Transparent padding in assets affecting positioning
+     * 
+     * Expected dimensions are based on originalBounds * VISUAL_SCALE_FACTOR.
+     * 
+     * @param phase1Walk1 Phase 1 walk frame 1 texture
+     * @param phase1Walk2 Phase 1 walk frame 2 texture
+     * @param phase1Jump Phase 1 jump texture
+     * @param phase1BigAttack Phase 1 big attack texture
+     * @param phase2Walk1 Phase 2 walk frame 1 texture
+     * @param phase2Walk2 Phase 2 walk frame 2 texture
+     * @param phase2Jump Phase 2 jump texture
+     * @param phase2BigAttack Phase 2 big attack texture
+     * @param phase3Walk1 Phase 3 walk frame 1 texture
+     * @param phase3Walk2 Phase 3 walk frame 2 texture
+     * @param phase3Jump Phase 3 jump texture
+     * @param phase3BigAttack Phase 3 big attack texture
+     */
+    private void validateAssetDimensions(Texture phase1Walk1, Texture phase1Walk2, Texture phase1Jump, Texture phase1BigAttack,
+                                        Texture phase2Walk1, Texture phase2Walk2, Texture phase2Jump, Texture phase2BigAttack,
+                                        Texture phase3Walk1, Texture phase3Walk2, Texture phase3Jump, Texture phase3BigAttack) {
+        // Expected dimensions based on visual scale
+        int expectedWidth = (int) scaledWidth;   // 90
+        int expectedHeight = (int) scaledHeight; // 150
+        
+        Gdx.app.log("FinalBoss", "=== Asset Dimension Validation ===");
+        Gdx.app.log("FinalBoss", "Expected dimensions: " + expectedWidth + "x" + expectedHeight);
+        Gdx.app.log("FinalBoss", "Original bounds: " + (int)originalBoundsWidth + "x" + (int)originalBoundsHeight);
+        Gdx.app.log("FinalBoss", "Visual scale factor: " + VISUAL_SCALE_FACTOR + "x");
+        
+        // Validate Phase 1 assets
+        validateTextureDimension("Phase1Walk1", phase1Walk1, expectedWidth, expectedHeight);
+        validateTextureDimension("Phase1Walk2", phase1Walk2, expectedWidth, expectedHeight);
+        validateTextureDimension("Phase1Jump", phase1Jump, expectedWidth, expectedHeight);
+        validateTextureDimension("Phase1BigAttack", phase1BigAttack, expectedWidth, expectedHeight);
+        
+        // Validate Phase 2 assets
+        validateTextureDimension("Phase2Walk1", phase2Walk1, expectedWidth, expectedHeight);
+        validateTextureDimension("Phase2Walk2", phase2Walk2, expectedWidth, expectedHeight);
+        validateTextureDimension("Phase2Jump", phase2Jump, expectedWidth, expectedHeight);
+        validateTextureDimension("Phase2BigAttack", phase2BigAttack, expectedWidth, expectedHeight);
+        
+        // Validate Phase 3 assets
+        validateTextureDimension("Phase3Walk1", phase3Walk1, expectedWidth, expectedHeight);
+        validateTextureDimension("Phase3Walk2", phase3Walk2, expectedWidth, expectedHeight);
+        validateTextureDimension("Phase3Jump", phase3Jump, expectedWidth, expectedHeight);
+        validateTextureDimension("Phase3BigAttack", phase3BigAttack, expectedWidth, expectedHeight);
+        
+        Gdx.app.log("FinalBoss", "=== Validation Complete ===");
+    }
+    
+    /**
+     * Validates a single texture's dimensions against expected values.
+     * Logs info if dimensions match, warning if they don't.
+     * 
+     * @param name Asset name for logging
+     * @param texture Texture to validate
+     * @param expectedWidth Expected width in pixels
+     * @param expectedHeight Expected height in pixels
+     */
+    private void validateTextureDimension(String name, Texture texture, int expectedWidth, int expectedHeight) {
+        if (texture == null) {
+            Gdx.app.log("FinalBoss", name + ": null (using fallback)");
+            return;
+        }
+        
+        int actualWidth = texture.getWidth();
+        int actualHeight = texture.getHeight();
+        
+        if (actualWidth == expectedWidth && actualHeight == expectedHeight) {
+            Gdx.app.log("FinalBoss", name + ": " + actualWidth + "x" + actualHeight + " ✓");
+        } else {
+            Gdx.app.log("FinalBoss", "WARNING: " + name + " dimensions mismatch!");
+            Gdx.app.log("FinalBoss", "  Actual: " + actualWidth + "x" + actualHeight);
+            Gdx.app.log("FinalBoss", "  Expected: " + expectedWidth + "x" + expectedHeight);
+            Gdx.app.log("FinalBoss", "  Difference: " + (actualWidth - expectedWidth) + "x" + (actualHeight - expectedHeight));
+            
+            // Provide guidance based on the mismatch
+            if (actualWidth < expectedWidth || actualHeight < expectedHeight) {
+                Gdx.app.log("FinalBoss", "  → Asset is smaller than expected. Consider resizing asset or adjusting VISUAL_SCALE_FACTOR.");
+            } else {
+                Gdx.app.log("FinalBoss", "  → Asset is larger than expected. May have transparent padding or need resizing.");
+            }
+        }
     }
 }

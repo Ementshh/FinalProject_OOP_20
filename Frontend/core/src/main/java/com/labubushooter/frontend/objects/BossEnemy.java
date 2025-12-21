@@ -84,27 +84,41 @@ public abstract class BossEnemy {
         // Update collider position
         updateCollider();
 
-        // Platform collision - same behavior as Player (only bottom collision)
+        // Platform collision - bottom collision only (boss lands when bottom touches platform top)
         grounded = false;
         for (Platform p : platforms) {
             if (bounds.overlaps(p.bounds)) {
-                // Only collide from below (when falling down and boss center is above platform
-                // top)
-                if (velY < 0 && bounds.y + bounds.height / 2 > p.bounds.y + p.bounds.height) {
-                    bounds.y = p.bounds.y + p.bounds.height;
+                // Get collision points
+                float bossBottom = getCollisionBottomY();
+                float platformTop = p.bounds.y + p.bounds.height;
+                
+                // Boss is falling AND boss has penetrated the platform
+                // Check if boss bottom is below platform top (penetration)
+                if (velY < 0 && bossBottom < platformTop) {
+                    // Position boss so its bottom sits exactly on platform top
+                    bounds.y = platformTop;
                     velY = 0;
                     grounded = true;
+                    updateCollider();
                 }
             }
         }
 
-        // Ground collision - same behavior as platforms
+        // Ground collision - same logic as platforms
         for (Ground g : grounds) {
             if (bounds.overlaps(g.bounds)) {
-                if (velY < 0 && bounds.y + bounds.height / 2 > g.bounds.y + g.bounds.height) {
-                    bounds.y = g.bounds.y + g.bounds.height;
+                // Get collision points
+                float bossBottom = getCollisionBottomY();
+                float groundTop = g.bounds.y + g.bounds.height;
+                
+                // Boss is falling AND boss has penetrated the ground
+                // Check if boss bottom is below ground top (penetration)
+                if (velY < 0 && bossBottom < groundTop) {
+                    // Position boss so its bottom sits exactly on ground top
+                    bounds.y = groundTop;
                     velY = 0;
                     grounded = true;
+                    updateCollider();
                 }
             }
         }
@@ -116,6 +130,32 @@ public abstract class BossEnemy {
         float offsetX = (bounds.width - collider.width) / 2;
         float offsetY = (bounds.height - collider.height) / 2;
         collider.setPosition(bounds.x + offsetX, bounds.y + offsetY);
+    }
+    
+    /**
+     * Gets the Y coordinate of the bottom of the boss for collision detection.
+     * Override this method in subclasses if custom collision behavior is needed.
+     * 
+     * Default implementation returns the bottom of the bounds rectangle.
+     * This is the standard behavior for most boss types.
+     * 
+     * @return Y coordinate of the collision bottom point
+     */
+    protected float getCollisionBottomY() {
+        return bounds.y;
+    }
+    
+    /**
+     * Gets the visual offset from the bottom of bounds to the bottom of the rendered sprite.
+     * Used for debugging and visual verification.
+     * 
+     * Default implementation returns 0 (no offset - sprite bottom aligns with bounds bottom).
+     * Override in subclasses that use visual scaling or offset rendering.
+     * 
+     * @return Visual bottom offset in pixels (negative means sprite extends below bounds)
+     */
+    protected float getVisualBottomOffset() {
+        return 0f;
     }
 
     public void draw(SpriteBatch batch) {
