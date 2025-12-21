@@ -55,6 +55,9 @@ public class AssetManager implements Disposable {
     public static final String MINI_BOSS_DASHPREP = "miniboss_dashprep";
     public static final String MINI_BOSS_DASH = "miniboss_dash";
     public static final String BOSS = "boss";
+    public static final String BOSS_PHASE1_BULLET = "boss_phase1_bullet";
+    public static final String BOSS_PHASE23_BULLET = "boss_phase23_bullet";
+    public static final String BOSS_BIG_BULLET = "boss_big_bullet";
     public static final String PISTOL = "pistol";
     public static final String MAC10 = "mac10";
     public static final String BACKGROUND_LEVEL1 = "background_level1";
@@ -163,6 +166,9 @@ public class AssetManager implements Disposable {
         loadTexture(MINI_BOSS_DASHPREP, "miniboss_dashprep.png");
         loadTexture(MINI_BOSS_DASH, "miniboss_dash.png");
         loadTexture(BOSS, "boss.png");
+        loadTexture(BOSS_PHASE1_BULLET, "boss_phase1_bullet.png");
+        loadTexture(BOSS_PHASE23_BULLET, "boss_phase23_bullet.png");
+        loadTexture(BOSS_BIG_BULLET, "boss_big_bullet.png");
         loadTexture(PISTOL, "pistol.png");
         loadTexture(MAC10, "mac10.png");
         loadTexture(BACKGROUND_LEVEL1, "bglevel1.png");

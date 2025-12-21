@@ -275,7 +275,7 @@ public class GamePlayScreen extends BaseScreen {
 
         // Draw enemy bullets
         for (EnemyBullet eb : context.activeEnemyBullets) {
-            eb.draw(context.batch);
+            eb.draw(context.batch, delta);
         }
 
         context.batch.end();
