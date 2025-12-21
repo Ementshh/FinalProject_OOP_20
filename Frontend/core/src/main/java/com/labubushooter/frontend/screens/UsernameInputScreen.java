@@ -208,6 +208,11 @@ public class UsernameInputScreen extends BaseScreen {
                     // New player or player at stage 1 - start game directly at level 1
                     Gdx.app.log("UsernameInputScreen", "New player or stage 1 - starting game at level 1");
                     context.currentLevel = 1;
+                    
+                    // Set coinScore from database (for returning player at stage 1)
+                    context.coinScore = playerData.totalCoins;
+                    Gdx.app.log("UsernameInputScreen", "Set coinScore from database: " + context.coinScore);
+                    
                     if (gamePlayScreen != null) {
                         gamePlayScreen.setNeedsLevelLoad(true);
                     }

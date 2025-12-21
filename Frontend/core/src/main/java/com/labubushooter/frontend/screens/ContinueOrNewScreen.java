@@ -70,6 +70,13 @@ public class ContinueOrNewScreen extends BaseScreen {
     private void continueGame() {
         Gdx.app.log("ContinueOrNew", "Continuing from stage " + context.currentPlayerData.lastStage);
         context.currentLevel = context.currentPlayerData.lastStage;
+        
+        // Set coinScore from database totalCoins when continuing
+        context.coinScore = context.currentPlayerData.totalCoins;
+        context.coinsCollectedThisSession = 0; // Reset session coins
+        
+        Gdx.app.log("ContinueOrNew", "Loaded coins from database: " + context.coinScore);
+        
         if (gamePlayScreen != null) {
             gamePlayScreen.setNeedsLevelLoad(true);
         }
@@ -82,6 +89,7 @@ public class ContinueOrNewScreen extends BaseScreen {
             context.debugManager.logSkippedAction("Reset progress on backend");
             context.currentPlayerData.lastStage = 1;
             context.coinsCollectedThisSession = 0;
+            context.coinScore = 0; // Reset displayed coins for new game
             context.currentLevel = 1;
             if (gamePlayScreen != null) {
                 gamePlayScreen.setNeedsLevelLoad(true);
@@ -97,13 +105,15 @@ public class ContinueOrNewScreen extends BaseScreen {
                 public void onSuccess() {
                     Gdx.app.postRunnable(() -> {
                         context.currentPlayerData.lastStage = 1;
+                        context.currentPlayerData.totalCoins = 0; // Reset total coins in player data
                         context.coinsCollectedThisSession = 0;
+                        context.coinScore = 0; // Reset displayed coins for new game
                         context.currentLevel = 1;
                         if (gamePlayScreen != null) {
                             gamePlayScreen.setNeedsLevelLoad(true);
                         }
                         transitionTo(GameState.PLAYING);
-                        Gdx.app.log("ContinueOrNew", "Starting new game");
+                        Gdx.app.log("ContinueOrNew", "Starting new game with coins reset to 0");
                     });
                 }
                 
