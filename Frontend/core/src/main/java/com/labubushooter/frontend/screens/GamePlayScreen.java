@@ -97,10 +97,10 @@ public class GamePlayScreen extends BaseScreen {
         if (Gdx.input.isKeyJustPressed(Input.Keys.K)) {
             if (context.currentLevel == 3 && context.miniBoss != null && !context.miniBoss.isDead()) {
                 
-                context.miniBoss.takeDamage(5f);
+                context.miniBoss.takeDamage(2f);
             }
             if (context.currentLevel == 5 && context.boss != null && !context.boss.isDead()) {
-                context.miniBoss.takeDamage(5f);
+                context.miniBoss.takeDamage(2f);
             }
         }
 
