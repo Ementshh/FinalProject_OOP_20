@@ -94,15 +94,13 @@ public class GamePlayScreen extends BaseScreen {
             Gdx.app.log("Debug", "Skipped to Level 5 (Final Boss)");
         }
 
-        // --- DEBUG: INSTA-KILL BOSS ---
         if (Gdx.input.isKeyJustPressed(Input.Keys.K)) {
             if (context.currentLevel == 3 && context.miniBoss != null && !context.miniBoss.isDead()) {
-                context.miniBoss.takeDamage(999999f);
-                Gdx.app.log("Debug", "Mini Boss instantly killed!");
+                
+                context.miniBoss.takeDamage(5f);
             }
             if (context.currentLevel == 5 && context.boss != null && !context.boss.isDead()) {
-                context.boss.takeDamage(999999f);
-                Gdx.app.log("Debug", "Final Boss instantly killed!");
+                context.miniBoss.takeDamage(5f);
             }
         }
 
