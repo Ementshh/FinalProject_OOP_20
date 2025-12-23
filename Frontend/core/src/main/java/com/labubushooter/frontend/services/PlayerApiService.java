@@ -6,15 +6,9 @@ import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.net.HttpRequestBuilder;
 import com.badlogic.gdx.utils.JsonReader;
 import com.badlogic.gdx.utils.JsonValue;
-import com.badlogic.gdx.utils.ObjectMap;
-import com.badlogic.gdx.utils.PropertiesUtils;
-import com.badlogic.gdx.utils.PropertiesUtils;
-
-import java.io.IOException;
-import java.util.HashMap;
 
 public class PlayerApiService {
-    private static String BASE_URL = "http://localhost:8080/api/players";
+    private static String BASE_URL = "https://marvelous-light-production.up.railway.app/api/players";
     private final JsonReader jsonReader;
 
     public PlayerApiService() {
@@ -24,42 +18,61 @@ public class PlayerApiService {
 
     private void loadConfig() {
         try {
-            // Try to load from a local config.properties file next to the jar
-            FileHandle handle = Gdx.files.local("config.properties");
-            if (handle.exists()) {
-                ObjectMap<String, String> properties = new ObjectMap<>();
-                PropertiesUtils.load(properties, handle.reader());
-                String url = properties.get("api.url");
-                if (url != null && !url.trim().isEmpty()) {
-                    // Remove trailing slash if present
-                    if (url.endsWith("/")) {
-                        url = url.substring(0, url.length() - 1);
+            // Try multiple locations for config file
+            FileHandle[] locations = {
+                Gdx.files.internal("config.properties"),
+                Gdx.files.local("config.properties"),
+                Gdx.files.external("config.properties")
+            };
+
+            for (FileHandle handle : locations) {
+                if (handle.exists()) {
+                    try {
+                        String content = handle.readString();
+                        Gdx.app.log("PlayerAPI", "Found config at: " + handle.path());
+                        
+                        String[] lines = content.split("\n");
+                        for (String line : lines) {
+                            line = line.trim();
+                            if (line.startsWith("api.url=")) {
+                                String url = line.substring(8).trim();
+                                if (!url.isEmpty()) {
+                                    // Remove trailing slash if present
+                                    if (url.endsWith("/")) {
+                                        url = url.substring(0, url.length() - 1);
+                                    }
+                                    // Ensure it ends with /api/players if the user just put the domain
+                                    if (!url.endsWith("/api/players")) {
+                                        if (!url.contains("/api")) {
+                                            url = url + "/api/players";
+                                        }
+                                    }
+                                    BASE_URL = url;
+                                    Gdx.app.log("PlayerAPI", "✓ Loaded API URL: " + BASE_URL);
+                                    return;
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        Gdx.app.error("PlayerAPI", "Error reading " + handle.path() + ": " + e.getMessage());
                     }
-                    // Ensure it ends with /api/players if the user just put the domain
-                    if (!url.endsWith("/api/players")) {
-                         // If user put "https://myapp.onrender.com", append "/api/players"
-                         // If user put "https://myapp.onrender.com/api/players", it's fine (handled by endsWith check above)
-                         // But we need to be careful. Let's assume user puts the root URL.
-                         // Actually, let's just trust the user or guide them to put the full path or root.
-                         // Better strategy: If it doesn't contain "/api", append it.
-                         if (!url.contains("/api")) {
-                             url = url + "/api/players";
-                         }
-                    }
-                    BASE_URL = url;
-                    Gdx.app.log("PlayerAPI", "Loaded API URL from config: " + BASE_URL);
                 }
-            } else {
-                Gdx.app.log("PlayerAPI", "No config.properties found, using default: " + BASE_URL);
-                // Create a default config file for convenience
-                try {
-                    handle.writeString("api.url=http://localhost:8080/api/players\n# Ganti URL di atas dengan URL backend cloud Anda (contoh: https://labuboom-backend.onrender.com/api/players)", false);
-                } catch (Exception e) {
-                    Gdx.app.error("PlayerAPI", "Could not create default config file: " + e.getMessage());
-                }
+            }
+
+            // No config found, use Railway default
+            Gdx.app.log("PlayerAPI", "No config.properties found, using Railway default: " + BASE_URL);
+            
+            // Try to create a default config file
+            try {
+                FileHandle localConfig = Gdx.files.local("config.properties");
+                localConfig.writeString("api.url=https://marvelous-light-production.up.railway.app/api/players\n# Backend deployed on Railway - URL sudah dikonfigurasi", false);
+                Gdx.app.log("PlayerAPI", "Created default config.properties");
+            } catch (Exception e) {
+                Gdx.app.error("PlayerAPI", "Could not create default config file: " + e.getMessage());
             }
         } catch (Exception e) {
             Gdx.app.error("PlayerAPI", "Error loading config: " + e.getMessage());
+            Gdx.app.log("PlayerAPI", "Fallback to default URL: " + BASE_URL);
         }
     }
 
@@ -94,7 +107,7 @@ public class PlayerApiService {
                 .url(BASE_URL + "/login")
                 .header("Content-Type", "application/json")
                 .header("Accept", "application/json")
-                .timeout(10000)
+                .timeout(30000)
                 .content(jsonBody)
                 .build();
 
@@ -196,7 +209,7 @@ public class PlayerApiService {
                 .url(BASE_URL + "/" + playerId + "/progress")
                 .header("Content-Type", "application/json")
                 .header("Accept", "application/json")
-                .timeout(10000)
+                .timeout(30000)
                 .content(jsonBody)
                 .build();
 
@@ -240,7 +253,7 @@ public class PlayerApiService {
                 .url(BASE_URL + "/" + playerId + "/reset")
                 .header("Content-Type", "application/json")
                 .header("Accept", "application/json")
-                .timeout(10000)
+                .timeout(30000)
                 .content("{}")
                 .build();
 

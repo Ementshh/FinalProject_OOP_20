@@ -20,6 +20,7 @@ boss_phase3_jump.png
 boss_phase3_walk1.png
 boss_phase3_walk2.png
 bullet.png
+config.properties
 door.png
 enemy.png
 enemyframe1.png
